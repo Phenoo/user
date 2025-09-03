@@ -42,6 +42,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { redirect } from "next/navigation";
 
 type TabType = "home" | "calendar" | "tasks" | "goals" | "profile";
 type ViewType = "month" | "week";
@@ -589,36 +590,6 @@ export default function StudentProductivityApp() {
       type: "exam",
       date: "2024-01-18",
     },
-  ];
-
-  const upcomingTasks = [
-    {
-      id: 1,
-      title: "Math Assignment",
-      due: "Today",
-      priority: "high",
-      subject: "Mathematics",
-    },
-    {
-      id: 2,
-      title: "History Essay",
-      due: "Tomorrow",
-      priority: "medium",
-      subject: "History",
-    },
-    {
-      id: 3,
-      title: "Science Lab Report",
-      due: "Friday",
-      priority: "low",
-      subject: "Physics",
-    },
-  ];
-
-  const todaySchedule = [
-    { time: "9:00 AM", subject: "Mathematics", room: "Room 101" },
-    { time: "11:00 AM", subject: "Physics", room: "Lab 2" },
-    { time: "2:00 PM", subject: "History", room: "Room 205" },
   ];
 
   const goals: Goal[] = [
@@ -1738,5 +1709,5 @@ export default function StudentProductivityApp() {
     }
   };
 
-  return renderTabContent();
+  return redirect("/dashboard");
 }
