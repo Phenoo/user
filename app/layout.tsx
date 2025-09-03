@@ -1,11 +1,17 @@
 import type { Metadata } from "next";
-import { Open_Sans } from "next/font/google";
+import { Urbanist, Lato } from "next/font/google";
 import "./globals.css";
 
-const openSans = Open_Sans({
-  variable: "--font-geist-sans",
+const urbanist = Urbanist({
+  variable: "--font-body",
   subsets: ["latin"],
 });
+const lato = Lato({
+  variable: "--font-title",
+  subsets: ["latin"],
+  weight: ["400", "900", "700"],
+});
+
 export const metadata: Metadata = {
   title: "Usoro - Study",
   description:
@@ -19,7 +25,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`antialiased`}>{children}</body>
+      <body className={`antialiased ${urbanist.className} ${lato.className}`}>
+        {children}
+      </body>
     </html>
   );
 }
