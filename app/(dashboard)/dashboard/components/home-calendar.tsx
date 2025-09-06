@@ -261,16 +261,16 @@ export function CalendarWidget() {
             {events.map((event, i) => (
               <div key={event.id} className="flex gap-3 ">
                 <div>
-                  <div className="text-xs text-muted-foreground w-12 p-1 bg-[#ddd] rounded-xl text-center">
+                  <div className="text-xs  w-12 p-1 bg-[#ddd] text-neutral-900  rounded-xl text-center">
                     {event.time.split(" - ")[0]}
                   </div>
 
                   {i + 1 < events.length && (
-                    <div className="border-[1px] border-dashed w-[1px]  h-full mx-auto"></div>
+                    <div className="border-[1px] border-dashed border-q w-[1px]  h-full mx-auto"></div>
                   )}
                 </div>
                 <div
-                  className={`flex-1 p-3 rounded-lg border relative border-l-4 text-black  ${
+                  className={`flex-1 p-3 rounded-lg border relative border-l-4 text-foreground  ${
                     event.color
                   }   ${event.isPast ? "opacity-60" : ""} ${
                     event.isCurrent ? "" : ""

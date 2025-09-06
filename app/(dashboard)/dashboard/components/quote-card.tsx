@@ -28,7 +28,7 @@ const QuoteCard = () => {
     <Card className="">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-sm">
-          <Quote className="h-4 w-4 text-black" />
+          <Quote className="h-4 w-4" />
           Daily Inspiration
         </CardTitle>
       </CardHeader>

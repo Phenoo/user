@@ -99,7 +99,7 @@ const navLinks = [
 export function Navigation() {
   const pathname = usePathname();
   return (
-    <nav className="hidden md:flex gap-1 w-[310px] bg-white p-1 justify-between rounded-3xl relative">
+    <nav className="hidden md:flex gap-1 w-[310px] backdrop-blur-md bg-white dark:bg-neutral-900 p-1 justify-between rounded-3xl relative">
       {navLinks.map((item) => {
         const Icon = item.icon;
         const isActive = pathname === item.link;
@@ -118,7 +118,7 @@ export function Navigation() {
             {isActive && (
               <motion.div
                 layoutId="active-pill"
-                className="absolute inset-0 rounded-3xl bg-[#ddd]"
+                className="absolute inset-0 rounded-3xl bg-[#ddd] dark:bg-[#222] "
                 transition={{
                   type: "spring",
                   stiffness: 500,

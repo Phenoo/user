@@ -6,8 +6,7 @@ const AISuggestionsCard = () => {
   return (
     <div
       className="relative  rounded-xl p-6 shadow-lg overflow-hidden
-      bg-gradient-to-r from-[#E11D48] via-[#FD1D1D] to-[#FCB045]
-
+bg-gradient-to-r from-[oklch(0.65_0.12_15)] via-[oklch(0.6_0.15_320)] to-[oklch(0.55_0.18_340)]
       "
     >
       <div className="flex items-center justify-between">
@@ -29,7 +28,7 @@ const AISuggestionsCard = () => {
         </p>
       </div>
 
-      <button className="mt-5 px-4 py-2 bg-white bg-opacity-40 rounded-full text-primary text-sm font-semibold hover:bg-opacity-50 transition-colors">
+      <button className="mt-5 px-4 py-2 bg-white bg-opacity-40 rounded-full text-black text-sm hover:bg-opacity-50 transition-colors">
         AI Suggestions
       </button>
 

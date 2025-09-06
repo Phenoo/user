@@ -24,6 +24,7 @@ import {
   MoreHorizontal,
   Plus,
   ChevronDown,
+  Loader,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { OverviewEventCalendar } from "./overview-events";
@@ -45,6 +46,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ModeToggle } from "@/components/mode-toggle";
+import { LoadingSkeleton } from "@/components/loading-skeleton";
+import ChartSkeleton from "@/components/loader";
 
 export const data = [
   {
@@ -81,17 +85,6 @@ export const data = [
   },
 ];
 
-const chartConfig = {
-  revenue: {
-    label: "Revenue",
-    color: "var(--primary)",
-  },
-  subscription: {
-    label: "Subscriptions",
-    color: "var(--primary)",
-  },
-} satisfies ChartConfig;
-
 export function StudentDashboard() {
   const recentFlashcards = [
     { subject: "Biology", count: 24, mastered: 18 },
@@ -118,9 +111,6 @@ export function StudentDashboard() {
     },
   ];
 
-  const todaysQuote =
-    inspirationalQuotes[Math.floor(Math.random() * inspirationalQuotes.length)];
-
   return (
     <div className="min-h-screen max-w-7xl p-4 mx-auto w-full flex flex-col gap-8">
       <div className="flex flex-col md:flex-row gap-4 justify-between">
@@ -128,9 +118,10 @@ export function StudentDashboard() {
           <h4 className="text-2xl md:text-3xl lg:text-4xl font-bold">
             Hello Daniel!
           </h4>
+          <ModeToggle />
         </div>
         <div className="flex gap-4 items-center flex-wrap">
-          <div className="flex gap-2 bg-white rounded-3xl flex-1 items-center p-1 px-4">
+          <div className="flex gap-2 bg-card rounded-3xl flex-1 items-center p-1 px-4">
             <CiSearch className="h-5 w-5 stroke-1" />
             <Input
               className="bg-transparent min-w-[250px] border-none shadow-none"
@@ -140,7 +131,8 @@ export function StudentDashboard() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button className="rounded-3xl">
-                <Plus className="h-4 w-4" /> Create
+                Create
+                <Plus className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
@@ -184,7 +176,7 @@ export function StudentDashboard() {
                 </p>
               </CardContent>
               <CardFooter>
-                <Button>
+                <Button className="rounded-3xl">
                   Quick Calculate
                   <GoArrowUpRight className="h-4 w-4" />
                 </Button>
@@ -286,7 +278,7 @@ export function StudentDashboard() {
                           className={cn(
                             "h-10 w-full rounded",
                             item * 4 < flashcard.mastered
-                              ? "bg-red-400"
+                              ? "bg-primary/50"
                               : "bg-[#ddd] "
                           )}
                         ></div>
@@ -294,7 +286,7 @@ export function StudentDashboard() {
                     </div>
                     <div className="flex justify-between w-full  gap-4 mt-2 p-4">
                       <div></div>
-                      <div className="flex gap-1 bg-[#ddd] p-2 rounded">
+                      <div className="flex gap-1 bg-[#ddd] dark:bg-neutral-700 p-2 rounded">
                         <IoFlagSharp className="h-4 w-4 mr-1" />
                         <p className="text-xs">June 12, 2025</p>
                       </div>
@@ -315,7 +307,7 @@ export function StudentDashboard() {
 
           <Card>
             <CardHeader className="flex-row flex gap-2 items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-foreground">
                 <Users className="h-5 w-5 text-primary" />
                 Study Groups
               </CardTitle>
@@ -335,10 +327,10 @@ export function StudentDashboard() {
                 <div key={index} className="p-3 bg-card rounded-lg border">
                   <p className="font-medium text-sm">{group.name}</p>
                   <div className="flex justify-between items-center mt-1">
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-xs text-foreground">
                       {group.members} members
                     </span>
-                    <span className="text-xs text-accent font-medium">
+                    <span className="text-xs text-foreground font-medium">
                       {group.next}
                     </span>
                   </div>

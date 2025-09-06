@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Urbanist, Lato } from "next/font/google";
 import "./globals.css";
+import { ThemeProvider } from "@/providers/theme-provider";
 
 const urbanist = Urbanist({
   variable: "--font-body",
@@ -26,7 +27,15 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`antialiased ${urbanist.className} ${lato.className}`}>
-        {children}
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+          enableColorScheme
+        >
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -1208,7 +1208,7 @@ export default function StudentProductivityApp() {
                           setUserProfile({ ...userProfile, year: value })
                         }
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className="w-full">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
