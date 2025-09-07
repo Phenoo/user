@@ -2,6 +2,10 @@ import type { Metadata } from "next";
 import { Urbanist, Lato } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/providers/theme-provider";
+import { ConvexClientProvider } from "@/providers/convex-provider";
+import { ConvexAuthNextjsServerProvider } from "@convex-dev/auth/nextjs/server";
+import { Toaster } from "@/components/ui/sonner";
+import ModalProvider from "@/components/modal-provider";
 
 const urbanist = Urbanist({
   variable: "--font-body",
@@ -25,18 +29,28 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`antialiased ${urbanist.className} ${lato.className}`}>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-          enableColorScheme
-        >
-          {children}
-        </ThemeProvider>
-      </body>
-    </html>
+    <ConvexAuthNextjsServerProvider>
+      <html lang="en">
+        <body>
+          <ConvexClientProvider>
+            <body
+              className={`antialiased ${urbanist.className} ${lato.className}`}
+            >
+              <ThemeProvider
+                attribute="class"
+                defaultTheme="system"
+                enableSystem
+                disableTransitionOnChange
+                enableColorScheme
+              >
+                {children}
+                <ModalProvider />
+                <Toaster />
+              </ThemeProvider>
+            </body>
+          </ConvexClientProvider>
+        </body>
+      </html>
+    </ConvexAuthNextjsServerProvider>
   );
 }

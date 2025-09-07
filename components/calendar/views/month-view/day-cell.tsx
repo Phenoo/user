@@ -58,7 +58,7 @@ export function DayCell({ cell, events, eventPositions }: IProps) {
       new Date(date.getFullYear(), date.getMonth(), 1)
     );
     return { cellEvents, currentCellMonth };
-  }, [date, events, eventPositions]);
+  }, [date, events, eventPositions, isMobile]);
 
   // Memoize event rendering for each position with animation
   const renderEventAtPosition = useCallback(

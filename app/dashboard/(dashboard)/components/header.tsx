@@ -8,12 +8,8 @@ import {
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuPortal,
   DropdownMenuSeparator,
   DropdownMenuShortcut,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -23,44 +19,37 @@ import { Bell, ChevronDown, Settings } from "lucide-react";
 
 import Logo from "@/components/logo";
 import { MobileNavigation, Navigation } from "./navigation";
+import { useAuthActions } from "@convex-dev/auth/react";
+import { useRouter } from "next/navigation";
+import { ModeToggle } from "@/components/mode-toggle";
+import useNotificationModal from "@/hooks/use-notification";
 
 const HeaderComponent = () => {
-  const navLinks = [
-    {
-      name: "Dashboard",
-      link: "/dashboard",
-    },
-    {
-      name: "Study",
-      link: "/dashboard/study",
-    },
-    {
-      name: "Flashcards",
-      link: "/dashboard/flashcards",
-    },
-    {
-      name: "Analytics",
-      link: "/dashboard/analytics",
-    },
-  ];
+  const { signOut } = useAuthActions();
+  const router = useRouter();
+  const { onOpen } = useNotificationModal();
+
+  const handleSignOut = async () => {
+    await signOut();
+    router.push("/");
+  };
   return (
     <>
       <header className="w-full p-4 fixed inset-0 h-20 z-10 bg-transparent">
         <div className="flex justify-between max-w-7xl mx-auto  w-full items-center gap-4">
           <Logo />
           <Navigation />
-          <div className="flex gap-2 bg-white rounded-3xl p-0.5">
-            <Button className="rounded-full bg-[#ddd] w-12 h-12">
-              <Settings className="h-6 w-6 text-black" />
+          <div className="flex gap-2 bg-glass  rounded-3xl p-0.5">
+            <ModeToggle />
+            <Button
+              className="rounded-full bg-[#ddd] dark:bg-[#222] w-12 h-12"
+              onClick={onOpen}
+            >
+              <Bell className="h-6 w-6 text-black dark:text-white" />
             </Button>
-            <Link href={"/dashboard/settings"}>
-              <Button className="rounded-full bg-[#ddd] w-12 h-12">
-                <Bell className="h-6 w-6 text-black" />
-              </Button>
-            </Link>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button className="rounded-full bg-[#ddd] w-12 h-12">
+                <Button className="rounded-full bg-[#ddd] dark:bg-[#222] w-12 h-12">
                   <Avatar className="h-12 w-12">
                     <AvatarImage src="https://github.com/shadcn.png" />
                     <AvatarFallback>CN</AvatarFallback>
@@ -84,7 +73,7 @@ const HeaderComponent = () => {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem>Support</DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={handleSignOut}>
                   Log out
                   <DropdownMenuShortcut>⇧⌘Q</DropdownMenuShortcut>
                 </DropdownMenuItem>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -26,6 +26,10 @@ import {
   GraduationCap,
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useMutation, useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { toast } from "sonner";
+import { Id } from "@/convex/_generated/dataModel";
 
 const TOTAL_STEPS = 5;
 
@@ -34,41 +38,55 @@ export function MainOnboarding() {
 
   const router = useRouter();
   const [formData, setFormData] = useState({
-    email: "",
+    schoolEmail: "",
     school: "",
     course: "",
     year: "",
     major: "",
     location: "",
-    // Productivity data
     challenges: [] as string[],
     shortTermGoal: "",
     longTermGoal: "",
     reminderPreference: "",
     studyTime: "",
     name: "",
+    isOnboarding: false,
+    userId: "" as Id<"users">,
   });
+
   const searchParams = useSearchParams();
 
-  const step = searchParams.get("step");
+  const updateUser = useMutation(api.users.updateUser);
+  const user = useQuery(api.users.currentUser);
 
-  console.log(step, "ssjjdjd");
+  const step = Number(searchParams.get("step") || currentStep);
 
   const progress = (currentStep / TOTAL_STEPS) * 100;
 
-  const handleNext = () => {
-    if (currentStep < TOTAL_STEPS) {
-      const nextStep = currentStep + 1;
-      setCurrentStep(nextStep);
-      router.push(`/onboarding?step=${nextStep}`);
+  const saveProgress = async (data: typeof formData) => {
+    try {
+      await updateUser(data);
+      toast.success(`Step ${step} sucess!`);
+    } catch (err) {
+      console.error("Failed to save onboarding data", err);
     }
   };
 
-  const handleBack = () => {
-    if (currentStep > 1) {
-      const prevStep = currentStep - 1;
+  const handleNext = async () => {
+    await saveProgress(formData);
+    if (step < TOTAL_STEPS) {
+      const nextStep = step + 1;
+      setCurrentStep(nextStep);
+      router.push(`/dashboard/onboarding?step=${nextStep}`);
+    }
+  };
+
+  const handleBack = async () => {
+    await saveProgress(formData);
+    if (step > 1) {
+      const prevStep = step - 1;
       setCurrentStep(prevStep);
-      router.push(`/onboarding?step=${prevStep}`);
+      router.push(`/dashboard/onboarding?step=${prevStep}`);
     }
   };
 
@@ -80,6 +98,28 @@ export function MainOnboarding() {
         : [...prev.challenges, challenge],
     }));
   };
+
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        schoolEmail: user.schoolEmail || "",
+        school: user.school || "",
+        course: user.course || "",
+        year: user.year || "",
+        major: user.major || "",
+        location: user.location || "",
+        challenges: user.challenges || [],
+        shortTermGoal: user.shortTermGoal || "",
+        longTermGoal: user.longTermGoal || "",
+        reminderPreference: user.reminderPreference || "",
+        studyTime: user.studyTime || "",
+        name: user.name || "",
+        isOnboarding: false,
+        userId: user._id,
+      });
+    }
+  }, [user]);
+  console.log(formData);
 
   const renderStep = () => {
     switch (Number(step)) {
@@ -120,9 +160,12 @@ export function MainOnboarding() {
                   id="email"
                   type="email"
                   placeholder="your.email@university.edu"
-                  value={formData.email}
+                  value={formData.schoolEmail}
                   onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, email: e.target.value }))
+                    setFormData((prev) => ({
+                      ...prev,
+                      schoolEmail: e.target.value,
+                    }))
                   }
                 />
               </div>
@@ -504,8 +547,8 @@ export function MainOnboarding() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center p-4">
-      <div className="w-full max-w-2xl">
+    <div className="h-full bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center p-4">
+      <div className="w-full h-full max-w-2xl">
         <div className="mb-8">
           <Progress value={progress} className="h-2" />
           <div className="flex justify-between mt-2 text-sm text-muted-foreground">
@@ -524,7 +567,7 @@ export function MainOnboarding() {
               <Button
                 variant="outline"
                 onClick={handleBack}
-                disabled={currentStep === 1}
+                disabled={step === 1}
                 className="px-6 bg-transparent"
               >
                 Back
@@ -532,7 +575,8 @@ export function MainOnboarding() {
 
               {currentStep === TOTAL_STEPS ? (
                 <Button
-                  onClick={() => {
+                  onClick={async () => {
+                    await saveProgress({ ...formData, isOnboarding: true });
                     router.push("/dashboard");
                   }}
                   className="px-6 bg-primary hover:bg-primary/90"

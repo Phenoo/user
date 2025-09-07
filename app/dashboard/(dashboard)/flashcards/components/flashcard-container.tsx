@@ -114,16 +114,19 @@ export function FlashcardContainer() {
   const [isCreateCourseOpen, setIsCreateCourseOpen] = useState(false);
   const [isCreateDocumentOpen, setIsCreateDocumentOpen] = useState(false);
 
-  const groupedByDate = mockFlashcards.reduce((acc, item) => {
-    const dateKey = item.date.includes("Academic Year")
-      ? "Library"
-      : item.date.includes("hours ago")
-      ? getDateFromHours(item.date)
-      : item.date;
-    if (!acc[dateKey]) acc[dateKey] = [];
-    acc[dateKey].push(item);
-    return acc;
-  }, {} as Record<string, FlashcardItem[]>);
+  const groupedByDate = mockFlashcards.reduce(
+    (acc, item) => {
+      const dateKey = item.date.includes("Academic Year")
+        ? "Library"
+        : item.date.includes("hours ago")
+          ? getDateFromHours(item.date)
+          : item.date;
+      if (!acc[dateKey]) acc[dateKey] = [];
+      acc[dateKey].push(item);
+      return acc;
+    },
+    {} as Record<string, FlashcardItem[]>
+  );
 
   function getDateFromHours(timeStr: string): string {
     const hours = Number.parseInt(timeStr.split(" ")[0]);
@@ -189,8 +192,8 @@ export function FlashcardContainer() {
             className={cn(
               "text-sm py-2 md:py-4 px-4 md:px-6 cursor-pointer hover:bg-rose-100 rounded-3xl flex items-center justify-center transition-colors",
               activeTab === "my-documents"
-                ? "bg-red-400 text-white font-bold"
-                : "hover:bg-rose-100"
+                ? "bg-primary text-foreground font-bold"
+                : "hover:bg-rose-100 text-background"
             )}
             onClick={() => setActiveTab("my-documents")}
           >
@@ -199,10 +202,10 @@ export function FlashcardContainer() {
           <div
             onClick={() => setActiveTab("my-courses")}
             className={cn(
-              "text-sm py-4 px-6 cursor-pointer rounded-3xl  flex items-center justify-center transition-colors",
+              "text-sm py-4 px-6 cursor-pointer rounded-3xl text-background  flex items-center justify-center transition-colors",
               activeTab === "my-courses"
-                ? "bg-red-400 text-white font-bold"
-                : "hover:bg-rose-100"
+                ? "bg-primary text-foreground font-bold"
+                : "hover:bg-rose-100 text-background"
             )}
           >
             My Courses

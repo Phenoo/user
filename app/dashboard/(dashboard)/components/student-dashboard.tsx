@@ -19,19 +19,14 @@ import {
   TrendingUp,
   ChevronRight,
   Users,
-  Quote,
-  Search,
   MoreHorizontal,
   Plus,
-  ChevronDown,
-  Loader,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { OverviewEventCalendar } from "./overview-events";
 
 import { RiTaskLine } from "react-icons/ri";
 
-import { ChartConfig } from "@/components/ui/chart";
 import { cn } from "@/lib/utils";
 import QuoteCard from "./quote-card";
 import { TodayChartsView } from "./today-tasks";
@@ -49,6 +44,8 @@ import {
 import { ModeToggle } from "@/components/mode-toggle";
 import { LoadingSkeleton } from "@/components/loading-skeleton";
 import ChartSkeleton from "@/components/loader";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 
 export const data = [
   {
@@ -86,6 +83,8 @@ export const data = [
 ];
 
 export function StudentDashboard() {
+  const user = useQuery(api.users.currentUser);
+
   const recentFlashcards = [
     { subject: "Biology", count: 24, mastered: 18 },
     { subject: "Chemistry", count: 32, mastered: 20 },
@@ -111,14 +110,21 @@ export function StudentDashboard() {
     },
   ];
 
+  if (user === undefined) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen max-w-7xl p-4 mx-auto w-full flex flex-col gap-8">
       <div className="flex flex-col md:flex-row gap-4 justify-between">
         <div>
           <h4 className="text-2xl md:text-3xl lg:text-4xl font-bold">
-            Hello Daniel!
+            Hello {user?.name ? `, ${user.name}` : ""}!
           </h4>
-          <ModeToggle />
         </div>
         <div className="flex gap-4 items-center flex-wrap">
           <div className="flex gap-2 bg-card rounded-3xl flex-1 items-center p-1 px-4">

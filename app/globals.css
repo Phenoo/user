@@ -139,3 +139,26 @@ p, button, span, input, label, div {
 .cardcalendar {
   border-top: 8px  solid !important;
 }
+
+
+.tableradius {
+  border-radius: 50% !important;
+  border: 1px solid #111;
+}
+
+/* Light mode glass */
+.bg-glass {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* Dark mode glass */
+.dark .bg-glass {
+  background: rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
