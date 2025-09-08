@@ -46,6 +46,8 @@ import { LoadingSkeleton } from "@/components/loading-skeleton";
 import ChartSkeleton from "@/components/loader";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import LoadingComponent from "@/components/loader";
+import Link from "next/link";
 
 export const data = [
   {
@@ -111,16 +113,12 @@ export function StudentDashboard() {
   ];
 
   if (user === undefined) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
+    return <LoadingComponent />;
   }
 
   return (
     <div className="min-h-screen max-w-7xl p-4 mx-auto w-full flex flex-col gap-8">
-      <div className="flex flex-col md:flex-row gap-4 justify-between">
+      <div className="flex flex-col md:flex-row gap-4 justify-between ">
         <div>
           <h4 className="text-2xl md:text-3xl lg:text-4xl font-bold">
             Hello {user?.name ? `, ${user.name}` : ""}!
@@ -130,7 +128,7 @@ export function StudentDashboard() {
           <div className="flex gap-2 bg-card rounded-3xl flex-1 items-center p-1 px-4">
             <CiSearch className="h-5 w-5 stroke-1" />
             <Input
-              className="bg-transparent min-w-[250px] border-none shadow-none"
+              className="bg-card min-w-[250px] border-none shadow-none"
               placeholder="Search"
             />
           </div>
@@ -241,10 +239,12 @@ export function StudentDashboard() {
               <CardTitle className="flex items-center gap-2 text-xl md:text-2xl">
                 Progress
               </CardTitle>
-              <Button variant="ghost" size="sm" className="text-sm">
-                View All
-                <GoArrowUpRight className="h-4 w-4 ml-1" />
-              </Button>
+              <Link href={"/dashboard/courses"}>
+                <Button variant="ghost" size="sm" className="text-sm">
+                  View All
+                  <GoArrowUpRight className="h-4 w-4 ml-1" />
+                </Button>
+              </Link>
             </CardHeader>
             <CardContent className="p-0">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -342,6 +342,8 @@ export function StudentDashboard() {
                   </div>
                 </div>
               ))}
+
+              <Button>View all</Button>
             </CardContent>
           </Card>
         </div>

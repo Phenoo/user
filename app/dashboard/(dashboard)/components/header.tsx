@@ -42,14 +42,14 @@ const HeaderComponent = () => {
           <div className="flex gap-2 bg-glass  rounded-3xl p-0.5">
             <ModeToggle />
             <Button
-              className="rounded-full bg-[#ddd] dark:bg-[#222] w-12 h-12"
+              className="rounded-full bg-transparent w-12 h-12"
               onClick={onOpen}
             >
               <Bell className="h-6 w-6 text-black dark:text-white" />
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button className="rounded-full bg-[#ddd] dark:bg-[#222] w-12 h-12">
+                <Button className="rounded-full bg-transparent w-12 h-12">
                   <Avatar className="h-12 w-12">
                     <AvatarImage src="https://github.com/shadcn.png" />
                     <AvatarFallback>CN</AvatarFallback>
@@ -59,11 +59,17 @@ const HeaderComponent = () => {
               <DropdownMenuContent className="w-48" align="start">
                 <DropdownMenuLabel>My Account</DropdownMenuLabel>
                 <DropdownMenuGroup>
-                  <DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => router.push("/dashboard/settings")}
+                  >
                     Profile
                     <DropdownMenuShortcut>⇧⌘P</DropdownMenuShortcut>
                   </DropdownMenuItem>
-                  <DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() =>
+                      router.push("/dashboard/settings?section=billing")
+                    }
+                  >
                     Billing
                     <DropdownMenuShortcut>⌘B</DropdownMenuShortcut>
                   </DropdownMenuItem>
@@ -71,7 +77,11 @@ const HeaderComponent = () => {
                 <DropdownMenuSeparator />
 
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>Support</DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => router.push("/dashboard/settings")}
+                >
+                  Support
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSignOut}>
                   Log out

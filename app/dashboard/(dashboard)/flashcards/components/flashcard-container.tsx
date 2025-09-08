@@ -33,7 +33,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-interface FlashcardItem {
+export interface FlashcardItem {
   id: string;
   title: string;
   subject: string;
@@ -187,7 +187,7 @@ export function FlashcardContainer() {
 
       {/* Tabs */}
       <div className="w-full">
-        <div className="grid w-fit grid-cols-2 bg-white p-1 rounded-3xl mb-6">
+        <div className="grid w-fit grid-cols-2 bg-muted p-1 rounded-3xl mb-6">
           <div
             className={cn(
               "text-sm py-2 md:py-4 px-4 md:px-6 cursor-pointer hover:bg-rose-100 rounded-3xl flex items-center justify-center transition-colors",
@@ -263,7 +263,7 @@ export function FlashcardContainer() {
   );
 }
 
-function FlashcardItem({ item }: { item: FlashcardItem }) {
+export function FlashcardItem({ item }: { item: FlashcardItem }) {
   return (
     <Card
       className={`relative ${item.color} border-t-4 shadow-sm transition-shadow hover:shadow-md`}

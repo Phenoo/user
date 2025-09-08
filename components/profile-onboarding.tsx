@@ -30,6 +30,7 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
+import { CountryDropdown } from "./country-dropdown";
 
 const TOTAL_STEPS = 5;
 
@@ -43,7 +44,7 @@ export function MainOnboarding() {
     course: "",
     year: "",
     major: "",
-    location: "",
+    location: "United States",
     challenges: [] as string[],
     shortTermGoal: "",
     longTermGoal: "",
@@ -53,6 +54,20 @@ export function MainOnboarding() {
     isOnboarding: false,
     userId: "" as Id<"users">,
   });
+
+  const [selectedCountry, setSelectedCountry] = useState("USA");
+  const [universities, setUniversities] = useState<any[]>([]);
+
+  // Fetch universities whenever country changes
+  useEffect(() => {
+    if (!formData.location) return;
+    fetch(
+      `http://universities.hipolabs.com/search?country=${formData.location}`
+    )
+      .then((res) => res.json())
+      .then((data) => setUniversities(data))
+      .catch((err) => console.error(err));
+  }, [formData.location]);
 
   const searchParams = useSearchParams();
 
@@ -119,7 +134,6 @@ export function MainOnboarding() {
       });
     }
   }, [user]);
-  console.log(formData);
 
   const renderStep = () => {
     switch (Number(step)) {
@@ -189,12 +203,35 @@ export function MainOnboarding() {
               </p>
             </div>
             <div className="space-y-4 max-w-lg mx-auto">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <CountryDropdown
+                placeholder="Select country"
+                defaultValue={selectedCountry}
+                onChange={(e) => {
+                  setSelectedCountry(e.alpha3);
+                  setFormData((prev) => ({
+                    ...prev,
+                    location: e.name,
+                  }));
+                }}
+              />
+              <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="school" className="text-base font-medium">
                     School/University
                   </Label>
-                  <Input
+                  <Select>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="School/University" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {universities.map((item, i) => (
+                        <SelectItem value={item.name} key={i}>
+                          {item.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {/* <Input
                     id="school"
                     placeholder="e.g., Stanford University"
                     value={formData.school}
@@ -204,23 +241,7 @@ export function MainOnboarding() {
                         school: e.target.value,
                       }))
                     }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="location" className="text-base font-medium">
-                    Location
-                  </Label>
-                  <Input
-                    id="location"
-                    placeholder="e.g., California, USA"
-                    value={formData.location}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        location: e.target.value,
-                      }))
-                    }
-                  />
+                  /> */}
                 </div>
               </div>
               <div className="space-y-2">
@@ -338,7 +359,7 @@ export function MainOnboarding() {
               ].map((challenge) => (
                 <Card
                   key={challenge.id}
-                  className={`cursor-pointer transition-all border border-foreground/20 hover:shadow-md ${
+                  className={`cursor-pointer transition-all border hover:shadow-md ${
                     formData.challenges.includes(challenge.id)
                       ? "ring-2 ring-primary bg-primary/5"
                       : "hover:bg-muted/50"

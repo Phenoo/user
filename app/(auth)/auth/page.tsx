@@ -1,4 +1,3 @@
-import { GalleryVerticalEnd } from "lucide-react";
 import Logo from "@/components/logo";
 import AuthenticationCard from "./components/authentication-card";
 

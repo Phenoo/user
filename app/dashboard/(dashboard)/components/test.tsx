@@ -224,7 +224,7 @@ export default function AuthenticationCard() {
                       onChange={(e) =>
                         handleInputChange("email", e.target.value)
                       }
-                      className="pl-10 bg-white/10 border-foreground/50 placeholder: focus:border-white/40 focus:ring-white/20"
+                      className="pl-10 bg-white/10 placeholder: focus:border-white/40 focus:ring-white/20"
                       placeholder="Enter your email"
                       required
                     />
@@ -244,7 +244,7 @@ export default function AuthenticationCard() {
                       onChange={(e) =>
                         handleInputChange("password", e.target.value)
                       }
-                      className="pl-10 pr-10 bg-white/10 border-foreground/50 placeholder: focus:border-white/40 focus:ring-white/20"
+                      className="pl-10 pr-10 bg-white/10 placeholder: focus:border-white/40 focus:ring-white/20"
                       placeholder="Enter your password"
                       required
                     />
@@ -325,7 +325,7 @@ export default function AuthenticationCard() {
                       onChange={(e) =>
                         handleInputChange("name", e.target.value)
                       }
-                      className="pl-10 bg-white/10 border-foreground/50 placeholder: focus:border-white/40 focus:ring-white/20"
+                      className="pl-10 bg-white/10 placeholder: focus:border-white/40 focus:ring-white/20"
                       placeholder="Enter your full name"
                       required
                     />
@@ -345,7 +345,7 @@ export default function AuthenticationCard() {
                       onChange={(e) =>
                         handleInputChange("email", e.target.value)
                       }
-                      className="pl-10 bg-white/10 border-foreground/50 placeholder: focus:border-white/40 focus:ring-white/20"
+                      className="pl-10 bg-white/10 placeholder: focus:border-white/40 focus:ring-white/20"
                       placeholder="Enter your email"
                       required
                     />
@@ -365,7 +365,7 @@ export default function AuthenticationCard() {
                       onChange={(e) =>
                         handleInputChange("password", e.target.value)
                       }
-                      className="pl-10 pr-10 bg-white/10 border-foreground/50 placeholder: focus:border-white/40 focus:ring-white/20"
+                      className="pl-10 pr-10 bg-white/10 placeholder: focus:border-white/40 focus:ring-white/20"
                       placeholder="Create a password"
                       required
                     />
@@ -446,7 +446,7 @@ export default function AuthenticationCard() {
                       onChange={(e) =>
                         handleInputChange("confirmPassword", e.target.value)
                       }
-                      className="pl-10 pr-10 bg-white/10 border-foreground/50 placeholder: focus:border-white/40 focus:ring-white/20"
+                      className="pl-10 pr-10 bg-white/10 placeholder: focus:border-white/40 focus:ring-white/20"
                       placeholder="Confirm your password"
                       required
                     />
@@ -535,7 +535,7 @@ export default function AuthenticationCard() {
                       onChange={(e) =>
                         handleInputChange("email", e.target.value)
                       }
-                      className="pl-10 bg-white/10 border-foreground/50 placeholder: focus:border-white/40 focus:ring-white/20"
+                      className="pl-10 bg-white/10 placeholder: focus:border-white/40 focus:ring-white/20"
                       placeholder="Enter your email"
                       required
                     />
@@ -584,7 +584,7 @@ export default function AuthenticationCard() {
                       onChange={(e) =>
                         handleInputChange("password", e.target.value)
                       }
-                      className="pl-10 pr-10 bg-white/10 border-foreground/50  placeholder: focus:border-white/40 focus:ring-white/20"
+                      className="pl-10 pr-10 bg-white/10  placeholder: focus:border-white/40 focus:ring-white/20"
                       placeholder="Enter new password"
                       required
                     />
@@ -615,7 +615,7 @@ export default function AuthenticationCard() {
                       onChange={(e) =>
                         handleInputChange("confirmPassword", e.target.value)
                       }
-                      className="pl-10 pr-10 bg-white/10 border-foreground/50 placeholder: focus:border-white/40 focus:ring-white/20"
+                      className="pl-10 pr-10 bg-white/10 placeholder: focus:border-white/40 focus:ring-white/20"
                       placeholder="Confirm new password"
                       required
                     />
@@ -680,7 +680,7 @@ export default function AuthenticationCard() {
                       type="text"
                       value={digit}
                       onChange={(e) => handleOtpChange(index, e.target.value)}
-                      className="w-12 h-12 text-center text-lg font-semibold bg-white/10 border-foreground/50 focus:border-white/40 focus:ring-white/20 rounded-xl"
+                      className="w-12 h-12 text-center text-lg font-semibold bg-white/10 focus:border-white/40 focus:ring-white/20 rounded-xl"
                       maxLength={1}
                     />
                   ))}

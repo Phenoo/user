@@ -4,6 +4,7 @@ import { useConvexAuth, useQuery } from "convex/react";
 import { useRouter } from "next/navigation";
 import HeaderComponent from "./(dashboard)/components/header";
 import { api } from "@/convex/_generated/api";
+import LoadingComponent from "@/components/loader";
 
 export default function DashboardLayout({
   children,
@@ -15,11 +16,7 @@ export default function DashboardLayout({
   const user = useQuery(api.users.currentUser);
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
+    return <LoadingComponent />;
   }
 
   if (!isAuthenticated) {
@@ -28,11 +25,7 @@ export default function DashboardLayout({
   }
 
   if (user === undefined) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
+    return <LoadingComponent />;
   }
 
   if (!user?.isOnboarding) {

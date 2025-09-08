@@ -30,73 +30,6 @@ const navLinks = [
   },
 ];
 
-// export function Navigation() {
-//   const pathname = usePathname();
-//   const [activeIndex, setActiveIndex] = useState(0);
-
-//   useEffect(() => {
-//     const index = navLinks.findIndex((link) => link.link === pathname);
-//     if (index !== -1) {
-//       setActiveIndex(index);
-//     }
-//   }, [pathname]);
-
-//   return (
-//     <nav className="relative flex gap-1 w-fit bg-white p-1 rounded-3xl shadow-lg border border-gray-100">
-//       <motion.div
-//         className="absolute top-1 bottom-1 bg-gray-100 rounded-3xl"
-//         initial={false}
-//         animate={{
-//           left: `${activeIndex * 25}%`,
-//           width: "25%",
-//         }}
-//         transition={{
-//           type: "spring",
-//           stiffness: 300,
-//           damping: 30,
-//         }}
-//       />
-
-//       {navLinks.map((item, index) => {
-//         const Icon = item.icon;
-//         const isActive = pathname === item.link;
-
-//         return (
-//           <Link
-//             key={item.name}
-//             href={item.link}
-//             className={cn(
-//               "relative flex items-center gap-1 px-4 py-2 rounded-3xl text-sm font-medium transition-all duration-200 ease-in-out z-10",
-//               "hover:text-foreground",
-//               isActive
-//                 ? "text-foreground"
-//                 : "text-muted-foreground hover:text-foreground"
-//             )}
-//           >
-//             <Icon
-//               className={cn(
-//                 "h-5 w-5 transition-transform duration-200",
-//                 isActive && "scale-110"
-//               )}
-//             />
-//             {isActive && (
-//               <motion.span
-//                 className="relative whitespace-nowrap"
-//                 initial={{ opacity: 0, width: 0 }}
-//                 animate={{ opacity: 1, width: "auto" }}
-//                 exit={{ opacity: 0, width: 0 }}
-//                 transition={{ duration: 0.2 }}
-//               >
-//                 {item.name}
-//               </motion.span>
-//             )}
-//           </Link>
-//         );
-//       })}
-//     </nav>
-//   );
-// }
-
 export function Navigation() {
   const pathname = usePathname();
   return (
@@ -149,7 +82,6 @@ export function MobileNavigation() {
         {navLinks.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.link;
-
           return (
             <Link
               key={item.name}
@@ -157,14 +89,14 @@ export function MobileNavigation() {
               className={cn(
                 "relative flex items-center gap-1 px-4 py-2 rounded-3xl text-sm font-medium transition-colors duration-200 ease-in-out",
                 isActive
-                  ? "text-foreground"
+                  ? "text-foreground font-bold"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
               {isActive && (
                 <motion.div
                   layoutId="active-pill"
-                  className="absolute inset-0 rounded-3xl bg-[#ddd] dark:bg-[#222]"
+                  className="absolute inset-0 w-full h-full rounded-3xl bg-[#ddd] dark:bg-[#222]"
                   transition={{
                     type: "spring",
                     stiffness: 500,

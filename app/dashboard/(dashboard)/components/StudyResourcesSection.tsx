@@ -5,7 +5,7 @@ const StudyResourcesSection = () => {
     <div className="">
       {" "}
       {/* Overall padding for the section */}
-      <h2 className="text-2xl font-bold  mb-6">Study Resources</h2>
+      <h2 className="text-2xl font-bold   mb-6">Study Resources</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {/* Documents Card */}
         <div className="relative w-full h-48 rounded-xl p-6 shadow-lg overflow-hidden bg-card  flex flex-col justify-between">
@@ -26,11 +26,11 @@ const StudyResourcesSection = () => {
                 ></path>
               </svg>
             </div>
-            <h3 className="text-lg font-semibold text-gray-800">Documents</h3>
+            <h3 className="text-lg font-semibold text-foreground">Documents</h3>
           </div>
 
           <div className="mt-4">
-            <p className="text-gray-600 text-sm">
+            <p className="text-foreground/50 text-sm">
               Access your notes, lectures, and reading materials.
             </p>
           </div>

@@ -17,7 +17,7 @@ export function ModeToggle() {
 
   return (
     <Button
-      className="rounded-full bg-[#ddd] dark:bg-[#222] w-12 h-12"
+      className="rounded-full  bg-transparent w-12 h-12"
       onClick={() => {
         if (theme === "dark") {
           setTheme("light");

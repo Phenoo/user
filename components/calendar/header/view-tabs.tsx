@@ -31,7 +31,7 @@ function Views() {
 
   return (
     <div className="gap-4  w-full">
-      <div className="h-auto  flex flex-row gap-4 rounded-3xl bg-white dark:bg-neutral-900 p-1 w-full">
+      <div className="h-auto  flex flex-row gap-1 rounded-3xl bg-muted dark:bg-neutral-900 p-1 w-full">
         {tabs.map(({ icon: Icon, name, value }) => {
           const isActive = view === value;
 
@@ -40,7 +40,7 @@ function Views() {
               key={value}
               layout
               className={cn(
-                "flex h-12 items-center rounded-3xl cursor-pointer justify-center overflow-hidden  transition-all",
+                "flex h-10 items-center rounded-3xl cursor-pointer justify-center overflow-hidden  transition-all",
                 isActive
                   ? "bg-red-400 text-white font-bold"
                   : "hover:bg-rose-300"
