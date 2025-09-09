@@ -17,7 +17,7 @@
   --secondary-foreground: oklch(1 0 0); /* #ffffff */
   --muted: oklch(0.98 0 0); /* #f9fafb */
   --muted-foreground: oklch(0.35 0 0); /* #4b5563 */
-  --accent: oklch(0.75 0.12 3220); /* soft purple accent */
+  --accent: #ef6438; /* soft purple accent */
   --accent-foreground: oklch(1 0 0); /* #ffffff */
   --destructive: oklch(0.6 0.2 25); /* #ea580c */
   --destructive-foreground: oklch(1 0 0); /* #ffffff */
@@ -54,7 +54,8 @@
   --secondary-foreground: oklch(0.95 0 0);
   --muted: oklch(0.18 0.02 320);
   --muted-foreground: oklch(0.7 0 0);
-  --accent: oklch(0.6 0.15 320); /* brighter purple for dark mode */
+  --accent: #ef6438; /* soft purple accent */
+  /* --accent: oklch(0.6 0.15 320);  */
   --accent-foreground: oklch(0.95 0 0);
   --destructive: oklch(0.65 0.2 25);
   --destructive-foreground: oklch(0.95 0 0);
@@ -135,6 +136,20 @@ h1, h2, h3, h5, h4, h6 {
 p, button, span, input, label, div {
   font-family: var(--font-sans), sans-serif;
   font-optical-sizing: auto;
+}
+
+
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--foreground)/0.1);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--background));
 }
 
 .cardcalendar {

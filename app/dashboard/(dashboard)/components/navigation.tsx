@@ -3,9 +3,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, BookOpen, BarChart3 } from "lucide-react";
+import { LayoutDashboard, BarChart3 } from "lucide-react";
 import { motion } from "framer-motion";
 import { PiBrainLight } from "react-icons/pi";
+import { IoCalendarOutline } from "react-icons/io5";
+import { MdMenuBook } from "react-icons/md";
 
 const navLinks = [
   {
@@ -14,9 +16,14 @@ const navLinks = [
     icon: LayoutDashboard,
   },
   {
+    name: "Courses",
+    link: "/dashboard/courses",
+    icon: MdMenuBook,
+  },
+  {
     name: "Study",
-    link: "/dashboard/study",
-    icon: BookOpen,
+    link: "/dashboard/schedule",
+    icon: IoCalendarOutline,
   },
   {
     name: "Flashcards",
@@ -33,7 +40,7 @@ const navLinks = [
 export function Navigation() {
   const pathname = usePathname();
   return (
-    <nav className="hidden md:flex gap-1 w-[310px] backdrop-blur-md bg-glass p-1 justify-between rounded-3xl relative">
+    <nav className="hidden md:flex gap-1 w-[380px] backdrop-blur-md bg-glass p-1 justify-between rounded-3xl relative">
       {navLinks.map((item) => {
         const Icon = item.icon;
         const isActive = pathname === item.link;
@@ -52,7 +59,7 @@ export function Navigation() {
             {isActive && (
               <motion.div
                 layoutId="active-pill"
-                className="absolute inset-0 rounded-3xl bg-[#ddd] dark:bg-[#222] "
+                className="absolute inset-0 w-full h-full rounded-3xl bg-gray-200 dark:bg-gray-700" // Example
                 transition={{
                   type: "spring",
                   stiffness: 500,
@@ -77,10 +84,11 @@ export function Navigation() {
 export function MobileNavigation() {
   const pathname = usePathname();
   return (
-    <div className="fixed bottom-4 z-10 p-4 w-full">
-      <nav className="md:hidden    flex gap-1 w-[310px] mx-auto bg-glass p-1 justify-between rounded-3xl relative">
+    <div className="fixed bottom-4 z-10  w-full">
+      <nav className="md:hidden    flex gap-1 w-[330px] mx-auto bg-glass p-1 justify-between rounded-3xl relative">
         {navLinks.map((item) => {
           const Icon = item.icon;
+
           const isActive = pathname === item.link;
           return (
             <Link
@@ -96,7 +104,7 @@ export function MobileNavigation() {
               {isActive && (
                 <motion.div
                   layoutId="active-pill"
-                  className="absolute inset-0 w-full h-full rounded-3xl bg-[#ddd] dark:bg-[#222]"
+                  className="absolute inset-0 w-full h-full rounded-3xl bg-gray-200 dark:bg-gray-700" // Example
                   transition={{
                     type: "spring",
                     stiffness: 500,

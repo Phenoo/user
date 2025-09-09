@@ -598,7 +598,7 @@ export function MainOnboarding() {
                 <Button
                   onClick={async () => {
                     await saveProgress({ ...formData, isOnboarding: true });
-                    router.push("/dashboard");
+                    router.push("/dashboard/pricing");
                   }}
                   className="px-6 bg-primary hover:bg-primary/90"
                 >
