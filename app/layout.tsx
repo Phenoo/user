@@ -18,7 +18,10 @@ const lato = Lato({
 });
 
 export const metadata: Metadata = {
-  title: "Usoro - Study",
+  title: {
+    template: "%s | Usoro - Study",
+    default: "Usoro - Study",
+  },
   description:
     "Student Management System, which centralises academic planning and make students focus on what really matters.",
 };
@@ -30,24 +33,20 @@ export default function RootLayout({
 }>) {
   return (
     <ConvexAuthNextjsServerProvider>
-      <html lang="en">
-        <body>
+      <html lang="en" suppressHydrationWarning>
+        <body className={`antialiased ${urbanist.className} ${lato.className}`}>
           <ConvexClientProvider>
-            <body
-              className={`antialiased ${urbanist.className} ${lato.className}`}
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="system"
+              enableSystem
+              disableTransitionOnChange
+              enableColorScheme
             >
-              <ThemeProvider
-                attribute="class"
-                defaultTheme="system"
-                enableSystem
-                disableTransitionOnChange
-                enableColorScheme
-              >
-                {children}
-                <ModalProvider />
-                <Toaster />
-              </ThemeProvider>
-            </body>
+              {children}
+              <ModalProvider />
+              <Toaster />
+            </ThemeProvider>
           </ConvexClientProvider>
         </body>
       </html>

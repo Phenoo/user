@@ -1,5 +1,10 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import {
+  internalMutation,
+  internalQuery,
+  mutation,
+  query,
+} from "./_generated/server";
 import { auth } from "./auth";
 
 export const currentUser = query({
@@ -38,6 +43,7 @@ export const updateUser = mutation({
     }
 
     const existingUser = await ctx.db.get(args.userId);
+
     if (!existingUser) {
       return {
         success: false,
@@ -67,5 +73,85 @@ export const getById = query({
   args: { id: v.id("users") },
   handler: async (ctx, args) => {
     return await ctx.db.get(args.id);
+  },
+});
+
+export const getUserById = internalQuery({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.userId);
+  },
+});
+
+export const getUserByStripeCustomerId = query({
+  args: { stripeCustomerId: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("users")
+      .withIndex("by_stripe_customer", (q) =>
+        q.eq("stripeCustomerId", args.stripeCustomerId)
+      )
+      .first();
+  },
+});
+
+//update subscription
+export const updateSubscription = internalMutation({
+  args: {
+    subscriptionId: v.string(),
+    userId: v.id("users"),
+    endsOn: v.number(),
+    subscriptionStatus: v.optional(
+      v.union(
+        v.literal("active"),
+        v.literal("canceled"),
+        v.literal("incomplete"),
+        v.literal("incomplete_expired"),
+        v.literal("past_due"),
+        v.literal("trialing"),
+        v.literal("unpaid")
+      )
+    ),
+    subscriptionPlan: v.optional(
+      v.union(
+        v.literal("FREE"),
+        v.literal("STUDENT"),
+        v.literal("STUDENTPRO"),
+        v.literal("STUDENTPRO_YEAR"),
+        v.literal("STUDENT_YEAR")
+      )
+    ),
+  },
+  handler: async (
+    ctx,
+    { subscriptionId, userId, endsOn, subscriptionPlan, subscriptionStatus }
+  ) => {
+    await ctx.db.patch(userId, {
+      subscriptionId: subscriptionId,
+      endsOn: endsOn,
+      subscriptionPlan: subscriptionPlan,
+      subscriptionStatus: subscriptionStatus,
+    });
+  },
+});
+
+//update subscription by id
+export const updateSubscriptionById = internalMutation({
+  args: { subscriptionId: v.string(), endsOn: v.number() },
+  handler: async (ctx, { subscriptionId, endsOn }) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_subscriptionId", (q) =>
+        q.eq("subscriptionId", subscriptionId)
+      )
+      .unique();
+
+    if (!user) {
+      throw new Error("User not found!");
+    }
+
+    await ctx.db.patch(user._id, {
+      endsOn: endsOn,
+    });
   },
 });

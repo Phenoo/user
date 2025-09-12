@@ -8,6 +8,8 @@ export type PLAN = {
   buttonText: string;
   features: string[];
   link: string;
+  monthlyId: string;
+  yearlyId: string;
 };
 
 export const PLANS: PLAN[] = [
@@ -18,6 +20,8 @@ export const PLANS: PLAN[] = [
     monthlyPrice: 5,
     annuallyPrice: 54,
     buttonText: "Get Starter",
+    monthlyId: process.env.NEXT_PUBLIC_STRIPE_STUDENT_PRICE_ID!,
+    yearlyId: process.env.STRIPE_STUDENT_YEARLY_PRICE_ID!,
     features: [
       "Task manager & to-do lists",
       "Basic study planner",
@@ -30,13 +34,15 @@ export const PLANS: PLAN[] = [
     link: "#",
   },
   {
-    id: "pro",
+    id: "",
     title: "Pro",
     desc: "Best for ambitious students who want advanced tools to manage studies, notes, and exams efficiently.",
     monthlyPrice: 12,
     annuallyPrice: 120,
     badge: "Most Popular",
     buttonText: "Upgrade to Pro",
+    monthlyId: process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID!,
+    yearlyId: process.env.NEXT_PUBLIC_STRIPE_PRO_YEARLY_PRICE_ID!,
     features: [
       "Unlimited subjects/courses",
       "Advanced study planner with smart scheduling",
@@ -48,26 +54,44 @@ export const PLANS: PLAN[] = [
     ],
     link: "#",
   },
-  {
-    id: "scholar",
-    title: "Scholar",
-    desc: "Designed for students who want the ultimate productivity system with AI-powered assistance.",
-    monthlyPrice: 25,
-    annuallyPrice: 250,
-    badge: "AI Powered",
-    buttonText: "Upgrade to Scholar",
-    features: [
-      "Everything in Pro",
-      "AI study assistant (summaries, flashcards, quizzes)",
-      "Essay & assignment drafting help",
-      "Smart exam prep dashboard",
-      "Unlimited cloud notes & storage",
-      "Cross-platform integrations (Google, Notion, etc.)",
-      "24/7 priority chat support",
-    ],
-    link: "#",
-  },
+  // {
+  //   id: "scholar",
+  //   title: "Scholar",
+  //   desc: "Designed for students who want the ultimate productivity system with AI-powered assistance.",
+  //   monthlyPrice: 25,
+  //   annuallyPrice: 250,
+  //   badge: "AI Powered",
+  //   monthlyId: process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID!,
+  //   yearlyId: process.env.NEXT_PUBLIC_STRIPE_PRO_YEARLY_PRICE_ID!,
+  //   buttonText: "Upgrade to Scholar",
+  //   features: [
+  //     "Everything in Pro",
+  //     "AI study assistant (summaries, flashcards, quizzes)",
+  //     "Essay & assignment drafting help",
+  //     "Smart exam prep dashboard",
+  //     "Unlimited cloud notes & storage",
+  //     "Cross-platform integrations (Google, Notion, etc.)",
+  //     "24/7 priority chat support",
+  //   ],
+  //   link: "#",
+  // },
 ];
+
+export function getPlan(priceId: string) {
+  let message;
+  switch (priceId) {
+    case process.env.NEXT_PUBLIC_STRIPE_STUDENT_PRICE_ID:
+      message = "STUDENT";
+    case process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID:
+      message = "STUDENTPRO";
+    case process.env.NEXT_PUBLIC_STRIPE_STUDENT_YEARLY_PRICE_ID:
+      message = "STUDENT_YEAR";
+    case process.env.NEXT_PUBLIC_STRIPE_PRO_YEARLY_PRICE_ID:
+      message = "STUDENTPRO_YEAR";
+  }
+
+  return message;
+}
 
 export const PLANS_FAQ = [
   {

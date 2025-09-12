@@ -16,7 +16,12 @@ import type {
 import type * as ResendOTP from "../ResendOTP.js";
 import type * as ResendOTPPasswordReset from "../ResendOTPPasswordReset.js";
 import type * as auth from "../auth.js";
+import type * as courses from "../courses.js";
+import type * as flashcards from "../flashcards.js";
 import type * as http from "../http.js";
+import type * as stripe from "../stripe.js";
+import type * as studyGroups from "../studyGroups.js";
+import type * as subscriptions from "../subscriptions.js";
 import type * as users from "../users.js";
 
 /**
@@ -31,7 +36,12 @@ declare const fullApi: ApiFromModules<{
   ResendOTP: typeof ResendOTP;
   ResendOTPPasswordReset: typeof ResendOTPPasswordReset;
   auth: typeof auth;
+  courses: typeof courses;
+  flashcards: typeof flashcards;
   http: typeof http;
+  stripe: typeof stripe;
+  studyGroups: typeof studyGroups;
+  subscriptions: typeof subscriptions;
   users: typeof users;
 }>;
 export declare const api: FilterApi<

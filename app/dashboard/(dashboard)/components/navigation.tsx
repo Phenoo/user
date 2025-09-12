@@ -52,7 +52,7 @@ export function Navigation() {
             className={cn(
               "relative flex items-center gap-1 px-4 py-2 rounded-3xl text-sm font-medium transition-colors duration-200 ease-in-out",
               isActive
-                ? "text-foreground"
+                ? "text-foreground bg-gray-200 dark:bg-gray-700"
                 : "text-muted-foreground hover:text-foreground"
             )}
           >

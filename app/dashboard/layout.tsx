@@ -19,13 +19,13 @@ export default function DashboardLayout({
     return <LoadingComponent />;
   }
 
+  if (user === undefined || isLoading) {
+    return <LoadingComponent />;
+  }
+
   if (!isAuthenticated) {
     router.push("/auth");
     return null;
-  }
-
-  if (user === undefined) {
-    return <LoadingComponent />;
   }
 
   if (!user?.isOnboarding) {

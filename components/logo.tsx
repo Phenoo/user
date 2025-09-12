@@ -1,3 +1,4 @@
+"use client";
 import { useConvexAuth } from "convex/react";
 import Link from "next/link";
 import React from "react";

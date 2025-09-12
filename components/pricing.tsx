@@ -8,6 +8,9 @@ import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
 import Container from "./container";
 import { PLAN, PLANS } from "@/constants/plans";
+import { useAction } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { useRouter } from "next/navigation";
 
 type Plan = "monthly" | "annually";
 
@@ -19,7 +22,7 @@ const Pricing = () => {
   };
 
   return (
-    <div className="relative flex flex-col items-center justify-center w-full  mx-auto">
+    <div className="relative flex flex-col items-center justify-center w-full  mx-auto mb-8">
       <div className="flex flex-col items-center justify-center max-w-2xl mx-auto">
         <div className="flex flex-col items-center text-center max-w-2xl mx-auto">
           <h2 className="text-2xl md:text-4xl  font-heading font-medium !leading-snug mt-6">
@@ -51,7 +54,7 @@ const Pricing = () => {
         </div>
       </div>
 
-      <div className="grid w-full grid-cols-1 lg:grid-cols-3 md:grid-cols-2 pt-8 lg:pt-12 gap-4 lg:gap-6 max-w-7xl mx-auto">
+      <div className="grid w-full grid-cols-1 lg:grid-cols-2 md:grid-cols-2 pt-8 lg:pt-12 gap-4 lg:gap-6 max-w-4xl mx-auto">
         {PLANS.map((plan, idx) => (
           <Plan key={plan.id} plan={plan} billPlan={billPlan} />
         ))}
@@ -61,6 +64,17 @@ const Pricing = () => {
 };
 
 const Plan = ({ plan, billPlan }: { plan: PLAN; billPlan: Plan }) => {
+  const router = useRouter();
+  const upgrade = useAction(api.stripe.pay);
+
+  const handleBuy = async () => {
+    const url = await upgrade({
+      price: billPlan === "monthly" ? plan.monthlyId : plan.yearlyId,
+    });
+    if (!url) return;
+    router.push(url);
+  };
+
   return (
     <div
       className={cn(
@@ -101,6 +115,7 @@ const Plan = ({ plan, billPlan }: { plan: PLAN; billPlan: Plan }) => {
           size="lg"
           variant={plan.title === "Starter" ? "blue" : "default"}
           className="w-full"
+          onClick={handleBuy}
         >
           {plan.buttonText}
         </Button>

@@ -343,7 +343,9 @@ export function StudentDashboard() {
                 </div>
               ))}
 
-              <Button>View all</Button>
+              <Link href={"/dashboard/study-groups"}>
+                <Button>View all</Button>
+              </Link>
             </CardContent>
           </Card>
         </div>

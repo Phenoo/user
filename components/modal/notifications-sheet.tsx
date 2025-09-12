@@ -112,13 +112,13 @@ const NotificationsSheet = () => {
         </SheetHeader>
         <div className="h-full flex flex-col">
           {/* Notification Tabs */}
-          <div className="flex justify-around p-2 border-b border-gray-200 bg-gray-50">
+          <div className="flex justify-around p-2 border-b gap-1 border-accent-foreground bg-background">
             <button
               className={`flex-1 text-center py-2 px-4 rounded-3xl text-sm font-medium ${activeTab === "all" ? "bg-white shadow text-gray-900" : "text-gray-600 hover:bg-gray-100"}`}
               onClick={() => setActiveTab("all")}
             >
               All{" "}
-              <span className="ml-1 px-2 py-0.5 rounded-full bg-gray-200 text-xs font-semibold">
+              <span className="ml-1 px-2 py-0.5 rounded-full text-xs font-semibold">
                 {allCount}
               </span>
             </button>
@@ -127,7 +127,7 @@ const NotificationsSheet = () => {
               onClick={() => setActiveTab("unread")}
             >
               Unread{" "}
-              <span className="ml-1 px-2 py-0.5 rounded-full bg-gray-200 text-xs font-semibold">
+              <span className="ml-1 px-2 py-0.5 rounded-full  text-xs font-semibold">
                 {unreadCount}
               </span>
             </button>
@@ -136,24 +136,29 @@ const NotificationsSheet = () => {
               onClick={() => setActiveTab("read")}
             >
               Read{" "}
-              <span className="ml-1 px-2 py-0.5 rounded-full bg-gray-200 text-xs font-semibold">
+              <span className="ml-1 px-2 py-0.5 rounded-full  text-xs font-semibold">
                 {readCount}
               </span>
             </button>
           </div>
 
           {/* Notification List */}
-          <div className="flex-grow overflow-y-auto p-4 space-y-4 divide-y divide-y-accent">
+          <div className="flex-grow overflow-y-auto p-4 space-y-4 divide-y divide-accent dark:divide-gray-700">
             {filteredNotifications.map((notification) => (
               <div
                 key={notification.id}
-                className={`flex items-start p-3 rounded-lg ${!notification.read ? "bg-indigo-50" : "hover:bg-gray-50"}`}
+                className={`flex items-start p-3 rounded-lg transition ${
+                  !notification.read
+                    ? "bg-indigo-50 dark:bg-indigo-900/40"
+                    : "hover:bg-gray-50 dark:hover:bg-gray-800"
+                }`}
               >
+                {/* Message type */}
                 {notification.type === "message" && (
                   <div className="relative w-8 h-8 mr-3">
                     <Image
                       src={notification.avatar || "placeholder.jpg"}
-                      alt={notification.sender || "notifcation sender"}
+                      alt={notification.sender || "notification sender"}
                       layout="fill"
                       objectFit="cover"
                       className="rounded-full"
@@ -163,11 +168,13 @@ const NotificationsSheet = () => {
                     )}
                   </div>
                 )}
+
+                {/* Tip type */}
                 {notification.type === "tip" && (
-                  <div className="relative w-8 h-8 mr-3 bg-green-100 rounded-full flex items-center justify-center">
+                  <div className="relative w-8 h-8 mr-3 bg-green-100 dark:bg-green-900/40 rounded-full flex items-center justify-center">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
-                      className="h-4 w-4 text-green-600"
+                      className="h-4 w-4 text-green-600 dark:text-green-400"
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
@@ -184,11 +191,13 @@ const NotificationsSheet = () => {
                     )}
                   </div>
                 )}
+
+                {/* Progress type */}
                 {notification.type === "progress" && (
-                  <div className="relative w-8 h-8 mr-3 bg-purple-100 rounded-full flex items-center justify-center">
+                  <div className="relative w-8 h-8 mr-3 bg-purple-100 dark:bg-purple-900/40 rounded-full flex items-center justify-center">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
-                      className="h-4 w-4 text-purple-600"
+                      className="h-4 w-4 text-purple-600 dark:text-purple-400"
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
@@ -205,11 +214,13 @@ const NotificationsSheet = () => {
                     )}
                   </div>
                 )}
+
+                {/* Reflection type */}
                 {notification.type === "reflection" && (
-                  <div className="relative w-8 h-8 mr-3 bg-yellow-100 rounded-full flex items-center justify-center">
+                  <div className="relative w-8 h-8 mr-3 bg-yellow-100 dark:bg-yellow-900/40 rounded-full flex items-center justify-center">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
-                      className="h-4 w-4 text-yellow-600"
+                      className="h-4 w-4 text-yellow-600 dark:text-yellow-400"
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
@@ -227,38 +238,31 @@ const NotificationsSheet = () => {
                   </div>
                 )}
 
+                {/* Text content */}
                 <div className="flex-1">
                   {notification.type === "message" && (
-                    <p className="text-sm text-gray-900 font-medium">
+                    <p className="text-sm text-gray-900 dark:text-gray-100 font-medium">
                       <span className="font-semibold">
                         {notification.sender}
                       </span>{" "}
-                      sent a new message in the chat "
+                      sent a new message in the chat{" "}
                       <span className="font-semibold">Conflict resolution</span>
-                      "
                     </p>
                   )}
-                  {notification.type === "tip" && (
-                    <p className="text-sm text-gray-900 font-medium">
-                      {notification.message}
-                    </p>
-                  )}
-                  {notification.type === "progress" && (
-                    <p className="text-sm text-gray-900 font-medium">
-                      {notification.message}
-                    </p>
-                  )}
-                  {notification.type === "reflection" && (
-                    <p className="text-sm text-gray-900 font-medium">
+                  {(notification.type === "tip" ||
+                    notification.type === "progress" ||
+                    notification.type === "reflection") && (
+                    <p className="text-sm text-gray-900 dark:text-gray-100 font-medium">
                       {notification.message}
                     </p>
                   )}
 
-                  <p className="text-xs text-gray-500 my-1">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 my-1">
                     {notification.time}
                   </p>
+
                   {notification.type === "message" && (
-                    <p className="text-sm text-gray-700 mt-1">
+                    <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">
                       "{notification.message}"
                     </p>
                   )}

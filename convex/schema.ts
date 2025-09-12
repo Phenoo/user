@@ -24,22 +24,59 @@ const schema = defineSchema({
     reminderPreference: v.optional(v.string()),
     studyTime: v.optional(v.string()),
     schoolEmail: v.optional(v.string()),
+    stripeCustomerId: v.optional(v.string()),
+    updatedAt: v.optional(v.number()),
+    endsOn: v.optional(v.number()),
+    subscriptionId: v.optional(v.string()),
+    subscriptionPlan: v.optional(
+      v.union(
+        v.literal("FREE"),
+        v.literal("STUDENT"),
+        v.literal("STUDENTPRO"),
+        v.literal("STUDENTPRO_YEAR"),
+        v.literal("STUDENT_YEAR")
+      )
+    ),
+    subscriptionStatus: v.optional(
+      v.union(
+        v.literal("active"),
+        v.literal("canceled"),
+        v.literal("incomplete"),
+        v.literal("incomplete_expired"),
+        v.literal("past_due"),
+        v.literal("trialing"),
+        v.literal("unpaid")
+      )
+    ),
+    subscriptionCancelAtPeriodEnd: v.optional(v.boolean()),
   })
     .index("email", ["email"])
     .index("by_name", ["name"])
+    .index("by_stripe_customer", ["stripeCustomerId"])
+    .index("by_subscriptionId", ["subscriptionId"])
     .index("by_school", ["school"])
     .index("by_location", ["location"]),
+  subscriptionEvents: defineTable({
+    userId: v.id("users"),
+    stripeEventId: v.string(),
+    eventType: v.string(),
+    subscriptionId: v.optional(v.string()),
+    customerId: v.optional(v.string()),
+    processed: v.boolean(),
+    data: v.any(), // Store the full Stripe event data
+    createdAt: v.number(),
+  })
+    .index("by_stripe_event", ["stripeEventId"])
+    .index("by_user", ["userId"]),
   courses: defineTable({
     userId: v.id("users"), // Link to the user who owns this course
     name: v.string(), // e.g., "Introduction to Programming"
     code: v.string(), // e.g., "CS101"
     academicYear: v.string(), // e.g., "2024-2025"
     session: v.string(), // e.g., "Fall", "Spring", "Summer"
-    professor: v.string(), // e.g., "Prof. J. Smith"
+    instructor: v.string(), // e.g., "Prof. J. Smith"
     credits: v.number(),
     description: v.optional(v.string()),
-    startDate: v.number(), // Unix timestamp for start date
-    endDate: v.number(), // Unix timestamp for end date
     lmsLink: v.optional(v.string()), // Learning Management System link
     colorTag: v.optional(v.string()), // Hex color or predefined color name for visual ID
     status: v.union(
@@ -50,7 +87,19 @@ const schema = defineSchema({
   })
     .index("by_userId", ["userId"])
     .index("by_userId_academicYear", ["userId", "academicYear"])
-    .index("by_userId_session", ["userId", "session"]),
+    .index("by_userId_session", ["userId", "session"])
+    .index("by_userId_academicYear_session_code", [
+      "userId",
+      "academicYear",
+      "session",
+      "code",
+    ])
+    .index("by_userId_academicYear_session_name", [
+      "userId",
+      "academicYear",
+      "session",
+      "name",
+    ]),
 
   // --- Schedules Collection (Course-specific schedule items) ---
   schedules: defineTable({
@@ -85,68 +134,122 @@ const schema = defineSchema({
 
   // --- Study Groups Collection ---
   studyGroups: defineTable({
-    userId: v.id("users"), // The user who created the group
-    courseId: v.id("courses"), // The course this study group is for
-    name: v.string(), // e.g., "Python Basics Group"
-    description: v.optional(v.string()),
-    members: v.array(v.id("users")), // Array of user IDs who are members
-    schedule: v.optional(
-      v.object({
-        // Optional recurring schedule for the group
-        dayOfWeek: v.union(
-          v.literal("Monday"),
-          v.literal("Tuesday"),
-          v.literal("Wednesday"),
-          v.literal("Thursday"),
-          v.literal("Friday"),
-          v.literal("Saturday"),
-          v.literal("Sunday")
-        ),
-        time: v.string(), // e.g., "19:00"
-        frequency: v.optional(
-          v.union(
-            v.literal("weekly"),
-            v.literal("bi-weekly"),
-            v.literal("ad-hoc")
-          )
-        ),
-      })
+    name: v.string(),
+    courseId: v.id("courses"),
+    description: v.string(),
+    organizerId: v.id("users"),
+    maxMembers: v.number(),
+    currentMembers: v.number(),
+    meetingType: v.union(
+      v.literal("In-Person"),
+      v.literal("Online"),
+      v.literal("Hybrid")
     ),
-    meetingLink: v.optional(v.string()), // Zoom, Google Meet link
-    status: v.union(v.literal("active"), v.literal("archived")),
+    location: v.string(),
+    meetingSchedule: v.string(),
+    googleCalendarLink: v.optional(v.string()),
+    zoomLink: v.optional(v.string()),
+    tags: v.array(v.string()),
+    rating: v.number(),
+    ratingCount: v.number(),
+    isActive: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
   })
-    .index("by_courseId", ["courseId"])
-    .index("by_userId", ["userId"]) // For finding groups created by a user
-    .index("by_member_userId", ["members"]), // For finding groups a user is part of
+    .index("by_course", ["courseId"])
+    .index("by_organizer", ["organizerId"]),
 
-  // --- Flashcards and Flashcard Decks Collection ---
-  flashcardDecks: defineTable({
+  // Study Group Memberships
+  studyGroupMembers: defineTable({
+    studyGroupId: v.id("studyGroups"),
     userId: v.id("users"),
-    courseId: v.id("courses"), // Link to the course this deck is for
-    name: v.string(), // e.g., "Module 1: Basic Syntax"
-    description: v.optional(v.string()),
-    tags: v.array(v.string()), // e.g., ["Python", "Variables", "Functions"]
-    lastReviewed: v.optional(v.number()), // Unix timestamp
+    role: v.union(v.literal("organizer"), v.literal("member")),
+    joinedAt: v.number(),
+    contributions: v.number(),
+    isActive: v.boolean(),
   })
+    .index("by_group", ["studyGroupId"])
+    .index("by_user", ["userId"])
+    .index("by_group_user", ["studyGroupId", "userId"]),
+
+  // Study Group Messages
+  studyGroupMessages: defineTable({
+    studyGroupId: v.id("studyGroups"),
+    userId: v.id("users"),
+    message: v.string(),
+    messageType: v.union(
+      v.literal("text"),
+      v.literal("file"),
+      v.literal("link")
+    ),
+    fileUrl: v.optional(v.string()),
+    fileName: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+    .index("by_group", ["studyGroupId"])
+    .index("by_group_time", ["studyGroupId", "createdAt"]),
+
+  // Study Group Resources
+  studyGroupResources: defineTable({
+    studyGroupId: v.id("studyGroups"),
+    uploadedBy: v.id("users"),
+    name: v.string(),
+    type: v.union(
+      v.literal("pdf"),
+      v.literal("doc"),
+      v.literal("link"),
+      v.literal("video")
+    ),
+    url: v.string(),
+    size: v.optional(v.string()),
+    description: v.optional(v.string()),
+    createdAt: v.number(),
+  }).index("by_group", ["studyGroupId"]),
+  // --- Flashcards and Flashcard Decks Collection ---
+
+  flashcardDecks: defineTable({
+    name: v.string(),
+    description: v.string(),
+    courseId: v.optional(v.id("courses")),
+    createdBy: v.id("users"),
+    subject: v.string(),
+    difficulty: v.optional(
+      v.union(v.literal("Easy"), v.literal("Medium"), v.literal("Hard"))
+    ),
+    totalCards: v.number(),
+    masteredCards: v.number(),
+    color: v.string(),
+    isPublic: v.boolean(),
+    tags: v.array(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_creator", ["createdBy"])
     .index("by_courseId", ["courseId"])
-    .index("by_userId", ["userId"]),
+    .index("by_public", ["isPublic"]),
 
   flashcards: defineTable({
     userId: v.id("users"),
     deckId: v.id("flashcardDecks"),
-    question: v.string(),
-    answer: v.string(),
-    difficulty: v.optional(
-      v.union(v.literal("easy"), v.literal("medium"), v.literal("hard"))
+    front: v.string(),
+    back: v.string(),
+    difficulty: v.union(
+      v.literal("Easy"),
+      v.literal("Medium"),
+      v.literal("Hard")
     ),
-    lastReviewed: v.optional(v.number()), // Unix timestamp
-    nextReview: v.optional(v.number()), // Unix timestamp for next review
-    correctCount: v.optional(v.number()),
-    incorrectCount: v.optional(v.number()),
+    timesCorrect: v.number(),
+    timesIncorrect: v.number(),
+    lastStudied: v.optional(v.number()),
+    isMastered: v.boolean(),
+    masteredAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
   })
+    .index("by_userId", ["userId"])
     .index("by_deckId", ["deckId"])
     .index("by_userId_deckId", ["userId", "deckId"]),
-  // But if you need to store specific user-course progress not derivable from other tables:
+
   courseProgress: defineTable({
     userId: v.id("users"),
     courseId: v.id("courses"),
@@ -177,6 +280,35 @@ const schema = defineSchema({
   })
     .index("by_userId", ["userId"])
     .index("by_userId_start", ["userId", "start"]),
+  studyGroupInvites: defineTable({
+    studyGroupId: v.id("studyGroups"),
+    inviteCode: v.string(),
+    expiresAt: v.number(),
+    createdAt: v.number(),
+    usedCount: v.number(),
+    maxUses: v.number(),
+  })
+    .index("by_group", ["studyGroupId"])
+    .index("by_code", ["inviteCode"]),
+
+  studySessions: defineTable({
+    userId: v.id("users"),
+    deckId: v.id("flashcardDecks"),
+    cardsStudied: v.number(),
+    correctAnswers: v.number(),
+    incorrectAnswers: v.number(),
+    accuracy: v.number(),
+    duration: v.number(), // in minutes
+    sessionType: v.union(
+      v.literal("all"),
+      v.literal("unmastered"),
+      v.literal("review")
+    ),
+    createdAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_deck", ["deckId"])
+    .index("by_user_date", ["userId", "createdAt"]),
 });
 
 export default schema;
