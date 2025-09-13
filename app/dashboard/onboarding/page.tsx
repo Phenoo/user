@@ -15,12 +15,12 @@ export default function OnboardingPage() {
     return <LoadingComponent />;
   }
 
-  if (user?.isOnboarding) {
-    router.replace("/dashboard");
-  }
+  // if (user?.isOnboarding) {
+  //   router.replace("/dashboard");
+  // }
 
   return (
-    <main className="min-h-screen bg-background max-w-7xl mx-auto p-4">
+    <main className="min-h-screen bg-background max-w-7xl mx-auto p-0.5 md:p-4">
       <Logo />
       <MainOnboarding />
     </main>

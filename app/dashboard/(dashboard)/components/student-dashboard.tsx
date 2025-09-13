@@ -48,6 +48,7 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import LoadingComponent from "@/components/loader";
 import Link from "next/link";
+import { universities_data } from "../list-universities";
 
 export const data = [
   {
@@ -91,25 +92,6 @@ export function StudentDashboard() {
     { subject: "Biology", count: 24, mastered: 18 },
     { subject: "Chemistry", count: 32, mastered: 20 },
     { subject: "Physics", count: 28, mastered: 25 },
-  ];
-
-  const inspirationalQuotes = [
-    {
-      text: "The expert in anything was once a beginner.",
-      author: "Helen Hayes",
-    },
-    {
-      text: "Education is the most powerful weapon which you can use to change the world.",
-      author: "Nelson Mandela",
-    },
-    {
-      text: "The beautiful thing about learning is that no one can take it away from you.",
-      author: "B.B. King",
-    },
-    {
-      text: "Success is the sum of small efforts repeated day in and day out.",
-      author: "Robert Collier",
-    },
   ];
 
   if (user === undefined) {
@@ -170,7 +152,7 @@ export function StudentDashboard() {
               <CardContent>
                 <div className="flex items-baseline gap-2">
                   <span className="text-3xl font-bold ">3.84</span>
-                  <span className="text-sm text-black/80 font-medium">
+                  <span className="text-sm text-foreground/80 font-medium">
                     +0.12
                   </span>
                 </div>

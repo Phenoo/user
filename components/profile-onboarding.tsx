@@ -31,6 +31,7 @@ import { api } from "@/convex/_generated/api";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
 import { CountryDropdown } from "./country-dropdown";
+import { universities_data } from "@/app/dashboard/(dashboard)/list-universities";
 
 const TOTAL_STEPS = 5;
 
@@ -59,16 +60,23 @@ export function MainOnboarding() {
   const [universities, setUniversities] = useState<any[]>([]);
 
   // Fetch universities whenever country changes
+  // useEffect(() => {
+  //   if (!formData.location) return;
+  //   fetch(
+  //     `http://universities.hipolabs.com/search?country=${formData.location}`
+  //   )
+  //     .then((res) => res.json())
+  //     .then((data) => setUniversities(data))
+  //     .catch((err) => console.error(err));
+  // }, [formData.location]);
   useEffect(() => {
     if (!formData.location) return;
-    fetch(
-      `http://universities.hipolabs.com/search?country=${formData.location}`
-    )
-      .then((res) => res.json())
-      .then((data) => setUniversities(data))
-      .catch((err) => console.error(err));
-  }, [formData.location]);
 
+    const country = universities_data.filter(
+      (item, i) => item.country === formData.location
+    );
+    setUniversities(country);
+  }, [formData.location]);
   const searchParams = useSearchParams();
 
   const updateUser = useMutation(api.users.updateUser);
@@ -144,10 +152,10 @@ export function MainOnboarding() {
               <div className="w-16 h-16 mx-auto bg-primary/10 rounded-full flex items-center justify-center">
                 <User className="w-8 h-8 text-primary" />
               </div>
-              <h1 className="text-3xl font-bold text-foreground">
+              <h1 className="text-xl md:text-3xl font-bold text-foreground">
                 Welcome to StudyFlow
               </h1>
-              <p className="text-lg text-muted-foreground max-w-md mx-auto text-pretty">
+              <p className="text-sm md:text-lg text-muted-foreground max-w-md mx-auto text-pretty">
                 We understand that managing your studies can feel overwhelming.
                 Let's get to know you and create a personalized experience.
               </p>
