@@ -235,29 +235,9 @@ export default function AuthenticationCard() {
     }));
   };
 
-  const getCardHeight = () => {
-    switch (step) {
-      case "login":
-        return "h-[480px]";
-      case "signup":
-        return "h-[680px]";
-      case "forgot-password":
-        return "h-[380px]";
-      case "reset-password":
-        return "h-[520px]";
-      case "otp":
-        return "h-[380px]";
-      case "success":
-        return "h-[320px]";
-      default:
-        return "h-[480px]";
-    }
-  };
-
   const passwordStrength = getPasswordStrength(formData.password);
   const isSignupValid =
     step === "signup" &&
-    formData.name &&
     formData.email &&
     formData.password &&
     formData.confirmPassword &&
