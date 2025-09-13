@@ -11,6 +11,14 @@ import { FcGoogle } from "react-icons/fc";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuthActions } from "@convex-dev/auth/react";
 
+import { REGEXP_ONLY_DIGITS_AND_CHARS } from "input-otp";
+
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+} from "@/components/ui/input-otp";
+
 type AuthStep =
   | "login"
   | "signup"
@@ -208,7 +216,7 @@ export default function AuthenticationCard() {
       password: "",
       confirmPassword: "",
       name: "",
-      otp: ["", "", "", "", "", ""],
+      otp: ["", "", "", "", ""],
     });
   };
 
@@ -220,7 +228,7 @@ export default function AuthenticationCard() {
       password: "",
       confirmPassword: "",
       name: "",
-      otp: ["", "", "", "", "", ""],
+      otp: ["", "", "", "", ""],
     });
   };
 
@@ -231,7 +239,7 @@ export default function AuthenticationCard() {
       password: "",
       confirmPassword: "",
       name: "",
-      otp: ["", "", "", "", "", ""],
+      otp: ["", "", "", "", ""],
     }));
   };
 
@@ -725,7 +733,7 @@ export default function AuthenticationCard() {
               <div className="text-center space-y-2">
                 <h1 className="text-2xl font-semibold">Verify Your Email</h1>
                 <p className="text-muted-foreground/70">
-                  Enter the 6-digit code sent to
+                  Enter the 5-digit code sent to
                 </p>
                 <p className="font-medium">{formData.email}</p>
               </div>
@@ -747,7 +755,7 @@ export default function AuthenticationCard() {
 
                 <Button
                   type="submit"
-                  disabled={isLoading || formData.otp.some((digit) => !digit)}
+                  disabled={isLoading || formData.otp.length > 5}
                   className="w-full h-11 rounded-xl font-medium transition-all duration-200"
                 >
                   {isLoading ? "Verifying..." : "Verify Code"}

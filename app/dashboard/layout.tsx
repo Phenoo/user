@@ -25,7 +25,6 @@ export default function DashboardLayout({
 
   if (!isAuthenticated) {
     router.push("/auth");
-    return null;
   }
 
   if (!user?.isOnboarding) {
