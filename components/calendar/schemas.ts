@@ -9,9 +9,7 @@ export const eventSchema = z.object({
   endDate: z.date({
     error: "End date is required",
   }),
-  color: z.enum(["blue", "green", "red", "yellow", "purple", "orange"], {
-    error: "Variant is required",
-  }),
+  color: z.string(),
 });
 
 export type TEventFormData = z.infer<typeof eventSchema>;

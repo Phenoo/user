@@ -94,6 +94,14 @@ const schema = defineSchema({
       "session",
       "name",
     ]),
+  events: defineTable({
+    title: v.string(),
+    description: v.string(),
+    startDate: v.string(), // ISO date
+    endDate: v.string(), // ISO date
+    color: v.string(),
+    userId: v.string(),
+  }),
 
   // --- Schedules Collection (Course-specific schedule items) ---
   schedules: defineTable({

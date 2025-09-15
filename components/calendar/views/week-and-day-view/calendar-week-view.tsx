@@ -6,7 +6,10 @@ import {
   staggerContainer,
   transition,
 } from "@/components/calendar/animations";
-import { useCalendar } from "@/components/calendar/contexts/calendar-context";
+import {
+  EventDoc,
+  useCalendar,
+} from "@/components/calendar/contexts/calendar-context";
 import { AddEditEventDialog } from "@/components/calendar/dialogs/add-edit-event-dialog";
 import { DroppableArea } from "@/components/calendar/dnd/droppable-area";
 import { groupEvents } from "@/components/calendar/helpers";
@@ -16,8 +19,8 @@ import { RenderGroupedEvents } from "@/components/calendar/views/week-and-day-vi
 import { WeekViewMultiDayEventsRow } from "@/components/calendar/views/week-and-day-view/week-view-multi-day-events-row";
 
 interface IProps {
-  singleDayEvents: IEvent[];
-  multiDayEvents: IEvent[];
+  singleDayEvents: EventDoc[];
+  multiDayEvents: EventDoc[];
 }
 
 export function CalendarWeekView({ singleDayEvents, multiDayEvents }: IProps) {

@@ -3,7 +3,10 @@ import { CalendarIcon, Clock, User } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { DayPicker } from "@/components/ui/day-picker";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useCalendar } from "@/components/calendar/contexts/calendar-context";
+import {
+  EventDoc,
+  useCalendar,
+} from "@/components/calendar/contexts/calendar-context";
 
 import { AddEditEventDialog } from "@/components/calendar/dialogs/add-edit-event-dialog";
 import { DroppableArea } from "@/components/calendar/dnd/droppable-area";
@@ -13,10 +16,12 @@ import { CalendarTimeline } from "@/components/calendar/views/week-and-day-view/
 import { DayViewMultiDayEventsRow } from "@/components/calendar/views/week-and-day-view/day-view-multi-day-events-row";
 import { RenderGroupedEvents } from "@/components/calendar/views/week-and-day-view/render-grouped-events";
 import { Calendar } from "@/components/ui/calendar";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 
 interface IProps {
-  singleDayEvents: IEvent[];
-  multiDayEvents: IEvent[];
+  singleDayEvents: EventDoc[];
+  multiDayEvents: EventDoc[];
 }
 
 export function CalendarDayView({ singleDayEvents, multiDayEvents }: IProps) {
@@ -24,6 +29,7 @@ export function CalendarDayView({ singleDayEvents, multiDayEvents }: IProps) {
     useCalendar();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
+  const user = useQuery(api.users.currentUser);
   const hours = Array.from({ length: 24 }, (_, i) => i);
 
   useEffect(() => {
@@ -53,7 +59,7 @@ export function CalendarDayView({ singleDayEvents, multiDayEvents }: IProps) {
     };
   }, []);
 
-  const getCurrentEvents = (events: IEvent[]) => {
+  const getCurrentEvents = (events: EventDoc[]) => {
     const now = new Date();
 
     return (
@@ -202,10 +208,8 @@ export function CalendarDayView({ singleDayEvents, multiDayEvents }: IProps) {
             <ScrollArea className="h-[422px] px-4" type="always">
               <div className="space-y-6 pb-4">
                 {currentEvents.map((event) => {
-                  const user = users.find((user) => user.id === event.user.id);
-
                   return (
-                    <div key={event.id} className="space-y-1.5">
+                    <div key={event._id} className="space-y-1.5">
                       <p className="line-clamp-2 text-sm font-semibold">
                         {event.title}
                       </p>

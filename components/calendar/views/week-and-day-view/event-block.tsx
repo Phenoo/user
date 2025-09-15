@@ -3,7 +3,10 @@ import { cva } from "class-variance-authority";
 import { differenceInMinutes, parseISO } from "date-fns";
 import type { HTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
-import { useCalendar } from "@/components/calendar/contexts/calendar-context";
+import {
+  EventDoc,
+  useCalendar,
+} from "@/components/calendar/contexts/calendar-context";
 import { EventDetailsDialog } from "@/components/calendar/dialogs/event-details-dialog";
 import { DraggableEvent } from "@/components/calendar/dnd/draggable-event";
 import { ResizableEvent } from "@/components/calendar/dnd/resizable-event";
@@ -51,7 +54,7 @@ const calendarWeekEventCardVariants = cva(
 interface IProps
   extends HTMLAttributes<HTMLDivElement>,
     Omit<VariantProps<typeof calendarWeekEventCardVariants>, "color"> {
-  event: IEvent;
+  event: EventDoc;
 }
 
 export function EventBlock({ event, className }: IProps) {

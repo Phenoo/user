@@ -17,10 +17,12 @@ import { MonthEventBadge } from "@/components/calendar/views/month-view/month-ev
 import { AddEditEventDialog } from "../../dialogs/add-edit-event-dialog";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
+import { EventDoc } from "../../contexts/calendar-context";
+import { TEventColor } from "../../types";
 
 interface IProps {
   cell: ICalendarCell;
-  events: IEvent[];
+  events: EventDoc[];
   eventPositions: Record<string, number>;
 }
 
@@ -81,7 +83,7 @@ export function DayCell({ cell, events, eventPositions }: IProps) {
 
       return (
         <motion.div
-          key={`event-${event.id}-${position}`}
+          key={`event-${event._id}-${position}`}
           className="lg:flex-1"
           initial={{ opacity: 0, x: -10 }}
           animate={{ opacity: 1, x: 0 }}
@@ -89,7 +91,10 @@ export function DayCell({ cell, events, eventPositions }: IProps) {
         >
           <>
             {showBullet && (
-              <EventBullet className="lg:hidden" color={event.color} />
+              <EventBullet
+                className="lg:hidden"
+                color={event.color as TEventColor}
+              />
             )}
             <MonthEventBadge
               className={cn("hidden lg:flex bg-white h-full")}

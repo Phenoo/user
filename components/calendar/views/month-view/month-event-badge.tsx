@@ -2,12 +2,16 @@ import type { VariantProps } from "class-variance-authority";
 import { cva } from "class-variance-authority";
 import { endOfDay, isSameDay, parseISO, startOfDay } from "date-fns";
 import { cn } from "@/lib/utils";
-import { useCalendar } from "@/components/calendar/contexts/calendar-context";
+import {
+  EventDoc,
+  useCalendar,
+} from "@/components/calendar/contexts/calendar-context";
 import { EventDetailsDialog } from "@/components/calendar/dialogs/event-details-dialog";
 import { DraggableEvent } from "@/components/calendar/dnd/draggable-event";
 import { formatTime } from "@/components/calendar/helpers";
 import type { IEvent } from "@/components/calendar/interfaces";
 import { EventBullet } from "@/components/calendar/views/month-view/event-bullet";
+import { TEventColor } from "../../types";
 
 const eventBadgeVariants = cva(
   "mx-1 flex size-auto h-6.5 select-none items-center justify-between gap-1.5 truncate whitespace-nowrap rounded-md border px-2 text-xs",
@@ -53,7 +57,7 @@ interface IProps
     VariantProps<typeof eventBadgeVariants>,
     "color" | "multiDayPosition"
   > {
-  event: IEvent;
+  event: EventDoc;
   cellDate: Date;
   eventCurrentDay?: number;
   eventTotalDays?: number;
@@ -117,7 +121,9 @@ export function MonthEventBadge({
         >
           <div className="flex items-center gap-1.5 truncate">
             {!["middle", "last"].includes(position) &&
-              badgeVariant === "dot" && <EventBullet color={event.color} />}
+              badgeVariant === "dot" && (
+                <EventBullet color={event.color as TEventColor} />
+              )}
 
             {renderBadgeText && (
               <p className="flex-1 truncate font-semibold">

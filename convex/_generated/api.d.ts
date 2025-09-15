@@ -17,6 +17,7 @@ import type * as ResendOTP from "../ResendOTP.js";
 import type * as ResendOTPPasswordReset from "../ResendOTPPasswordReset.js";
 import type * as auth from "../auth.js";
 import type * as courses from "../courses.js";
+import type * as events from "../events.js";
 import type * as flashcards from "../flashcards.js";
 import type * as http from "../http.js";
 import type * as seedFeatureLimits from "../seedFeatureLimits.js";
@@ -38,6 +39,7 @@ declare const fullApi: ApiFromModules<{
   ResendOTPPasswordReset: typeof ResendOTPPasswordReset;
   auth: typeof auth;
   courses: typeof courses;
+  events: typeof events;
   flashcards: typeof flashcards;
   http: typeof http;
   seedFeatureLimits: typeof seedFeatureLimits;

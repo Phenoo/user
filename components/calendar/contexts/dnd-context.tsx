@@ -10,20 +10,23 @@ import React, {
   useMemo,
 } from "react";
 import { toast } from "sonner";
-import { useCalendar } from "@/components/calendar/contexts/calendar-context";
+import {
+  EventDoc,
+  useCalendar,
+} from "@/components/calendar/contexts/calendar-context";
 import type { IEvent } from "@/components/calendar/interfaces";
 import { DndConfirmationDialog } from "@/components/calendar/dialogs/dnd-confirmation-dialog";
 
 interface PendingDropData {
-  event: IEvent;
+  event: EventDoc;
   newStartDate: Date;
   newEndDate: Date;
 }
 
 interface DragDropContextType {
-  draggedEvent: IEvent | null;
+  draggedEvent: EventDoc | null;
   isDragging: boolean;
-  startDrag: (event: IEvent) => void;
+  startDrag: (event: EventDoc) => void;
   endDrag: () => void;
   handleEventDrop: (date: Date, hour?: number, minute?: number) => void;
   showConfirmation: boolean;
@@ -48,7 +51,7 @@ export function DndProvider({
 }: DndProviderProps) {
   const { updateEvent } = useCalendar();
   const [dragState, setDragState] = useState<{
-    draggedEvent: IEvent | null;
+    draggedEvent: EventDoc | null;
     isDragging: boolean;
   }>({ draggedEvent: null, isDragging: false });
 
@@ -59,10 +62,10 @@ export function DndProvider({
     useState<PendingDropData | null>(null);
 
   const onEventDroppedRef = useRef<
-    ((event: IEvent, newStartDate: Date, newEndDate: Date) => void) | null
+    ((event: EventDoc, newStartDate: Date, newEndDate: Date) => void) | null
   >(null);
 
-  const startDrag = useCallback((event: IEvent) => {
+  const startDrag = useCallback((event: EventDoc) => {
     setDragState({ draggedEvent: event, isDragging: true });
   }, []);
 
@@ -71,7 +74,7 @@ export function DndProvider({
   }, []);
 
   const calculateNewDates = useCallback(
-    (event: IEvent, targetDate: Date, hour?: number, minute?: number) => {
+    (event: EventDoc, targetDate: Date, hour?: number, minute?: number) => {
       const originalStart = new Date(event.startDate);
       const originalEnd = new Date(event.endDate);
       const duration = originalEnd.getTime() - originalStart.getTime();
@@ -162,7 +165,7 @@ export function DndProvider({
 
   // Default event update handler
   const handleEventUpdate = useCallback(
-    (event: IEvent, newStartDate: Date, newEndDate: Date) => {
+    (event: EventDoc, newStartDate: Date, newEndDate: Date) => {
       try {
         const updatedEvent = {
           ...event,
