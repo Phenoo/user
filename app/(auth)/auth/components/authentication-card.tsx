@@ -18,6 +18,7 @@ import {
   InputOTPGroup,
   InputOTPSlot,
 } from "@/components/ui/input-otp";
+import Logo from "@/components/logo";
 
 type AuthStep =
   | "login"
@@ -277,6 +278,10 @@ export default function AuthenticationCard() {
     >
       <div className="relative h-full">
         {/* Content */}
+
+        <div className="w-full h-full flex items-center justify-center pt-4">
+          <Logo />
+        </div>
         <div className="relative h-full p-8 flex flex-col">
           {currentStep === "login" && (
             <div className="flex-1 flex flex-col justify-center space-y-6">
@@ -285,7 +290,7 @@ export default function AuthenticationCard() {
                 <p className="text-muted-foreground">Sign in to your account</p>
               </div>
 
-              <form onSubmit={handleSubmit} className="space-y-4">
+              {/* <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
                   <div className="relative">
@@ -356,7 +361,7 @@ export default function AuthenticationCard() {
                 <span className="bg-background text-muted-foreground relative z-10 px-2">
                   Or continue with
                 </span>
-              </div>
+              </div> */}
 
               <Button
                 variant="outline"
@@ -368,12 +373,12 @@ export default function AuthenticationCard() {
               </Button>
 
               <div className="text-center">
-                <button
+                {/* <button
                   onClick={() => switchMode("signup")}
                   className="text-muted-foreground hover:text-foreground text-sm transition-colors"
                 >
                   {"Don't have an account? Sign up"}
-                </button>
+                </button> */}
               </div>
             </div>
           )}

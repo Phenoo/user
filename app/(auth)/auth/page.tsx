@@ -17,7 +17,7 @@ export default function LoginPage() {
       }}
     >
       <div className="w-full min-h-screen flex flex-col gap-1 items-center justify-center bg-black/70  p-6 md:p-10">
-        <Logo />
+        {/* <Logo /> */}
         <AuthenticationCard />
       </div>
     </div>
