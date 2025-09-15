@@ -120,8 +120,6 @@ export const updateSubscription = internalMutation({
     ctx,
     { subscriptionId, userId, endsOn, subscriptionPlan, subscriptionStatus }
   ) => {
-    console.log("answerr///wwjwjwjwjwjw");
-
     await ctx.db.patch(userId, {
       subscriptionId: subscriptionId,
       endsOn: endsOn,

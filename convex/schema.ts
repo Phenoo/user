@@ -45,7 +45,7 @@ const schema = defineSchema({
     subscriptionCancelAtPeriodEnd: v.optional(v.boolean()),
   })
     .index("by_name", ["name"])
-    .index("by_email", ["email"])
+    .index("email", ["email"])
     .index("by_stripe_customer", ["stripeCustomerId"])
     .index("by_subscriptionId", ["subscriptionId"])
     .index("by_school", ["school"])
