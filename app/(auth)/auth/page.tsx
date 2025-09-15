@@ -1,6 +1,11 @@
-"use client";
 import Logo from "@/components/logo";
 import AuthenticationCard from "./components/authentication-card";
+
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Authentication",
+};
 
 export default function LoginPage() {
   return (

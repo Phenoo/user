@@ -12,6 +12,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -25,8 +34,15 @@ import {
   Trash2,
   CreditCard,
 } from "lucide-react";
-import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
+import { CountryDropdown } from "@/components/country-dropdown";
+import { Checkbox } from "@/components/ui/checkbox";
+import { universities_data } from "../../list-universities";
+import ProfileSettings from "./profile-settings";
 
 type SettingsSection =
   | "profile"
@@ -38,12 +54,25 @@ type SettingsSection =
   | "account"
   | "privacy";
 
+const sidebarItems = [
+  { id: "profile" as const, label: "Profile Settings", icon: User },
+  { id: "study" as const, label: "Study Preferences", icon: BookOpen },
+  { id: "timer" as const, label: "Timer Settings", icon: Timer },
+  { id: "notifications" as const, label: "Notifications", icon: Bell },
+  { id: "goals" as const, label: "Study Goals", icon: Target },
+  { id: "billing" as const, label: "Billing & Plans", icon: CreditCard },
+  { id: "account" as const, label: "Account Security", icon: Shield },
+  { id: "privacy" as const, label: "Privacy & Data", icon: Settings },
+];
+
 export function SettingsLayout() {
   const [activeSection, setActiveSection] =
     useState<SettingsSection>("profile");
 
   const searchParams = useSearchParams();
   const router = useRouter();
+
+  const pathname = usePathname();
 
   const searchSection = searchParams.get("section");
 
@@ -54,17 +83,6 @@ export function SettingsLayout() {
       setActiveSection(searchSection);
     }
   }, [searchSection, router]);
-
-  const sidebarItems = [
-    { id: "profile" as const, label: "Profile Settings", icon: User },
-    { id: "study" as const, label: "Study Preferences", icon: BookOpen },
-    { id: "timer" as const, label: "Timer Settings", icon: Timer },
-    { id: "notifications" as const, label: "Notifications", icon: Bell },
-    { id: "goals" as const, label: "Study Goals", icon: Target },
-    { id: "billing" as const, label: "Billing & Plans", icon: CreditCard },
-    { id: "account" as const, label: "Account Security", icon: Shield },
-    { id: "privacy" as const, label: "Privacy & Data", icon: Settings },
-  ];
 
   return (
     <div className="min-h-screen bg-background">
@@ -79,7 +97,10 @@ export function SettingsLayout() {
                 return (
                   <button
                     key={item.id}
-                    onClick={() => setActiveSection(item.id)}
+                    onClick={() => {
+                      setActiveSection(item.id);
+                      router.push(`${pathname}?section=${activeSection}`);
+                    }}
                     className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors ${
                       activeSection === item.id
                         ? "bg-primary/10 text-foreground border border-primary/20"
@@ -112,65 +133,6 @@ export function SettingsLayout() {
           </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-function ProfileSettings() {
-  return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-semibold">Profile Settings</h2>
-        <p className="text-muted-foreground mt-1">
-          Manage your personal information and academic details.
-        </p>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Personal Information</CardTitle>
-          <CardDescription>
-            Update your basic profile information
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Full Name</Label>
-              <Input id="name" placeholder="Enter your full name" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="your.email@university.edu"
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="school">School/University</Label>
-              <Input id="school" placeholder="Your university name" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="major">Major/Course</Label>
-              <Input id="major" placeholder="Computer Science" />
-            </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="year">Academic Year</Label>
-              <Input id="year" placeholder="Sophomore" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="location">Location</Label>
-              <Input id="location" placeholder="City, Country" />
-            </div>
-          </div>
-          <Button>Save Changes</Button>
-        </CardContent>
-      </Card>
     </div>
   );
 }

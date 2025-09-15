@@ -18,7 +18,7 @@ export const ResendOTP = Resend({
   },
   async sendVerificationRequest({ identifier: email, provider, token }) {
     console.log("[v0] Attempting to send OTP to:", email);
-    console.log(provider.apiKey, "sssss");
+
     if (!provider.apiKey) {
       throw new Error("RESEND_API_KEY environment variable is not set");
     }

@@ -25,7 +25,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Plus, BookOpen } from "lucide-react";
-import { FlashcardItem } from "@/components/flashcard-item";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -65,6 +64,25 @@ export interface FlashcardItemProps {
   color: string;
   type: "course" | "document";
 }
+
+export const cardColors = [
+  { bg: "bg-blue-500", border: "border-t-blue-500" },
+  { bg: "bg-green-500", border: "border-t-green-500" },
+  { bg: "bg-purple-500", border: "border-t-purple-500" },
+  { bg: "bg-orange-500", border: "border-t-orange-500" },
+  { bg: "bg-red-500", border: "border-t-red-500" },
+  { bg: "bg-yellow-500", border: "border-t-yellow-500" },
+  { bg: "bg-pink-500", border: "border-t-pink-500" },
+  { bg: "bg-teal-500", border: "border-t-teal-500" },
+  { bg: "bg-indigo-500", border: "border-t-indigo-500" },
+  { bg: "bg-cyan-500", border: "border-t-cyan-500" },
+  { bg: "bg-lime-500", border: "border-t-lime-500" },
+  { bg: "bg-emerald-500", border: "border-t-emerald-500" },
+  { bg: "bg-rose-500", border: "border-t-rose-500" },
+  { bg: "bg-fuchsia-500", border: "border-t-fuchsia-500" },
+  { bg: "bg-sky-500", border: "border-t-sky-500" },
+];
+
 export default function FlashcardsPageContainer() {
   const user = useQuery(api.users.currentUser);
   const userId = user?._id;
@@ -83,7 +101,6 @@ export default function FlashcardsPageContainer() {
     "all"
   );
   const [isCreateDeckOpen, setIsCreateDeckOpen] = useState(false);
-  const [isCreateCardOpen, setIsCreateCardOpen] = useState(false);
   const [sessionStats, setSessionStats] = useState({
     correct: 0,
     incorrect: 0,
@@ -107,7 +124,6 @@ export default function FlashcardsPageContainer() {
     tags: [] as string[],
   });
 
-  const currentDeck = decks.find((deck) => deck._id === selectedDeck);
   const studyCards = selectedDeckCards.filter((card) => {
     if (studyMode === "unmastered") return !card.isMastered;
     if (studyMode === "review") return card.lastStudied && !card.isMastered;
@@ -115,13 +131,6 @@ export default function FlashcardsPageContainer() {
   });
 
   const currentCard = studyCards[currentCardIndex];
-
-  const [courseSubject, setCourseSubject] = useState("");
-
-  const getCourses =
-    useQuery(api.courses.getAllCourses, {
-      userId: user?._id as Id<"users">,
-    }) || [];
 
   const nextCard = () => {
     if (currentCardIndex < studyCards.length - 1) {
@@ -163,18 +172,10 @@ export default function FlashcardsPageContainer() {
     }
   };
 
-  const shuffleCards = () => {
-    if (!currentDeck) return;
-    // Reset to first card after shuffle
-    setCurrentCardIndex(0);
-    setIsFlipped(false);
-  };
-
   const createDeck = async () => {
     try {
       const deckId = await createDeckMutation({
         userId: userId!,
-        subject: courseSubject,
         color: newDeck.color,
         description: newDeck.description,
         difficulty: newDeck.difficulty,
@@ -200,16 +201,6 @@ export default function FlashcardsPageContainer() {
       console.error("Failed to create deck:", error);
     }
   };
-
-  useEffect(() => {
-    const newcourseSubject =
-      getCourses &&
-      newDeck.courseId &&
-      getCourses.filter((item) => item._id === newDeck.courseId)[0].code;
-    console.log(newcourseSubject);
-
-    setCourseSubject(newcourseSubject);
-  }, [newDeck.courseId]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -325,20 +316,17 @@ export default function FlashcardsPageContainer() {
                       <div className="space-y-2">
                         <Label>Color</Label>
                         <div className="flex gap-2">
-                          {[
-                            "bg-blue-500",
-                            "bg-green-500",
-                            "bg-purple-500",
-                            "bg-orange-500",
-                            "bg-red-500",
-                          ].map((color) => (
+                          {cardColors.map((color) => (
                             <button
-                              key={color}
+                              key={color.bg}
                               onClick={() =>
-                                setNewDeck((prev) => ({ ...prev, color }))
+                                setNewDeck((prev) => ({
+                                  ...prev,
+                                  color: color.border,
+                                }))
                               }
-                              className={`w-8 h-8 rounded-sm ${color} ${
-                                newDeck.color === color
+                              className={`w-8 h-8 rounded-sm ${color.bg} ${
+                                newDeck.color === color.border
                                   ? "ring-2 ring-foreground"
                                   : ""
                               }`}
@@ -369,9 +357,9 @@ export default function FlashcardsPageContainer() {
                   ? "All cards in this deck are mastered! Try switching to 'All Cards' mode."
                   : "This deck doesn't have any cards yet. Add some cards to start studying."}
               </p>
-              <Button onClick={() => setIsCreateCardOpen(true)}>
+              <Button onClick={() => setIsCreateDeckOpen(true)}>
                 <Plus className="h-4 w-4 mr-2" />
-                Add First Card
+                Add First Deck
               </Button>
             </div>
           )}

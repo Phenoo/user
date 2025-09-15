@@ -58,6 +58,7 @@ export function MainOnboarding() {
 
   const [selectedCountry, setSelectedCountry] = useState("USA");
   const [universities, setUniversities] = useState<any[]>([]);
+  const [didntFind, setDidntFind] = useState(false);
 
   // Fetch universities whenever country changes
   // useEffect(() => {
@@ -239,17 +240,27 @@ export function MainOnboarding() {
                       ))}
                     </SelectContent>
                   </Select>
-                  {/* <Input
-                    id="school"
-                    placeholder="e.g., Stanford University"
-                    value={formData.school}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        school: e.target.value,
-                      }))
-                    }
-                  /> */}
+                  <div className="flex gap-2 items-center my-4 text-sm md:text-base">
+                    <Checkbox
+                      checked={didntFind}
+                      onCheckedChange={() => setDidntFind(!didntFind)}
+                      className="size-5 border-foreground"
+                    />
+                    Didn&apos;t find my university here
+                  </div>
+                  {didntFind && (
+                    <Input
+                      id="school"
+                      placeholder="e.g., Stanford University"
+                      value={formData.school}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          school: e.target.value,
+                        }))
+                      }
+                    />
+                  )}
                 </div>
               </div>
               <div className="space-y-2">

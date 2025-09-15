@@ -35,7 +35,7 @@ export const pay = action({
         metadata: {
           userId: user._id,
         },
-        success_url: `${domain}/dashboard/success`,
+        success_url: `${domain}/dashboard/success?session_id=${user.subscriptionId}`,
         cancel_url: `${domain}`,
       });
     return session.url;
@@ -87,8 +87,6 @@ export const fulfill = internalAction({
             | "FREE"
             | "STUDENT"
             | "STUDENTPRO"
-            | "STUDENTPRO_YEAR"
-            | "STUDENT_YEAR"
             | undefined,
         });
       }
@@ -115,13 +113,13 @@ export const fulfill = internalAction({
 export function getPlan(priceId: string) {
   let message;
   switch (priceId) {
-    case process.env.NEXT_PUBLIC_STRIPE_STUDENT_PRICE_ID:
+    case process.env.STRIPE_STUDENT_PRICE_ID:
       message = "STUDENT";
-    case process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID:
+    case process.env.STRIPE_PRO_PRICE_ID:
       message = "STUDENTPRO";
-    case process.env.NEXT_PUBLIC_STRIPE_STUDENT_YEARLY_PRICE_ID:
+    case process.env.STRIPE_STUDENT_YEARLY_PRICE_ID:
       message = "STUDENT_YEAR";
-    case process.env.NEXT_PUBLIC_STRIPE_PRO_YEARLY_PRICE_ID:
+    case process.env.STRIPE_PRO_YEARLY_PRICE_ID:
       message = "STUDENTPRO_YEAR";
   }
 

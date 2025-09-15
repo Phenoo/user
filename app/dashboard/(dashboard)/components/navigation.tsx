@@ -85,7 +85,7 @@ export function MobileNavigation() {
   const pathname = usePathname();
   return (
     <div className="fixed bottom-4 z-10  w-full">
-      <nav className="md:hidden    flex gap-1 w-[330px] mx-auto bg-glass p-1 justify-between rounded-3xl relative">
+      <nav className="md:hidden  flex gap-1 w-[330px] mx-auto bg-glass p-1 justify-between rounded-3xl relative">
         {navLinks.map((item) => {
           const Icon = item.icon;
 

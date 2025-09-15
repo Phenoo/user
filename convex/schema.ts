@@ -7,7 +7,7 @@ const schema = defineSchema({
   users: defineTable({
     name: v.optional(v.string()),
     image: v.optional(v.string()),
-    email: v.optional(v.string()),
+    email: v.string(),
     emailVerificationTime: v.optional(v.number()),
     phone: v.optional(v.string()),
     phoneVerificationTime: v.optional(v.number()),
@@ -29,13 +29,7 @@ const schema = defineSchema({
     endsOn: v.optional(v.number()),
     subscriptionId: v.optional(v.string()),
     subscriptionPlan: v.optional(
-      v.union(
-        v.literal("FREE"),
-        v.literal("STUDENT"),
-        v.literal("STUDENTPRO"),
-        v.literal("STUDENTPRO_YEAR"),
-        v.literal("STUDENT_YEAR")
-      )
+      v.union(v.literal("FREE"), v.literal("STUDENT"), v.literal("STUDENTPRO"))
     ),
     subscriptionStatus: v.optional(
       v.union(
@@ -50,8 +44,8 @@ const schema = defineSchema({
     ),
     subscriptionCancelAtPeriodEnd: v.optional(v.boolean()),
   })
-    .index("email", ["email"])
     .index("by_name", ["name"])
+    .index("by_email", ["email"])
     .index("by_stripe_customer", ["stripeCustomerId"])
     .index("by_subscriptionId", ["subscriptionId"])
     .index("by_school", ["school"])
@@ -309,6 +303,131 @@ const schema = defineSchema({
     .index("by_user", ["userId"])
     .index("by_deck", ["deckId"])
     .index("by_user_date", ["userId", "createdAt"]),
+  usageTracking: defineTable({
+    userId: v.id("users"),
+    feature: v.union(
+      v.literal("COURSES_CREATED"),
+      v.literal("DECKS_CREATED"),
+      v.literal("CARDS_CREATED"),
+      v.literal("AI_GENERATIONS"),
+      v.literal("DATA_EXPORTS"),
+      v.literal("ANALYTICS_VIEWS")
+    ),
+    count: v.number(),
+    lastReset: v.number(), // timestamp of last monthly reset
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_feature", ["userId", "feature"]),
+  featureLimits: defineTable({
+    plan: v.union(
+      v.literal("FREE"),
+      v.literal("STUDENT"),
+      v.literal("STUDENTPRO")
+    ),
+    feature: v.string(),
+    limit: v.number(), // -1 for unlimited
+    isActive: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_plan", ["plan"])
+    .index("by_plan_feature", ["plan", "feature"])
+    .index("by_active", ["isActive"]),
+
+  aiSuggestions: defineTable({
+    userId: v.id("users"),
+    type: v.union(
+      v.literal("STUDY_SCHEDULE"),
+      v.literal("WEAK_AREAS"),
+      v.literal("DECK_RECOMMENDATION"),
+      v.literal("STUDY_METHOD"),
+      v.literal("GOAL_SETTING"),
+      v.literal("PERFORMANCE_INSIGHT")
+    ),
+    title: v.string(),
+    description: v.string(),
+    priority: v.union(v.literal("LOW"), v.literal("MEDIUM"), v.literal("HIGH")),
+    actionable: v.boolean(),
+    metadata: v.any(), // Store additional data like recommended study times, deck IDs, etc.
+    isRead: v.boolean(),
+    isImplemented: v.boolean(),
+    createdAt: v.number(),
+    expiresAt: v.optional(v.number()),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_type", ["userId", "type"])
+    .index("by_user_priority", ["userId", "priority"])
+    .index("by_user_unread", ["userId", "isRead"]),
+
+  studyAnalytics: defineTable({
+    userId: v.id("users"),
+    date: v.string(), // YYYY-MM-DD format
+    totalStudyTime: v.number(), // in minutes
+    cardsStudied: v.number(),
+    correctAnswers: v.number(),
+    incorrectAnswers: v.number(),
+    accuracy: v.number(), // percentage
+    streakDays: v.number(),
+    decksStudied: v.array(v.id("flashcardDecks")),
+    coursesStudied: v.array(v.id("courses")),
+    weakAreas: v.array(v.string()), // tags or topics where user struggled
+    strongAreas: v.array(v.string()), // tags or topics where user excelled
+    createdAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_date", ["userId", "date"])
+    .index("by_date", ["date"]),
+  subscriptionHistory: defineTable({
+    userId: v.id("users"),
+    fromPlan: v.union(
+      v.literal("FREE"),
+      v.literal("STUDENT"),
+      v.literal("STUDENTPRO")
+    ),
+    toPlan: v.union(
+      v.literal("FREE"),
+      v.literal("STUDENT"),
+      v.literal("STUDENTPRO")
+    ),
+    reason: v.union(
+      v.literal("UPGRADE"),
+      v.literal("DOWNGRADE"),
+      v.literal("CANCELLATION"),
+      v.literal("RENEWAL"),
+      v.literal("PAYMENT_FAILED")
+    ),
+    amount: v.optional(v.number()),
+    currency: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_created_at", ["createdAt"]),
+  studyGoals: defineTable({
+    userId: v.id("users"),
+    type: v.union(
+      v.literal("DAILY_CARDS"),
+      v.literal("DAILY_TIME"),
+      v.literal("WEEKLY_DECKS"),
+      v.literal("ACCURACY_TARGET"),
+      v.literal("STREAK_TARGET")
+    ),
+    target: v.number(),
+    current: v.number(),
+    period: v.union(
+      v.literal("DAILY"),
+      v.literal("WEEKLY"),
+      v.literal("MONTHLY")
+    ),
+    isActive: v.boolean(),
+    achievedAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_active", ["userId", "isActive"])
+    .index("by_user_type", ["userId", "type"]),
 });
 
 export default schema;

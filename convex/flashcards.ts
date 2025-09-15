@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { internal } from "./_generated/api";
 
 // Get user's flashcard decks
 export const getUserDecks = query({
@@ -8,6 +9,17 @@ export const getUserDecks = query({
     return await ctx.db
       .query("flashcardDecks")
       .withIndex("by_creator", (q) => q.eq("createdBy", args.userId))
+      .collect();
+  },
+});
+
+export const getUserDecksByCourseId = query({
+  args: { courseId: v.id("courses"), userId: v.id("users") },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("flashcardDecks")
+      .withIndex("by_creator", (q) => q.eq("createdBy", args.userId))
+      .filter((q) => q.or(q.eq(q.field("courseId"), args.courseId)))
       .collect();
   },
 });
@@ -23,6 +35,8 @@ export const getDeckCards = query({
   },
 });
 
+// by_courseId
+
 export const getCards = query({
   args: { userId: v.id("users"), deckId: v.id("flashcardDecks") },
   handler: async (ctx, args) => {
@@ -37,10 +51,9 @@ export const createDeck = mutation({
   args: {
     name: v.string(),
     description: v.string(),
-    courseId: v.optional(v.id("courses")),
+    courseId: v.id("courses"),
     userId: v.id("users"),
     createdBy: v.id("users"),
-    subject: v.string(),
     difficulty: v.union(
       v.literal("Easy"),
       v.literal("Medium"),
@@ -52,8 +65,18 @@ export const createDeck = mutation({
   },
   handler: async (ctx, args) => {
     const { userId, ...updates } = args;
+    const course = await ctx.db
+      .query("courses")
+      .withIndex("by_id", (q) => q.eq("_id", args.courseId))
+      .collect();
+
+    if (!course) {
+      throw new Error("Course not found");
+    }
+
     return await ctx.db.insert("flashcardDecks", {
       ...updates,
+      subject: course[0].code,
       totalCards: 0,
       masteredCards: 0,
       createdAt: Date.now(),

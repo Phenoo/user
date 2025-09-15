@@ -113,19 +113,15 @@ export const updateSubscription = internalMutation({
       )
     ),
     subscriptionPlan: v.optional(
-      v.union(
-        v.literal("FREE"),
-        v.literal("STUDENT"),
-        v.literal("STUDENTPRO"),
-        v.literal("STUDENTPRO_YEAR"),
-        v.literal("STUDENT_YEAR")
-      )
+      v.union(v.literal("FREE"), v.literal("STUDENT"), v.literal("STUDENTPRO"))
     ),
   },
   handler: async (
     ctx,
     { subscriptionId, userId, endsOn, subscriptionPlan, subscriptionStatus }
   ) => {
+    console.log("answerr///wwjwjwjwjwjw");
+
     await ctx.db.patch(userId, {
       subscriptionId: subscriptionId,
       endsOn: endsOn,

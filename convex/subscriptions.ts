@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query, internalMutation } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
 
 // Get user subscription status
 export const getUserSubscription = query({
@@ -14,22 +14,6 @@ export const getUserSubscription = query({
       cancelAtPeriodEnd: user.subscriptionCancelAtPeriodEnd,
       stripeCustomerId: user.stripeCustomerId,
     };
-  },
-});
-
-// Update user subscription from Stripe webhook
-
-// Create or update Stripe customer ID
-const updateStripeCustomerId = internalMutation({
-  args: {
-    userId: v.id("users"),
-    stripeCustomerId: v.string(),
-  },
-  handler: async (ctx, args) => {
-    await ctx.db.patch(args.userId, {
-      stripeCustomerId: args.stripeCustomerId,
-      updatedAt: Date.now(),
-    });
   },
 });
 

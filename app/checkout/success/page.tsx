@@ -1,34 +1,33 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { useSearchParams } from "next/navigation"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { CheckCircle, ArrowRight, Home } from "lucide-react"
-import Link from "next/link"
+import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { CheckCircle, ArrowRight, Home } from "lucide-react";
+import Link from "next/link";
 
 export default function CheckoutSuccessPage() {
-  const searchParams = useSearchParams()
-  const sessionId = searchParams.get("session_id")
-  const [isLoading, setIsLoading] = useState(true)
-  const [sessionData, setSessionData] = useState<any>(null)
+  const searchParams = useSearchParams();
+  const sessionId = searchParams.get("session_id");
+  const [isLoading, setIsLoading] = useState(true);
+  const [sessionData, setSessionData] = useState<any>(null);
 
   useEffect(() => {
     if (sessionId) {
-      // In a real app, you'd verify the session with your backend
       // For now, we'll just simulate success
       setTimeout(() => {
         setSessionData({
           customer_email: "user@example.com",
           amount_total: 999,
           currency: "usd",
-        })
-        setIsLoading(false)
-      }, 1000)
+        });
+        setIsLoading(false);
+      }, 1000);
     } else {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }, [sessionId])
+  }, [sessionId]);
 
   if (isLoading) {
     return (
@@ -38,7 +37,7 @@ export default function CheckoutSuccessPage() {
           <p className="text-muted-foreground">Confirming your payment...</p>
         </div>
       </div>
-    )
+    );
   }
 
   if (!sessionId || !sessionData) {
@@ -46,14 +45,16 @@ export default function CheckoutSuccessPage() {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Card className="max-w-md w-full mx-4">
           <CardContent className="pt-6 text-center">
-            <p className="text-muted-foreground mb-4">Invalid session or payment not found.</p>
+            <p className="text-muted-foreground mb-4">
+              Invalid session or payment not found.
+            </p>
             <Link href="/pricing">
               <Button>Return to Pricing</Button>
             </Link>
           </CardContent>
         </Card>
       </div>
-    )
+    );
   }
 
   return (
@@ -63,12 +64,16 @@ export default function CheckoutSuccessPage() {
           <div className="flex justify-center mb-4">
             <CheckCircle className="h-16 w-16 text-green-500" />
           </div>
-          <CardTitle className="text-3xl font-bold text-green-600">Payment Successful!</CardTitle>
+          <CardTitle className="text-3xl font-bold text-green-600">
+            Payment Successful!
+          </CardTitle>
         </CardHeader>
 
         <CardContent className="space-y-6">
           <div className="text-center">
-            <p className="text-lg text-muted-foreground mb-2">Thank you for your subscription!</p>
+            <p className="text-lg text-muted-foreground mb-2">
+              Thank you for your subscription!
+            </p>
             <p className="text-sm text-muted-foreground">
               A confirmation email has been sent to {sessionData.customer_email}
             </p>
@@ -109,5 +114,5 @@ export default function CheckoutSuccessPage() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

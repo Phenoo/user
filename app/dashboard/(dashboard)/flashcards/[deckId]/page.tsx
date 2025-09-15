@@ -277,13 +277,13 @@ export default function DeckPage({
       {/* Header */}
       <header className="border-b bg-card">
         <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center gap-4">
-            <Link href="/flashcards">
-              <Button variant="ghost" size="sm">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Flashcards
-              </Button>
-            </Link>
+          <Link href="/flashcards">
+            <Button variant="ghost" size="sm">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Flashcards
+            </Button>
+          </Link>
+          <div className="flex items-start md:items-center gap-4 justify-between flex-col md:flex-row">
             <div className="flex items-center gap-3">
               <div className="w-6 h-6 rounded-sm bg-blue-500" />
               <h1 className="text-2xl font-bold text-foreground">
@@ -437,46 +437,52 @@ export default function DeckPage({
             <RotateCcw className="h-4 w-4 mr-2" />
             Review Unmastered
           </Button>
-          <Link href={`/flashcards?deck=${deck._id}`}>
-            <Button variant="outline" size="lg">
-              <Brain className="h-4 w-4 mr-2" />
-              Full Study Session
-            </Button>
-          </Link>
+          {/* <Link href={`/flashcards?deck=${deck._id}`}> */}
+          <Button variant="outline" size="lg">
+            <Brain className="h-4 w-4 mr-2" />
+            Full Study Session
+          </Button>
+          {/* </Link> */}
         </div>
 
         {/* Cards Grid */}
         <div className="space-y-4">
           <h2 className="text-xl font-bold">All Cards</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {cards?.map((card) => (
-              <Link
-                key={card._id}
-                href={`/dashboard/flashcards/${deck._id}/${card._id}`}
-              >
-                <FlashcardItem
-                  item={{
-                    id: card._id,
-                    title:
-                      card.front.length > 50
-                        ? card.front.substring(0, 50) + "..."
-                        : card.front,
-                    subject: card.difficulty,
-                    date: card.isMastered
-                      ? "Mastered"
-                      : `${card.timesCorrect}/${card.timesCorrect + card.timesIncorrect} correct`,
-                    participants: card.timesCorrect + card.timesIncorrect,
-                    color: card.isMastered
-                      ? "border-t-green-500"
-                      : card.difficulty === "Hard"
-                        ? "border-t-red-500"
-                        : card.difficulty === "Medium"
-                          ? "border-t-yellow-500"
-                          : "border-t-blue-500",
-                  }}
-                />
-              </Link>
-            )) || []}
+            {cards.length > 0 ? (
+              cards?.map((card) => (
+                <Link
+                  key={card._id}
+                  href={`/dashboard/flashcards/${deck._id}/${card._id}`}
+                >
+                  <FlashcardItem
+                    item={{
+                      id: card._id,
+                      title:
+                        card.front.length > 50
+                          ? card.front.substring(0, 50) + "..."
+                          : card.front,
+                      subject: card.difficulty,
+                      date: card.isMastered
+                        ? "Mastered"
+                        : `${card.timesCorrect}/${card.timesCorrect + card.timesIncorrect} correct`,
+                      participants: card.timesCorrect + card.timesIncorrect,
+                      color: card.isMastered
+                        ? "border-t-green-500"
+                        : card.difficulty === "Hard"
+                          ? "border-t-red-500"
+                          : card.difficulty === "Medium"
+                            ? "border-t-yellow-500"
+                            : "border-t-blue-500",
+                    }}
+                  />
+                </Link>
+              ))
+            ) : (
+              <div className="py-10">
+                <h4 className="text-lg font-bold ">No cards found</h4>
+              </div>
+            )}
           </div>
         </div>
       </div>

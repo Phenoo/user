@@ -46,9 +46,15 @@ import LoadingComponent from "@/components/loader";
 import { cn } from "@/lib/utils";
 import EditCoursesSheet from "../../_components/edit-courses";
 import { toast } from "sonner";
+
 import { FlashcardItem } from "@/components/flashcard-item";
-import { FlashcardItemProps } from "../../../flashcards/components/flashcard-container";
+
+import {
+  FlashcardContainer,
+  FlashcardItemProps,
+} from "../../../flashcards/components/flashcard-container";
 import { Course } from "../../_components/courses-container";
+import NewFlashcard from "../../../flashcards/components/new-flashcard";
 
 interface Schedule {
   id: string;
@@ -349,7 +355,11 @@ export default function CoursePage() {
   const schedules = mockSchedules[courseId] || [];
   const studyGroups = mockStudyGroups[courseId] || [];
   const statistics = mockStatistics[courseId];
-  const flashcards = mockFlashcards[1] || [];
+  const flashcards =
+    useQuery(api.flashcards.getUserDecksByCourseId, {
+      courseId: params.id as Id<"courses">,
+      userId: user?._id as Id<"users">,
+    }) || [];
   const youtubeVideos = mockYouTubeVideos[courseId] || [];
   const documents = mockDocuments[courseId] || [];
 
@@ -848,16 +858,11 @@ export default function CoursePage() {
                 <h2 className="text-2xl font-bold text-foreground">
                   Flashcard Sets
                 </h2>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Set
-                </Button>
+                <NewFlashcard />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                {flashcards.map((set) => (
-                  <FlashcardItem item={set} key={set.id} />
-                ))}
+              <div className="grid w-full gap-6">
+                <FlashcardContainer decks={flashcards} />
               </div>
             </div>
           )}

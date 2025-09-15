@@ -1,6 +1,7 @@
 import React from "react";
 import { IoSparklesSharp } from "react-icons/io5";
 import { BsArrowUpRight } from "react-icons/bs";
+import Link from "next/link";
 
 const AISuggestionsCard = () => {
   return (
@@ -16,9 +17,11 @@ bg-gradient-to-r from-[oklch(0.65_0.12_15)] via-[oklch(0.6_0.15_320)] to-[oklch(
           </div>
           <h3 className="text-white text-lg font-semibold">AI Suggestions</h3>
         </div>
-        <div className="bg-white text-black bg-opacity-30 rounded-full p-2">
-          <BsArrowUpRight stroke="1" className="h-4 stroke-[1px]  w-4" />
-        </div>
+        <Link href={"/dashboard/ai-suggestions"}>
+          <div className="bg-white text-black bg-opacity-30 rounded-full p-2">
+            <BsArrowUpRight stroke="1" className="h-4 stroke-[1px]  w-4" />
+          </div>
+        </Link>
       </div>
 
       <div className="mt-4">
