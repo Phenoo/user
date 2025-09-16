@@ -249,9 +249,6 @@ const AddCoursesSheet = () => {
                   <SelectValue placeholder="Select year" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="2030">2030</SelectItem>
-                  <SelectItem value="2029">2029</SelectItem>
-                  <SelectItem value="2027">2027</SelectItem>
                   <SelectItem value="2026">2026</SelectItem>
                   <SelectItem value="2025">2025</SelectItem>
                   <SelectItem value="2024">2024</SelectItem>

@@ -281,9 +281,6 @@ export default function CoursescontainerPage() {
                         <SelectValue placeholder="Select year" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="2030">2030</SelectItem>
-                        <SelectItem value="2029">2029</SelectItem>
-                        <SelectItem value="2027">2027</SelectItem>
                         <SelectItem value="2026">2026</SelectItem>
                         <SelectItem value="2025">2025</SelectItem>
                         <SelectItem value="2024">2024</SelectItem>
@@ -496,11 +493,25 @@ export default function CoursescontainerPage() {
                     <div key={session} className="space-y-4">
                       <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
                         <div className="w-2 h-2 bg-foreground rounded-full"></div>
-                        {session} Semester
+                        <Link href={`/dashboard/semester-analysis`}>
+                          {session} Semester
+                        </Link>
                         <Badge variant="secondary" className="ml-2">
                           {coursesByYear[year][session].length} course
                           {coursesByYear[year][session].length !== 1 ? "s" : ""}
                         </Badge>
+                        <div className="flex items-center space-x-4">
+                          {/* <Badge variant="secondary">
+                          GPA: {semesterInfo.gpa.toFixed(2)}
+                        </Badge> */}
+                          <Badge variant="outline">
+                            {coursesByYear[year][session].reduce(
+                              (total, item) => total + item.credits,
+                              0
+                            )}{" "}
+                            Credits
+                          </Badge>
+                        </div>
                       </h3>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

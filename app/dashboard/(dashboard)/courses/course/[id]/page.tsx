@@ -24,6 +24,7 @@ import {
   ExternalLink,
   Plus,
   Search,
+  GraduationCap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,7 +39,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import {
+  useParams,
+  usePathname,
+  useRouter,
+  useSearchParams,
+} from "next/navigation";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -47,14 +53,10 @@ import { cn } from "@/lib/utils";
 import EditCoursesSheet from "../../_components/edit-courses";
 import { toast } from "sonner";
 
-import { FlashcardItem } from "@/components/flashcard-item";
-
-import {
-  FlashcardContainer,
-  FlashcardItemProps,
-} from "../../../flashcards/components/flashcard-container";
+import { FlashcardContainer } from "../../../flashcards/components/flashcard-container";
 import { Course } from "../../_components/courses-container";
 import NewFlashcard from "../../../flashcards/components/new-flashcard";
+import { AddAssessmentSheet } from "../../_components/add-assessment-sheet";
 
 interface Schedule {
   id: string;
@@ -181,67 +183,6 @@ const mockStatistics: Record<string, Statistics> = {
   },
 };
 
-const mockFlashcards: Record<string, FlashcardItemProps[]> = {
-  "1": [
-    {
-      id: "1",
-      title: "Chapter 3",
-      subject: "Party History",
-      date: "Academic Year 1 2024 - 2025",
-      participants: 3,
-      color: "border-t-rose-400",
-    },
-    {
-      id: "2",
-      title: "Chapter 4",
-      subject: "Aesthetics",
-      date: "Academic Year 1 (2024 - 2025)",
-      participants: 2,
-      color: "border-t-green-400",
-    },
-    {
-      id: "3",
-      title: "Chapter 3",
-      subject: "Aesthetics",
-      date: "Academic Year 1 (2024 - 2025)",
-      participants: 2,
-      color: "border-t-green-400",
-    },
-    {
-      id: "4",
-      title: "Chapter 2",
-      subject: "Party History",
-      date: "Academic Year 1 (2024 - 2025)",
-      participants: 1,
-      color: "border-t-rose-400",
-    },
-    {
-      id: "5",
-      title: "Chapter 1",
-      subject: "Aesthetics",
-      date: "Academic Year 1 (2024 - 2025)",
-      participants: 2,
-      color: "border-t-green-400",
-    },
-    {
-      id: "6",
-      title: "How something is done vocabulary",
-      subject: "Beginner English",
-      date: "8 hours ago",
-      participants: 1,
-      color: "border-t-yellow-400",
-    },
-    {
-      id: "7",
-      title: "Home vocabulary",
-      subject: "Beginner English",
-      date: "7 hours ago",
-      participants: 1,
-      color: "border-yellow-400",
-    },
-  ],
-};
-
 const mockYouTubeVideos: Record<string, YouTubeVideo[]> = {
   "1": [
     {
@@ -351,6 +292,7 @@ export default function CoursePage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [documentFilter, setDocumentFilter] = useState("all");
   const [videoFilter, setVideoFilter] = useState("all");
+  const [isAddAssessmentOpen, setIsAddAssessmentOpen] = useState(false);
 
   const schedules = mockSchedules[courseId] || [];
   const studyGroups = mockStudyGroups[courseId] || [];
@@ -362,6 +304,12 @@ export default function CoursePage() {
     }) || [];
   const youtubeVideos = mockYouTubeVideos[courseId] || [];
   const documents = mockDocuments[courseId] || [];
+
+  const assessments =
+    useQuery(api.assessments.getAssessmentsByCourseId, {
+      courseId: courseId as Id<"courses">,
+      userId: user?._id as Id<"users">,
+    }) || [];
 
   const filteredDocuments = documents.filter((doc) => {
     const matchesSearch = doc.name
@@ -386,18 +334,45 @@ export default function CoursePage() {
     { id: "schedules", label: "Schedules", icon: Calendar },
     { id: "groups", label: "Study Groups", icon: Users },
     { id: "statistics", label: "Statistics", icon: BarChart3 },
+    { id: "assessments", label: "Assessments & Scores", icon: GraduationCap },
     { id: "flashcards", label: "Flashcards", icon: Brain },
     { id: "videos", label: "YouTube Videos", icon: Play },
     { id: "documents", label: "Documents", icon: FileText },
   ];
-  if (!user || course === undefined) {
-    return <LoadingComponent />;
-  }
+
+  const calculateWeightedScore = () => {
+    const gradedAssessments = assessments.filter(
+      (a) => a.status === "graded" && a.score !== null
+    );
+    const totalWeight = gradedAssessments.reduce((sum, a) => sum + a.weight, 0);
+    const weightedSum = gradedAssessments.reduce(
+      //@ts-ignore
+
+      (sum, a) => sum + (a.score / a.maxScore) * a.weight,
+      0
+    );
+    return totalWeight > 0 ? (weightedSum / totalWeight) * 100 : 0;
+  };
+
+  const getGradeByType = (type: string) => {
+    const typeAssessments = assessments.filter(
+      (a) => a.type === type && a.status === "graded"
+    );
+    if (typeAssessments.length === 0) return null;
+    const average =
+      typeAssessments.reduce(
+        //@ts-ignore
+
+        (sum, a) => sum + (a.score / a.maxScore) * 100,
+        0
+      ) / typeAssessments.length;
+    return Math.round(average);
+  };
 
   const handleDelete = async () => {
     try {
       await deleteCourse({
-        userId: user._id as Id<"users">,
+        userId: user?._id as Id<"users">,
         courseId: courseId as Id<"courses">,
       });
       toast.success("Course deleted successfully!");
@@ -409,6 +384,15 @@ export default function CoursePage() {
       // Display the error message from Convex
     }
   };
+
+  const handleEditCourse = (course: Course) => {
+    setIsEditing(true);
+    setEditingCourse(course);
+  };
+
+  if (!user || course === undefined) {
+    return <LoadingComponent />;
+  }
 
   if (!course) {
     return (
@@ -427,11 +411,6 @@ export default function CoursePage() {
       </div>
     );
   }
-
-  const handleEditCourse = (course: Course) => {
-    setIsEditing(true);
-    setEditingCourse(course);
-  };
 
   return (
     <>
@@ -648,6 +627,26 @@ export default function CoursePage() {
                   </Badge>
                 </CardContent>
               </Card>
+
+              <Card
+                className="cursor-pointer hover:shadow-lg transition-shadow"
+                onClick={() => setActiveSection("assessments")}
+              >
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2">
+                    <GraduationCap className="h-5 w-5 text-foreground" />
+                    Assessments & Scores
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground text-sm mb-3">
+                    View and manage your course assessments and scores
+                  </p>
+                  <Badge variant="secondary">
+                    {assessments.length} assessments
+                  </Badge>
+                </CardContent>
+              </Card>
             </div>
           )}
 
@@ -835,7 +834,7 @@ export default function CoursePage() {
                     {statistics.upcomingDeadlines.map((deadline, index) => (
                       <div
                         key={index}
-                        className="flex justify-between items-center p-3 bg-muted rounded-lg"
+                        className="flex justify-between items-center p-3 bg-muted rounded-lg hover:bg-muted/50 transition-colors"
                       >
                         <div>
                           <p className="font-medium">{deadline.title}</p>
@@ -1034,6 +1033,228 @@ export default function CoursePage() {
               </div>
             </div>
           )}
+
+          {activeSection === "assessments" && (
+            <div className="space-y-6">
+              <div className="flex justify-between items-center">
+                <h2 className="text-2xl font-bold text-foreground">
+                  Assessments & Scores
+                </h2>
+                <Button onClick={() => setIsAddAssessmentOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Assessment
+                </Button>
+              </div>
+
+              {/* Score Summary Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">
+                      Current Grade
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-primary">
+                      {Math.round(calculateWeightedScore())}%
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Weighted Average
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">
+                      Exams Average
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {getGradeByType("Exam") || "N/A"}
+                      {getGradeByType("Exam") && "%"}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {assessments.filter((a) => a.type === "Exam").length}{" "}
+                      exam(s)
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">
+                      Assignments Average
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {getGradeByType("Assignment") || "N/A"}
+                      {getGradeByType("Assignment") && "%"}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {
+                        assessments.filter((a) => a.type === "Assignment")
+                          .length
+                      }{" "}
+                      assignment(s)
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">
+                      Quizzes Average
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {getGradeByType("Quiz") || "N/A"}
+                      {getGradeByType("Quiz") && "%"}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {assessments.filter((a) => a.type === "Quiz").length}{" "}
+                      quiz(zes)
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Detailed Assessment List */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>All Assessments</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {assessments.map((assessment) => (
+                      <div
+                        key={assessment._id}
+                        className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                      >
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <h3 className="font-semibold">{assessment.name}</h3>
+                            <Badge
+                              variant={
+                                assessment.type === "Exam"
+                                  ? "destructive"
+                                  : assessment.type === "Assignment"
+                                    ? "default"
+                                    : assessment.type === "Project"
+                                      ? "secondary"
+                                      : "outline"
+                              }
+                            >
+                              {assessment.type}
+                            </Badge>
+                            <Badge
+                              variant={
+                                assessment.status === "graded"
+                                  ? "default"
+                                  : assessment.status === "pending"
+                                    ? "secondary"
+                                    : "outline"
+                              }
+                            >
+                              {assessment.status}
+                            </Badge>
+                          </div>
+
+                          <div className="flex items-center gap-6 text-sm text-muted-foreground">
+                            <span>Due: {assessment.date}</span>
+                            <span>Weight: {assessment.weight}%</span>
+                            {assessment.score !== null && (
+                              <span>
+                                Score: {assessment.score}/{assessment.maxScore}(
+                                {Math.round(
+                                  //@ts-ignore
+
+                                  (assessment.score / assessment.maxScore) * 100
+                                )}
+                                %)
+                              </span>
+                            )}
+                          </div>
+
+                          {assessment.feedback && (
+                            <p className="text-sm text-muted-foreground mt-2 italic">
+                              "{assessment.feedback}"
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="text-right">
+                          {assessment.score !== null ? (
+                            <div className="text-2xl font-bold">
+                              {Math.round(
+                                //@ts-ignore
+                                (assessment.score / assessment.maxScore) * 100
+                              )}
+                              %
+                            </div>
+                          ) : (
+                            <div className="text-lg text-muted-foreground">
+                              {assessment.status === "pending"
+                                ? "Pending"
+                                : "Upcoming"}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Grade Breakdown Chart */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Grade Distribution</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {["Exam", "Assignment", "Quiz", "Project"].map((type) => {
+                      const typeAssessments = assessments.filter(
+                        (a) => a.type === type
+                      );
+                      const gradedCount = typeAssessments.filter(
+                        (a) => a.status === "graded"
+                      ).length;
+                      const totalWeight = typeAssessments.reduce(
+                        (sum, a) => sum + a.weight,
+                        0
+                      );
+                      const avgScore = getGradeByType(type);
+
+                      return (
+                        <div key={type} className="space-y-2">
+                          <div className="flex justify-between items-center">
+                            <span className="font-medium">{type}s</span>
+                            <span className="text-sm text-muted-foreground">
+                              {gradedCount}/{typeAssessments.length} completed •{" "}
+                              {totalWeight}% of grade
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <Progress
+                              value={avgScore || 0}
+                              className="flex-1 h-2"
+                            />
+                            <span className="text-sm font-medium w-12">
+                              {avgScore ? `${avgScore}%` : "N/A"}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </div>
       </div>
       <EditCoursesSheet
@@ -1065,6 +1286,16 @@ export default function CoursePage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <AddAssessmentSheet
+        isOpen={isAddAssessmentOpen}
+        setIsOpen={setIsAddAssessmentOpen}
+        courseId={courseId as Id<"courses">}
+        userId={user?._id as Id<"users">}
+        onAssessmentAdded={() => {
+          // This callback will implicitly trigger a re-fetch in useQuery for `assessments`
+          // if Convex detects a change in the 'assessments' table.
+        }}
+      />
     </>
   );
 }

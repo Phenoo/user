@@ -103,7 +103,27 @@ const schema = defineSchema({
     userId: v.string(),
   }),
 
-  // --- Schedules Collection (Course-specific schedule items) ---
+  assessments: defineTable({
+    courseId: v.id("courses"),
+    userId: v.id("users"),
+    name: v.string(),
+    type: v.string(), // "Exam", "Assignment", "Quiz", "Project", etc.
+    score: v.optional(v.number()), // Actual score obtained
+    maxScore: v.optional(v.number()), // Maximum possible score
+    weight: v.number(), // Weight percentage (e.g., 30 for 30%)
+    date: v.string(), // Due date or date of assessment
+    feedback: v.optional(v.string()), // Instructor feedback
+    status: v.union(
+      v.literal("graded"),
+      v.literal("pending"),
+      v.literal("upcoming")
+    ),
+    createdAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_courseId", ["courseId"])
+    .index("by_userId_courseId", ["userId", "courseId"]),
+
   schedules: defineTable({
     userId: v.id("users"),
     courseId: v.id("courses"), // Link to the course this schedule item belongs to

@@ -43,8 +43,9 @@ import { Id } from "@/convex/_generated/dataModel";
 import { toast } from "sonner";
 import { BsArrowUpRight } from "react-icons/bs";
 import { Course } from "../courses/_components/courses-container";
+import NewStudyGroup from "./_components/new-study-group";
 
-interface StudyGroup {
+export interface StudyGroup {
   _id: string;
   name: string;
   course: Course;
@@ -198,144 +199,7 @@ export default function StudyGroupsPage() {
             </SelectContent>
           </Select>
 
-          <Sheet open={isCreateSheetOpen} onOpenChange={setIsCreateSheetOpen}>
-            <SheetTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Create Group
-              </Button>
-            </SheetTrigger>
-            <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
-              <SheetHeader>
-                <SheetTitle>Create Study Group</SheetTitle>
-              </SheetHeader>
-              <div className="space-y-4 p-4">
-                <div className="space-y-2">
-                  <Label htmlFor="group-name">Group Name</Label>
-                  <Input
-                    id="group-name"
-                    value={newGroup.name}
-                    onChange={(e) =>
-                      setNewGroup((prev) => ({ ...prev, name: e.target.value }))
-                    }
-                    placeholder="e.g., CS 101 Study Circle"
-                  />
-                </div>
-                <div className="grid grid-cols-1 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="course">Course</Label>
-
-                    <CoursesSelect
-                      course={course}
-                      onChange={(e) => {
-                        setCourse(e);
-                      }}
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    value={newGroup.description}
-                    onChange={(e) =>
-                      setNewGroup((prev) => ({
-                        ...prev,
-                        description: e.target.value,
-                      }))
-                    }
-                    placeholder="Describe your study group..."
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="max-members">Max Members</Label>
-                    <Input
-                      id="max-members"
-                      type="number"
-                      value={newGroup.maxMembers}
-                      onChange={(e) =>
-                        setNewGroup((prev) => ({
-                          ...prev,
-                          maxMembers: e.target.value,
-                        }))
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="meeting-type">Meeting Type</Label>
-                    <Select
-                      value={newGroup.meetingType}
-                      onValueChange={(
-                        value: "In-Person" | "Online" | "Hybrid"
-                      ) =>
-                        setNewGroup((prev) => ({ ...prev, meetingType: value }))
-                      }
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="In-Person">In-Person</SelectItem>
-                        <SelectItem value="Online">Online</SelectItem>
-                        <SelectItem value="Hybrid">Hybrid</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="location">Location</Label>
-                  <Input
-                    id="location"
-                    value={newGroup.location}
-                    onChange={(e) =>
-                      setNewGroup((prev) => ({
-                        ...prev,
-                        location: e.target.value,
-                      }))
-                    }
-                    placeholder="Library Room 204 or meeting description"
-                  />
-                </div>
-                <div className="space-y-4 border-t pt-4">
-                  <h4 className="font-medium text-sm">Meeting Integrations</h4>
-                  <div className="space-y-2">
-                    <Label htmlFor="google-calendar">
-                      Google Calendar Event Link
-                    </Label>
-                    <Input
-                      id="google-calendar"
-                      value={newGroup.googleCalendarLink}
-                      onChange={(e) =>
-                        setNewGroup((prev) => ({
-                          ...prev,
-                          googleCalendarLink: e.target.value,
-                        }))
-                      }
-                      placeholder="https://calendar.google.com/calendar/event?eid=..."
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="zoom-link">Zoom Meeting Link</Label>
-                    <Input
-                      id="zoom-link"
-                      value={newGroup.zoomLink}
-                      onChange={(e) =>
-                        setNewGroup((prev) => ({
-                          ...prev,
-                          zoomLink: e.target.value,
-                        }))
-                      }
-                      placeholder="https://zoom.us/j/123456789"
-                    />
-                  </div>
-                </div>
-                <Button onClick={createGroup} className="w-full">
-                  Create Study Group
-                </Button>
-              </div>
-            </SheetContent>
-          </Sheet>
+          <NewStudyGroup />
         </div>
 
         {/* Study Groups Grid */}

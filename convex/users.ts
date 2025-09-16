@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import {
   internalMutation,
   internalQuery,
@@ -149,3 +149,21 @@ export const updateSubscriptionById = internalMutation({
     });
   },
 });
+
+export const getCurrentUserOrThrow = async (ctx: any) => {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) {
+    throw new ConvexError("Not authenticated");
+  }
+
+  const user = await ctx.db
+    .query("users")
+    .withIndex("email", (q: any) => q.eq("email", identity.email))
+    .unique();
+
+  if (!user) {
+    throw new ConvexError("User not found");
+  }
+
+  return user;
+};

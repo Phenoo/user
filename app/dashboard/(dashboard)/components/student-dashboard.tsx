@@ -14,6 +14,7 @@ import { IoFlagSharp } from "react-icons/io5";
 import { GoArrowUpRight, GoStopwatch } from "react-icons/go";
 import { LuCalendarCheck2 } from "react-icons/lu";
 import { CiSearch } from "react-icons/ci";
+import { CgTranscript } from "react-icons/cg";
 
 import {
   TrendingUp,
@@ -49,6 +50,7 @@ import { api } from "@/convex/_generated/api";
 import LoadingComponent from "@/components/loader";
 import Link from "next/link";
 import { universities_data } from "../list-universities";
+import { useRouter } from "next/navigation";
 
 export const data = [
   {
@@ -87,7 +89,7 @@ export const data = [
 
 export function StudentDashboard() {
   const user = useQuery(api.users.currentUser);
-
+  const router = useRouter();
   const recentFlashcards = [
     { subject: "Biology", count: 24, mastered: 18 },
     { subject: "Chemistry", count: 32, mastered: 20 },
@@ -135,6 +137,12 @@ export function StudentDashboard() {
                 Event
                 <LuCalendarCheck2 className="h-4 w-4 ml-auto" />
               </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => router.push("/dashboard/transcript")}
+              >
+                Transcript
+                <CgTranscript className="h-4 w-4 ml-auto" />
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -162,10 +170,12 @@ export function StudentDashboard() {
                 </p>
               </CardContent>
               <CardFooter>
-                <Button className="rounded-3xl">
-                  Quick Calculate
-                  <GoArrowUpRight className="h-4 w-4" />
-                </Button>
+                <Link href={"/dashboard/quick-calculate"}>
+                  <Button className="rounded-3xl">
+                    Quick Calculate
+                    <GoArrowUpRight className="h-4 w-4" />
+                  </Button>
+                </Link>
               </CardFooter>
             </Card>
             <TodayChartsView />
