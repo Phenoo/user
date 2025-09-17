@@ -10,6 +10,9 @@ import { useTheme } from "next-themes";
 
 const Hero = () => {
   const { theme } = useTheme();
+
+  const dsjsjs = theme === "dark";
+
   return (
     <div className="relative flex flex-col items-center justify-center w-full py-20">
       <div className="absolute flex lg:hidden size-40 rounded-full bg-primary blur-[10rem] top-0 left-1/2 -translate-x-1/2 -z-10"></div>
@@ -62,8 +65,11 @@ const Hero = () => {
           </Container>
           <Container delay={0.25} className="z-20">
             <div className="flex items-center justify-center mt-6 gap-x-4">
-              <Link href="#" className="flex items-center gap-2 group">
-                <Button size="lg">
+              <Link href="/auth" className="flex items-center gap-2 group">
+                <Button
+                  size="lg"
+                  className="bg-foreground text-background hover:bg-foreground/70"
+                >
                   Start Free Trial
                   <ArrowRightIcon className="size-4 group-hover:translate-x-1 transition-all duration-300" />
                 </Button>
@@ -76,15 +82,23 @@ const Hero = () => {
               <div className="hidden lg:block absolute -top-1/8 left-1/2 -z-20 bg-[var(--primary)] w-1/4 -translate-x-1/2 h-1/4 -translate-y-1/2 inset-0 blur-[10rem] animate-image-glow"></div>
 
               <div className="rounded-lg lg:rounded-[22px] border border-border bg-background">
-                <Image
-                  src={
-                    theme === "dark" ? "/dashboard.png" : "/dashboard-ligh.png"
-                  }
-                  alt="dashboard"
-                  width={1920}
-                  height={1080}
-                  className="rounded-lg lg:rounded-[20px]"
-                />
+                {dsjsjs ? (
+                  <Image
+                    src={"/dashboard.png"}
+                    alt="dashboard"
+                    width={1920}
+                    height={1080}
+                    className="rounded-lg lg:rounded-[20px]"
+                  />
+                ) : (
+                  <Image
+                    src={"/dashboard-ligh.png"}
+                    alt="dashboard"
+                    width={1920}
+                    height={1080}
+                    className="rounded-lg lg:rounded-[20px]"
+                  />
+                )}
               </div>
             </div>
             <div className="bg-gradient-to-t from-black/50 rounded-2xl  dark:from-background to-transparent absolute bottom-0 inset-x-0 w-full h-1/2"></div>
