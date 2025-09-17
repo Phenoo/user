@@ -6,6 +6,9 @@ import { ConvexClientProvider } from "@/providers/convex-provider";
 import { ConvexAuthNextjsServerProvider } from "@convex-dev/auth/nextjs/server";
 import { Toaster } from "@/components/ui/sonner";
 import ModalProvider from "@/components/modal-provider";
+import { NextIntlClientProvider } from "next-intl";
+
+import { getMessages } from "next-intl/server";
 
 const urbanist = Urbanist({
   variable: "--font-body",
@@ -26,7 +29,7 @@ export const metadata: Metadata = {
     "Student Management System, which centralises academic planning and make students focus on what really matters.",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
@@ -36,17 +39,19 @@ export default function RootLayout({
       <html lang="en" suppressHydrationWarning>
         <body className={`antialiased ${urbanist.className} ${lato.className}`}>
           <ConvexClientProvider>
-            <ThemeProvider
-              attribute="class"
-              defaultTheme="system"
-              enableSystem
-              disableTransitionOnChange
-              enableColorScheme
-            >
-              {children}
-              <ModalProvider />
-              <Toaster />
-            </ThemeProvider>
+            <NextIntlClientProvider>
+              <ThemeProvider
+                attribute="class"
+                defaultTheme="dark"
+                enableSystem
+                disableTransitionOnChange
+                enableColorScheme
+              >
+                {children}
+                <ModalProvider />
+                <Toaster />
+              </ThemeProvider>
+            </NextIntlClientProvider>
           </ConvexClientProvider>
         </body>
       </html>

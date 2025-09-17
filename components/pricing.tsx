@@ -10,56 +10,64 @@ import Container from "./container";
 import { PLAN, PLANS } from "@/constants/plans";
 import { useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 type Plan = "monthly" | "annually";
 
 const Pricing = () => {
   const [billPlan, setBillPlan] = useState<Plan>("monthly");
 
+  const pathname = usePathname();
   const handleSwitch = () => {
     setBillPlan((prev) => (prev === "monthly" ? "annually" : "monthly"));
   };
 
   return (
-    <div className="relative flex flex-col items-center justify-center w-full  mx-auto mb-8">
-      <div className="flex flex-col items-center justify-center max-w-5xl mx-auto">
-        <div className="flex flex-col items-center text-center max-w-2xl mx-auto">
-          <h2 className="text-2xl md:text-4xl  font-heading font-medium !leading-snug mt-6">
-            Find the right plan to boost <br className="hidden lg:block" />{" "}
-            <span className="font-subheading italic">your productivity</span>
-          </h2>
-          <p className="text-base md:text-lg text-center text-foreground/80 mt-6">
-            Stay on top of classes, exams, and projects with tools designed for
-            students. Organize tasks, plan your study schedule, and get
-            AI-powered support to make learning easier.
-          </p>
+    <section id="pricing">
+      <div className="relative flex flex-col items-center justify-center w-full  mx-auto mb-8">
+        <div
+          className={cn(
+            "flex flex-col items-center justify-center mx-auto w-full",
+            pathname === "/" ? "max-w-6xl" : "max-w-5xl"
+          )}
+        >
+          <div className="flex flex-col items-center text-center max-w-2xl mx-auto">
+            <h2 className="text-2xl md:text-4xl  font-heading font-medium !leading-snug mt-6">
+              Find the right plan to boost <br className="hidden lg:block" />{" "}
+              <span className="font-subheading italic">your productivity</span>
+            </h2>
+            <p className="text-base md:text-lg text-center text-foreground/80 mt-6">
+              Stay on top of classes, exams, and projects with tools designed
+              for students. Organize tasks, plan your study schedule, and get
+              AI-powered support to make learning easier.
+            </p>
+          </div>
+
+          <div className="flex items-center justify-center space-x-4 mt-6">
+            <span className="text-base font-medium">Monthly</span>
+            <button
+              onClick={handleSwitch}
+              className="relative rounded-full focus:outline-none"
+            >
+              <div className="w-12 h-6 transition rounded-full shadow-md outline-none bg-primary"></div>
+              <div
+                className={cn(
+                  "absolute inline-flex items-center justify-center w-4 h-4 transition-all duration-500 ease-in-out top-1 left-1 rounded-full bg-white",
+                  billPlan === "annually" ? "translate-x-6" : "translate-x-0"
+                )}
+              />
+            </button>
+            <span className="text-base font-medium">Annually</span>
+          </div>
         </div>
 
-        <div className="flex items-center justify-center space-x-4 mt-6">
-          <span className="text-base font-medium">Monthly</span>
-          <button
-            onClick={handleSwitch}
-            className="relative rounded-full focus:outline-none"
-          >
-            <div className="w-12 h-6 transition rounded-full shadow-md outline-none bg-primary"></div>
-            <div
-              className={cn(
-                "absolute inline-flex items-center justify-center w-4 h-4 transition-all duration-500 ease-in-out top-1 left-1 rounded-full bg-white",
-                billPlan === "annually" ? "translate-x-6" : "translate-x-0"
-              )}
-            />
-          </button>
-          <span className="text-base font-medium">Annually</span>
+        <div className="grid w-full grid-cols-1 lg:grid-cols-3 md:grid-cols-2 pt-8 lg:pt-12 gap-4 lg:gap-6 max-w-5xl mx-auto">
+          {PLANS.map((plan, idx) => (
+            <Plan key={plan.id} plan={plan} billPlan={billPlan} />
+          ))}
         </div>
       </div>
-
-      <div className="grid w-full grid-cols-1 lg:grid-cols-3 md:grid-cols-2 pt-8 lg:pt-12 gap-4 lg:gap-6 max-w-5xl mx-auto">
-        {PLANS.map((plan, idx) => (
-          <Plan key={plan.id} plan={plan} billPlan={billPlan} />
-        ))}
-      </div>
-    </div>
+    </section>
   );
 };
 
