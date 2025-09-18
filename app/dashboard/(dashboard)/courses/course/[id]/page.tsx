@@ -21,7 +21,6 @@ import {
   Play,
   FileText,
   Download,
-  ExternalLink,
   Plus,
   Search,
   GraduationCap,
@@ -48,6 +47,7 @@ import {
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
+import { YouTubeSection } from "../../_components/youtube-section";
 import LoadingComponent from "@/components/loader";
 import { cn } from "@/lib/utils";
 import EditCoursesSheet from "../../_components/edit-courses";
@@ -183,43 +183,6 @@ const mockStatistics: Record<string, Statistics> = {
   },
 };
 
-const mockYouTubeVideos: Record<string, YouTubeVideo[]> = {
-  "1": [
-    {
-      id: "1",
-      title: "Binary Tree Traversal Explained",
-      channel: "CS Dojo",
-      duration: "15:32",
-      thumbnail: "/binary-tree-tutorial.jpg",
-      relevance: "Highly Relevant",
-    },
-    {
-      id: "2",
-      title: "Graph Algorithms Visualization",
-      channel: "3Blue1Brown",
-      duration: "22:45",
-      thumbnail: "/graph-algorithms-visualization.jpg",
-      relevance: "Highly Relevant",
-    },
-    {
-      id: "3",
-      title: "Dynamic Programming Patterns",
-      channel: "Back To Back SWE",
-      duration: "18:20",
-      thumbnail: "/dynamic-programming-patterns.jpg",
-      relevance: "Relevant",
-    },
-    {
-      id: "4",
-      title: "Big O Notation Simplified",
-      channel: "freeCodeCamp",
-      duration: "12:15",
-      thumbnail: "/big-o-notation-tutorial.jpg",
-      relevance: "Relevant",
-    },
-  ],
-};
-
 const mockDocuments: Record<string, Document[]> = {
   "1": [
     {
@@ -276,7 +239,12 @@ const mockDocuments: Record<string, Document[]> = {
 export default function CoursePage() {
   const params = useParams();
   const courseId = params.id as string;
+  const pathname = usePathname();
   const user = useQuery(api.users.currentUser);
+
+  const searchParams = useSearchParams();
+
+  const sectionParams = searchParams.get("section");
 
   const course = useQuery(api.courses.getCourseById, {
     courseId: courseId as Id<"courses">,
@@ -291,7 +259,6 @@ export default function CoursePage() {
   const [activeSection, setActiveSection] = useState("overview");
   const [searchTerm, setSearchTerm] = useState("");
   const [documentFilter, setDocumentFilter] = useState("all");
-  const [videoFilter, setVideoFilter] = useState("all");
   const [isAddAssessmentOpen, setIsAddAssessmentOpen] = useState(false);
 
   const schedules = mockSchedules[courseId] || [];
@@ -302,7 +269,6 @@ export default function CoursePage() {
       courseId: params.id as Id<"courses">,
       userId: user?._id as Id<"users">,
     }) || [];
-  const youtubeVideos = mockYouTubeVideos[courseId] || [];
   const documents = mockDocuments[courseId] || [];
 
   const assessments =
@@ -317,15 +283,6 @@ export default function CoursePage() {
       .includes(searchTerm.toLowerCase());
     const matchesFilter =
       documentFilter === "all" || doc.category === documentFilter;
-    return matchesSearch && matchesFilter;
-  });
-
-  const filteredVideos = youtubeVideos.filter((video) => {
-    const matchesSearch =
-      video.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      video.channel.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesFilter =
-      videoFilter === "all" || video.relevance === videoFilter;
     return matchesSearch && matchesFilter;
   });
 
@@ -488,12 +445,18 @@ export default function CoursePage() {
                 return (
                   <button
                     key={section.id}
-                    onClick={() => setActiveSection(section.id)}
-                    className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
-                      activeSection === section.id
+                    onClick={() => {
+                      router.push(`${pathname}?section=${section.id}`);
+                    }}
+                    className={cn(
+                      `flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap`,
+                      sectionParams === section.id
                         ? "border-primary text-foreground font-bold"
-                        : "border-transparent text-muted-foreground hover:text-foreground"
-                    }`}
+                        : "border-transparent text-muted-foreground hover:text-foreground",
+                      !sectionParams &&
+                        section.id === "overview" &&
+                        "border-primary text-foreground font-bold"
+                    )}
                   >
                     <Icon className="h-4 w-4" />
                     {section.label}
@@ -506,7 +469,7 @@ export default function CoursePage() {
 
         {/* Content */}
         <div className="max-w-7xl mx-auto p-6">
-          {activeSection === "overview" && (
+          {(sectionParams === "overview" || !sectionParams) && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <Card
                 className="cursor-pointer hover:shadow-lg transition-shadow"
@@ -603,7 +566,7 @@ export default function CoursePage() {
                     Curated YouTube videos for additional learning
                   </p>
                   <Badge variant="secondary">
-                    {youtubeVideos.length} videos suggested
+                    Educational videos available
                   </Badge>
                 </CardContent>
               </Card>
@@ -650,7 +613,7 @@ export default function CoursePage() {
             </div>
           )}
 
-          {activeSection === "schedules" && (
+          {sectionParams === "schedules" && (
             <div className="space-y-6">
               <div className="flex justify-between items-center">
                 <h2 className="text-2xl font-bold text-foreground">
@@ -695,7 +658,7 @@ export default function CoursePage() {
             </div>
           )}
 
-          {activeSection === "groups" && (
+          {sectionParams === "groups" && (
             <div className="space-y-6">
               <div className="flex justify-between items-center">
                 <h2 className="text-2xl font-bold text-foreground">
@@ -746,7 +709,7 @@ export default function CoursePage() {
             </div>
           )}
 
-          {activeSection === "statistics" && statistics && (
+          {sectionParams === "statistics" && statistics && (
             <div className="space-y-6">
               <h2 className="text-2xl font-bold text-foreground">
                 Course Statistics
@@ -851,7 +814,7 @@ export default function CoursePage() {
             </div>
           )}
 
-          {activeSection === "flashcards" && (
+          {sectionParams === "flashcards" && (
             <div className="space-y-6">
               <div className="flex justify-between items-center">
                 <h2 className="text-2xl font-bold text-foreground">
@@ -866,94 +829,14 @@ export default function CoursePage() {
             </div>
           )}
 
-          {activeSection === "videos" && (
-            <div className="space-y-6">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <h2 className="text-2xl font-bold text-foreground">
-                  YouTube Video Suggestions
-                </h2>
-                <div className="flex gap-2">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                    <Input
-                      placeholder="Search videos..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10 w-64"
-                    />
-                  </div>
-                  <Select value={videoFilter} onValueChange={setVideoFilter}>
-                    <SelectTrigger className="w-40">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Videos</SelectItem>
-                      <SelectItem value="Highly Relevant">
-                        Highly Relevant
-                      </SelectItem>
-                      <SelectItem value="Relevant">Relevant</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {filteredVideos.map((video) => (
-                  <Card
-                    key={video.id}
-                    className="hover:shadow-lg transition-shadow"
-                  >
-                    <CardContent className="p-0">
-                      <div className="aspect-video relative">
-                        <img
-                          src={video.thumbnail || "/placeholder.jpg"}
-                          alt={video.title}
-                          className="w-full h-full object-cover rounded-t-lg"
-                        />
-                        <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                          <Button size="lg" className="rounded-full">
-                            <Play className="h-6 w-6" />
-                          </Button>
-                        </div>
-                        <Badge className="absolute top-2 right-2 bg-black/80 text-white">
-                          {video.duration}
-                        </Badge>
-                      </div>
-                      <div className="p-4 space-y-3">
-                        <div className="flex justify-between items-start gap-2">
-                          <h3 className="font-semibold text-balance leading-tight">
-                            {video.title}
-                          </h3>
-                          <Badge
-                            variant={
-                              video.relevance === "Highly Relevant"
-                                ? "default"
-                                : "secondary"
-                            }
-                          >
-                            {video.relevance}
-                          </Badge>
-                        </div>
-                        <p className="text-muted-foreground text-sm">
-                          {video.channel}
-                        </p>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="w-full bg-transparent"
-                        >
-                          <ExternalLink className="h-4 w-4 mr-2" />
-                          Watch on YouTube
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
+          {sectionParams === "videos" && (
+            <YouTubeSection
+              courseName={course?.name || ""}
+              courseDescription={course?.description}
+            />
           )}
 
-          {activeSection === "documents" && (
+          {sectionParams === "documents" && (
             <div className="space-y-6">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <h2 className="text-2xl font-bold text-foreground">
@@ -1034,7 +917,7 @@ export default function CoursePage() {
             </div>
           )}
 
-          {activeSection === "assessments" && (
+          {sectionParams === "assessments" && (
             <div className="space-y-6">
               <div className="flex justify-between items-center">
                 <h2 className="text-2xl font-bold text-foreground">

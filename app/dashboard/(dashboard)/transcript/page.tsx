@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -24,6 +24,7 @@ import Link from "next/link";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
+import { useRouter } from "next/navigation";
 
 interface StudentInfo {
   name: string;
@@ -118,6 +119,7 @@ const calculateCourseGrade = (
 export default function TranscriptPage() {
   const user = useQuery(api.users.currentUser);
 
+  const router = useRouter();
   const courses =
     useQuery(api.courses.getAllCourses, {
       userId: user?._id as Id<"users">,
@@ -141,6 +143,82 @@ export default function TranscriptPage() {
   });
 
   const transcriptRef = useRef<HTMLDivElement>(null);
+
+  // Screenshot protection
+  useEffect(() => {
+    const preventScreenshot = (e: KeyboardEvent) => {
+      // Prevent common screenshot shortcuts
+      if (
+        (e.ctrlKey || e.metaKey) &&
+        (e.key === "PrintScreen" || e.key === "F12" || e.key === "F11")
+      ) {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      }
+
+      // Prevent Alt + PrintScreen
+      if (e.altKey && e.key === "PrintScreen") {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      }
+    };
+
+    const preventContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+      return false;
+    };
+
+    const preventDragStart = (e: DragEvent) => {
+      e.preventDefault();
+      return false;
+    };
+
+    const preventSelectStart = (e: Event) => {
+      e.preventDefault();
+      return false;
+    };
+
+    // Developer tools detection
+    const detectDevTools = () => {
+      const threshold = 160;
+      if (
+        window.outerHeight - window.innerHeight > threshold ||
+        window.outerWidth - window.innerWidth > threshold
+      ) {
+        // Developer tools detected - blur the content
+        if (transcriptRef.current) {
+          transcriptRef.current.style.filter = "blur(10px)";
+          transcriptRef.current.style.pointerEvents = "none";
+        }
+      } else {
+        // Developer tools closed - restore content
+        if (transcriptRef.current) {
+          transcriptRef.current.style.filter = "none";
+          transcriptRef.current.style.pointerEvents = "auto";
+        }
+      }
+    };
+
+    // Add event listeners
+    document.addEventListener("keydown", preventScreenshot, true);
+    document.addEventListener("contextmenu", preventContextMenu, true);
+    document.addEventListener("dragstart", preventDragStart, true);
+    document.addEventListener("selectstart", preventSelectStart, true);
+
+    // Monitor for developer tools
+    const interval = setInterval(detectDevTools, 500);
+
+    // Cleanup
+    return () => {
+      document.removeEventListener("keydown", preventScreenshot, true);
+      document.removeEventListener("contextmenu", preventContextMenu, true);
+      document.removeEventListener("dragstart", preventDragStart, true);
+      document.removeEventListener("selectstart", preventSelectStart, true);
+      clearInterval(interval);
+    };
+  }, []);
 
   const coursesWithGrades: CourseWithGrade[] = courses.map((course) => {
     const courseAssessments = assessments.filter(
@@ -249,7 +327,35 @@ export default function TranscriptPage() {
           allowTaint: true,
           backgroundColor: "#ffffff",
           logging: true, // Keep this on!
-          // foreignObjectRendering: true, // Try this if you have complex content (like SVGs)
+          foreignObjectRendering: false, // Disable to avoid oklch color issues
+          ignoreElements: (element) => {
+            // Skip elements that might have problematic CSS
+            return element.classList.contains("print:hidden");
+          },
+          onclone: (clonedDoc) => {
+            // Force all colors to be hex/rgb in the cloned document
+            const style = clonedDoc.createElement("style");
+            style.textContent = `
+              * {
+                color: #000000 !important;
+                background-color: #ffffff !important;
+                border-color: #000000 !important;
+              }
+              .bg-gray-100 {
+                background-color: #f3f4f6 !important;
+              }
+              .border-black {
+                border-color: #000000 !important;
+              }
+              .border-gray-200 {
+                border-color: #e5e7eb !important;
+              }
+              .text-gray-600 {
+                color: #4b5563 !important;
+              }
+            `;
+            clonedDoc.head.appendChild(style);
+          },
         });
         console.log("Canvas captured:", canvas);
         tempCanvas = canvas; // Assign for removal in finally
@@ -329,7 +435,20 @@ export default function TranscriptPage() {
   const TranscriptDocument = () => (
     <div
       ref={transcriptRef}
-      className="bg-white text-black p-8 max-w-4xl mx-auto print:shadow-none print:max-w-none"
+      className="bg-white text-black p-8 max-w-4xl mx-auto print:shadow-none print:max-w-none pdf-compatible screenshot-protected"
+      style={{
+        // Override oklch colors with hex equivalents for PDF generation compatibility
+        backgroundColor: "#ffffff",
+        color: "#000000",
+        // Screenshot protection
+        userSelect: "none",
+        WebkitUserSelect: "none",
+        MozUserSelect: "none",
+        msUserSelect: "none",
+        WebkitTouchCallout: "none",
+      }}
+      onContextMenu={(e: React.MouseEvent) => e.preventDefault()}
+      onDragStart={(e: React.DragEvent) => e.preventDefault()}
     >
       {/* Header */}
       <div className="text-center mb-8 border-b-2 border-black pb-4">
@@ -501,12 +620,14 @@ export default function TranscriptPage() {
     <div className="min-h-screen print:bg-white">
       <div className="container mx-auto px-4 py-8 print:px-0 print:py-0">
         <div className="mb-6 print:hidden">
-          <Link href="/">
-            <Button variant="ghost" className="mb-4">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Home
-            </Button>
-          </Link>
+          <Button
+            variant="ghost"
+            className="mb-4"
+            onClick={() => router.back()}
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Home
+          </Button>
           <div className="flex justify-between flex-wrap gap-4 items-center">
             <div>
               <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
@@ -780,6 +901,106 @@ export default function TranscriptPage() {
           .print\\:bg-white {
             background-color: white !important;
           }
+        }
+
+        /* Override oklch colors with hex equivalents for PDF generation compatibility */
+        .pdf-compatible {
+          --background: #ffffff !important;
+          --foreground: #000000 !important;
+          --card: #f9fafb !important;
+          --card-foreground: #4b5563 !important;
+          --popover: #ffffff !important;
+          --popover-foreground: #4b5563 !important;
+          --primary: #fccddd !important;
+          --primary-foreground: #000000 !important;
+          --secondary: #e879f9 !important;
+          --secondary-foreground: #ffffff !important;
+          --muted: #f9fafb !important;
+          --muted-foreground: #4b5563 !important;
+          --accent: #f9fafb !important;
+          --accent-foreground: #ffffff !important;
+          --destructive: #ea580c !important;
+          --destructive-foreground: #ffffff !important;
+          --border: #e5e7eb !important;
+          --input: #e5e7eb !important;
+          --ring: #fccddd !important;
+        }
+
+        .pdf-compatible * {
+          color: inherit !important;
+          background-color: inherit !important;
+          border-color: inherit !important;
+        }
+
+        /* Screenshot Protection Styles */
+        .screenshot-protected {
+          -webkit-user-select: none !important;
+          -moz-user-select: none !important;
+          -ms-user-select: none !important;
+          user-select: none !important;
+          -webkit-touch-callout: none !important;
+          -webkit-user-drag: none !important;
+          -khtml-user-select: none !important;
+          pointer-events: auto !important;
+        }
+
+        .screenshot-protected * {
+          -webkit-user-select: none !important;
+          -moz-user-select: none !important;
+          -ms-user-select: none !important;
+          user-select: none !important;
+          -webkit-touch-callout: none !important;
+          -webkit-user-drag: none !important;
+          -khtml-user-select: none !important;
+        }
+
+        /* Prevent text selection */
+        .screenshot-protected::selection {
+          background: transparent !important;
+        }
+
+        .screenshot-protected::-moz-selection {
+          background: transparent !important;
+        }
+
+        /* Disable right-click context menu */
+        .screenshot-protected {
+          -webkit-context-menu: none !important;
+          -moz-context-menu: none !important;
+          context-menu: none !important;
+        }
+
+        /* Additional screenshot protection */
+        .screenshot-protected {
+          -webkit-tap-highlight-color: transparent !important;
+          -webkit-touch-callout: none !important;
+          -webkit-user-drag: none !important;
+          -khtml-user-select: none !important;
+          -moz-user-select: none !important;
+          -ms-user-select: none !important;
+          user-select: none !important;
+        }
+
+        /* Prevent image saving */
+        .screenshot-protected img {
+          -webkit-user-drag: none !important;
+          -khtml-user-drag: none !important;
+          -moz-user-drag: none !important;
+          -o-user-drag: none !important;
+          user-drag: none !important;
+          pointer-events: none !important;
+        }
+
+        /* Disable text selection completely */
+        .screenshot-protected,
+        .screenshot-protected * {
+          -webkit-user-select: none !important;
+          -moz-user-select: none !important;
+          -ms-user-select: none !important;
+          user-select: none !important;
+          -webkit-touch-callout: none !important;
+          -webkit-user-drag: none !important;
+          -khtml-user-select: none !important;
         }
       `}</style>
     </div>
