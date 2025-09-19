@@ -55,7 +55,11 @@ const Features = () => {
                     alt={feature.title}
                     width={500}
                     height={500}
-                    className="w-full h-full object-cover"
+                    className={cn(
+                      "w-full h-full object-cover rounded-sm",
+
+                      index === 3 && "h-[250px] object-contain rounded-lg"
+                    )}
                   />
                 </div>
               </MagicCard>

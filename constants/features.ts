@@ -12,27 +12,28 @@ export const FEATURES = [
     description:
       "Automatically track your study sessions and analyze your learning patterns with AI-powered insights.",
     icon: WandSparklesIcon,
-    image: "/images/feature-two.svg",
+    image: "/user-experience.png",
   },
   {
     title: "Comprehensive Insights",
     description:
       "Visualize your academic performance with detailed analytics and predictive grade forecasting.",
     icon: ChartColumnBigIcon,
-    image: "/images/feature-one.svg",
+    image: "/graphoffer.png",
   },
   {
     title: "Intelligent Scheduling",
     description:
       "AI-optimized study schedules that adapt to your learning style and upcoming deadlines.",
     icon: DatabaseIcon,
-    image: "/images/feature-three.svg",
+    image: "/event.png",
   },
   {
-    title: "Real-Time Analytics",
-    description: "Track and analyze your marketing performance in real-time",
+    title: "Grade Analytics",
+    description:
+      "Visualize your academic performance with detailed analytics and predictive grade forecasting.",
     icon: TrendingUpIcon,
-    image: "/images/feature-four.svg",
+    image: "/grade-analtyics.png",
   },
   {
     title: "Time Management",
@@ -40,6 +41,6 @@ export const FEATURES = [
       "Advanced time tracking and productivity insights to maximize your study efficiency.",
 
     icon: ZapIcon,
-    image: "/images/feature-five.svg",
+    image: "/timeshe.png",
   },
 ];

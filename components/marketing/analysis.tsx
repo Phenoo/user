@@ -1,9 +1,108 @@
-import { DownloadIcon, FilterIcon, TrendingUpIcon } from "lucide-react";
-import Container from "../global/container";
-import { Button } from "../ui/button";
+"use client";
+import {
+  RadialBarChart,
+  RadialBar,
+  PolarAngleAxis,
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  PolarGrid,
+  LabelList,
+} from "recharts";
+import { Button } from "@/components/ui/button";
+import { FilterIcon, DownloadIcon, TrendingUpIcon } from "lucide-react";
 import { MagicCard } from "../ui/magic-card";
+import Container from "../global/container";
 
-const Analysis = () => {
+import {
+  ChartConfig,
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
+
+export const description = "A multiple line chart";
+
+export const descriptions = "A mixed bar chart";
+
+const chartDataSec = [
+  { browser: "january", visitors: 275, fill: "var(--color-january)" },
+  { browser: "february", visitors: 200, fill: "var(--color-february)" },
+  { browser: "march", visitors: 187, fill: "var(--color-march)" },
+  { browser: "april", visitors: 173, fill: "var(--color-april)" },
+  { browser: "may", visitors: 90, fill: "var(--color-may)" },
+];
+
+const chartConfigSec = {
+  visitors: {
+    label: "Visitors",
+  },
+  january: {
+    label: "January",
+    color: "var(--chart-1)",
+  },
+  february: {
+    label: "February",
+    color: "var(--chart-2)",
+  },
+  march: {
+    label: "March",
+    color: "var(--chart-3)",
+  },
+  april: {
+    label: "April",
+    color: "var(--chart-4)",
+  },
+  may: {
+    label: "May",
+    color: "var(--chart-5)",
+  },
+} satisfies ChartConfig;
+
+const chartData = [
+  { browser: "maths", visitors: 275, fill: "var(--color-maths)" },
+  { browser: "english", visitors: 200, fill: "var(--color-english)" },
+  { browser: "arts", visitors: 187, fill: "var(--color-arts)" },
+  { browser: "physics", visitors: 173, fill: "var(--color-physics)" },
+  { browser: "physics", visitors: 143, fill: "var(--color-physics)" },
+  { browser: "other", visitors: 90, fill: "var(--color-other)" },
+];
+const chartConfig = {
+  visitors: {
+    label: "Visitors",
+  },
+  maths: {
+    label: "Maths",
+    color: "var(--chart-1)",
+  },
+  english: {
+    label: "English",
+    color: "var(--chart-2)",
+  },
+  arts: {
+    label: "Arts",
+    color: "var(--chart-3)",
+  },
+  physics: {
+    label: "Physics",
+    color: "var(--chart-4)",
+  },
+  other: {
+    label: "Other",
+    color: "var(--chart-5)",
+  },
+} satisfies ChartConfig;
+
+export default function StudentSection() {
+  const performanceData = [
+    { name: "Math", value: 82, fill: "#ff8da1" },
+    { name: "Science", value: 76, fill: "#ffc5d3" },
+    { name: "English", value: 91, fill: "#f52891" },
+    { name: "Arts", value: 100, fill: "#f51481" },
+  ];
+
   return (
     <div className="relative flex flex-col items-center justify-center w-full py-20">
       <Container>
@@ -19,8 +118,8 @@ const Analysis = () => {
           </p>
         </div>
       </Container>
-
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative w-full">
+        {/* Academic Performance */}
         <Container delay={0.2}>
           <div className="rounded-2xl bg-background/40 relative border border-border/50">
             <MagicCard
@@ -31,74 +130,57 @@ const Analysis = () => {
             >
               <div className="absolute bottom-0 right-0 bg-rose-500 w-1/4 h-1/4 blur-[8rem] z-20"></div>
               <div className="space-y-4">
-                <h3 className="text-xl font-semibold">Campaign Insights</h3>
+                <h3 className="text-xl font-semibold">Academic Performance</h3>
                 <p className="text-sm text-muted-foreground">
-                  Track your campaign performance with data-driven insights.
+                  Visualize student grades across different subjects.
                 </p>
 
-                <div className="space-y-4">
-                  <div className="flex justify-between items-baseline">
-                    <div>
-                      <div className="text-3xl font-semibold">$12,834</div>
-                      <div className="text-sm text-green-500 flex items-center gap-1 mt-2">
-                        <TrendingUpIcon className="w-4 h-4" />
-                        +25% from last month
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button size="icon" variant="ghost">
-                        <FilterIcon className="w-5 h-5" />
-                      </Button>
-                      <Button size="icon" variant="ghost">
-                        <DownloadIcon className="w-5 h-5" />
-                      </Button>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <div className="text-3xl font-semibold">85%</div>
+                    <div className="text-sm text-green-500 flex items-center gap-1 mt-2">
+                      <TrendingUpIcon className="w-4 h-4" />
+                      +5% improvement this semester
                     </div>
                   </div>
+                  <div className="flex gap-2">
+                    <Button size="icon" variant="ghost">
+                      <FilterIcon className="w-5 h-5" />
+                    </Button>
+                    <Button size="icon" variant="ghost">
+                      <DownloadIcon className="w-5 h-5" />
+                    </Button>
+                  </div>
+                </div>
 
-                  <div className="space-y-2">
-                    <div className="grid grid-cols-4 text-sm text-muted-foreground py-2">
-                      <div>Campaign</div>
-                      <div>Status</div>
-                      <div>Reach</div>
-                      <div>ROI</div>
-                    </div>
-                    {[
-                      {
-                        name: "Sales",
-                        status: "Active",
-                        reach: "45K",
-                        roi: "+32%",
-                      },
-                      {
-                        name: "Emails",
-                        status: "Done",
-                        reach: "28K",
-                        roi: "+18%",
-                      },
-                      {
-                        name: "Ads",
-                        status: "Active",
-                        reach: "62K",
-                        roi: "+45%",
-                      },
-                    ].map((campaign) => (
-                      <div
-                        key={campaign.name}
-                        className="grid grid-cols-4 text-sm py-2 border-t border-border/50"
-                      >
-                        <div>{campaign.name}</div>
-                        <div>{campaign.status}</div>
-                        <div>{campaign.reach}</div>
-                        <div className="font-semibold">{campaign.roi}</div>
-                      </div>
-                    ))}
-                  </div>
+                {/* Radial Chart */}
+                <div className="h-64">
+                  <ChartContainer
+                    config={chartConfig}
+                    className="mx-auto aspect-square max-h-[250px]"
+                  >
+                    <RadialBarChart
+                      data={chartData}
+                      innerRadius={30}
+                      outerRadius={100}
+                    >
+                      <ChartTooltip
+                        cursor={false}
+                        content={
+                          <ChartTooltipContent hideLabel nameKey="browser" />
+                        }
+                      />
+                      <PolarGrid gridType="circle" />
+                      <RadialBar dataKey="visitors" />
+                    </RadialBarChart>
+                  </ChartContainer>
                 </div>
               </div>
             </MagicCard>
           </div>
         </Container>
 
+        {/* Engagement & Attendance */}
         <Container delay={0.2}>
           <div className="rounded-2xl bg-background/40 relative border border-border/50">
             <MagicCard
@@ -109,69 +191,61 @@ const Analysis = () => {
             >
               <div className="absolute bottom-0 right-0 bg-pink-500 w-1/4 h-1/4 blur-[8rem] z-20"></div>
               <div className="space-y-4">
-                <h3 className="text-xl font-semibold">Audience Metrics</h3>
+                <h3 className="text-xl font-semibold">
+                  Engagement & Attendance
+                </h3>
                 <p className="text-sm text-muted-foreground">
-                  Understand your audience behavior and engagement patterns.
+                  Track how students attend and engage week by week.
                 </p>
 
-                <div className="space-y-4">
-                  <div className="flex justify-between items-baseline">
-                    <div>
-                      <div className="text-3xl font-semibold">84,392</div>
-                      <div className="text-sm text-green-500 flex items-center gap-1 mt-2">
-                        <TrendingUpIcon className="w-4 h-4" />
-                        +12% engagement rate
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button size="icon" variant="ghost">
-                        <FilterIcon className="w-5 h-5" />
-                      </Button>
-                      <Button size="icon" variant="ghost">
-                        <DownloadIcon className="w-5 h-5" />
-                      </Button>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <div className="text-3xl font-semibold">89%</div>
+                    <div className="text-sm text-green-500 flex items-center gap-1 mt-2">
+                      <TrendingUpIcon className="w-4 h-4" />
+                      +8% engagement this month
                     </div>
                   </div>
+                  <div className="flex gap-2">
+                    <Button size="icon" variant="ghost">
+                      <FilterIcon className="w-5 h-5" />
+                    </Button>
+                    <Button size="icon" variant="ghost">
+                      <DownloadIcon className="w-5 h-5" />
+                    </Button>
+                  </div>
+                </div>
 
-                  {/* Audience Table */}
-                  <div className="space-y-2">
-                    <div className="grid grid-cols-4 text-sm text-muted-foreground py-2">
-                      <div>Channel</div>
-                      <div>Users</div>
-                      <div>Sessions</div>
-                      <div>Conv. Rate</div>
-                    </div>
-                    {[
-                      {
-                        channel: "Social",
-                        users: "32K",
-                        sessions: "45K",
-                        rate: "3.2%",
-                      },
-                      {
-                        channel: "Email",
-                        users: "28K",
-                        sessions: "36K",
-                        rate: "4.5%",
-                      },
-                      {
-                        channel: "Direct",
-                        users: "15K",
-                        sessions: "22K",
-                        rate: "5.1%",
-                      },
-                    ].map((metric) => (
-                      <div
-                        key={metric.channel}
-                        className="grid grid-cols-4 text-sm py-2 border-t border-border/50"
-                      >
-                        <div>{metric.channel}</div>
-                        <div>{metric.users}</div>
-                        <div>{metric.sessions}</div>
-                        <div className="font-semibold">{metric.rate}</div>
-                      </div>
-                    ))}
-                  </div>
+                {/* Bar Chart */}
+                <div className="h-72">
+                  <ChartContainer config={chartConfigSec}>
+                    <BarChart
+                      accessibilityLayer
+                      data={chartDataSec}
+                      layout="vertical"
+                      margin={{
+                        left: 0,
+                      }}
+                    >
+                      <YAxis
+                        dataKey="browser"
+                        type="category"
+                        tickLine={false}
+                        tickMargin={10}
+                        axisLine={false}
+                        tickFormatter={(value) =>
+                          chartConfigSec[value as keyof typeof chartConfigSec]
+                            ?.label
+                        }
+                      />
+                      <XAxis dataKey="visitors" type="number" hide />
+                      <ChartTooltip
+                        cursor={false}
+                        content={<ChartTooltipContent hideLabel />}
+                      />
+                      <Bar dataKey="visitors" layout="vertical" radius={5} />
+                    </BarChart>
+                  </ChartContainer>
                 </div>
               </div>
             </MagicCard>
@@ -180,6 +254,4 @@ const Analysis = () => {
       </div>
     </div>
   );
-};
-
-export default Analysis;
+}
