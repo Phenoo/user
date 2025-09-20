@@ -9,11 +9,16 @@ import { Badge } from "@/components/ui/badge";
 import { Users, MapPin, Clock, CheckCircle, XCircle } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { Id } from "@/convex/_generated/dataModel";
 
 export default function JoinStudyGroupPage() {
   const params = useParams();
   const router = useRouter();
   const inviteCode = params.inviteCode as string;
+
+  const users = useQuery(api.users.currentUser);
+
+  const userId = users?._id as Id<"users">;
 
   const [joinStatus, setJoinStatus] = useState<
     "loading" | "success" | "error" | "already-joined"
@@ -22,6 +27,7 @@ export default function JoinStudyGroupPage() {
   const groupInvite = useQuery(api.studyGroups.getGroupByInviteCode, {
     inviteCode,
   });
+
   const joinGroup = useMutation(api.studyGroups.joinGroupByInvite);
 
   useEffect(() => {
@@ -36,12 +42,11 @@ export default function JoinStudyGroupPage() {
     if (!groupInvite) return;
 
     try {
-      await joinGroup({ inviteCode });
+      await joinGroup({ inviteCode, userId: userId });
       setJoinStatus("success");
-
       // Redirect to group page after 2 seconds
       setTimeout(() => {
-        router.push(`/study-groups/${groupInvite._id}`);
+        router.push(`/dashboard/study-groups/${groupInvite._id}`);
       }, 2000);
     } catch (error) {
       setJoinStatus("error");
@@ -160,7 +165,7 @@ export default function JoinStudyGroupPage() {
 
           {/* Action Buttons */}
           <div className="flex gap-4 pt-4">
-            <Link href="/study-groups" className="flex-1">
+            <Link href="/dashboard/study-groups" className="flex-1">
               <Button variant="outline" className="w-full bg-transparent">
                 Browse Other Groups
               </Button>

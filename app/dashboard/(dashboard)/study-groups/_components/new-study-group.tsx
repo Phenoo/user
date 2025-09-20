@@ -27,8 +27,9 @@ import CoursesSelect from "@/components/courses-select";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
+import { cn } from "@/lib/utils";
 
-const NewStudyGroup = () => {
+const NewStudyGroup = ({ title = true }: { title?: boolean }) => {
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
   const [course, setCourse] = useState("");
 
@@ -86,8 +87,8 @@ const NewStudyGroup = () => {
     <Sheet open={isCreateSheetOpen} onOpenChange={setIsCreateSheetOpen}>
       <SheetTrigger asChild>
         <Button>
-          <Plus className="h-4 w-4 mr-2" />
-          Create Group
+          <Plus className={cn("h-4 w-4", title && "mr-2")} />
+          {title && "Create Group"}
         </Button>
       </SheetTrigger>
       <SheetContent className="w-full sm:max-w-lg overflow-y-auto">

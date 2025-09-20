@@ -23,6 +23,7 @@ export const updateUser = mutation({
     userId: v.id("users"),
     isOnboarding: v.optional(v.boolean()),
     school: v.optional(v.string()),
+    birthDate: v.optional(v.string()),
     course: v.optional(v.string()),
     year: v.optional(v.string()),
     major: v.optional(v.string()),

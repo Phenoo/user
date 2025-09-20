@@ -73,11 +73,6 @@ export default function CoursescontainerPage() {
 
   const user = useQuery(api.users.currentUser);
 
-  const getCourses =
-    useQuery(api.courses.getAllCourses, {
-      userId: user?._id as Id<"users">,
-    }) || [];
-
   const courses =
     useQuery(api.courses.getAllCourses, {
       userId: user?._id as Id<"users">,

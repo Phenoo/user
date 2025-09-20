@@ -51,6 +51,9 @@ import LoadingComponent from "@/components/loader";
 import Link from "next/link";
 import { universities_data } from "../list-universities";
 import { useRouter } from "next/navigation";
+import { Id } from "@/convex/_generated/dataModel";
+import NewStudyGroup from "../study-groups/_components/new-study-group";
+import CpaCard from "./cpa-card";
 
 export const data = [
   {
@@ -95,6 +98,17 @@ export function StudentDashboard() {
     { subject: "Chemistry", count: 32, mastered: 20 },
     { subject: "Physics", count: 28, mastered: 25 },
   ];
+
+  const userId = user?._id;
+
+  const getStudyGroups = useQuery(api.studyGroups.getUserStudyGroups, {
+    userId: userId as Id<"users">,
+  });
+
+  const courses =
+    useQuery(api.courses.getAllCourses, {
+      userId: user?._id as Id<"users">,
+    }) || [];
 
   if (user === undefined) {
     return <LoadingComponent />;
@@ -153,31 +167,7 @@ export function StudentDashboard() {
         {/* Left Column */}
         <div className="lg:col-span-8 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-            <Card className="">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm">Current GPA</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-bold ">3.84</span>
-                  <span className="text-sm text-foreground/80 font-medium">
-                    +0.12
-                  </span>
-                </div>
-                <Progress value={84} className="mt-3 h-2" />
-                <p className="text-xs text-muted-foreground mt-2">
-                  Target: 3.9
-                </p>
-              </CardContent>
-              <CardFooter>
-                <Link href={"/dashboard/quick-calculate"}>
-                  <Button className="rounded-3xl">
-                    Quick Calculate
-                    <GoArrowUpRight className="h-4 w-4" />
-                  </Button>
-                </Link>
-              </CardFooter>
-            </Card>
+            <CpaCard />
             <TodayChartsView />
             <QuoteCard />
           </div>
@@ -189,9 +179,11 @@ export function StudentDashboard() {
                 <TrendingUp className="h-5 w-5 text-primary" />
                 Study Analytics
               </CardTitle>
-              <Button variant="ghost" size="sm">
-                View Details <ChevronRight className="h-4 w-4 ml-1" />
-              </Button>
+              <Link href={"/dashboard/analytics"}>
+                <Button variant="ghost" size="sm">
+                  View Details <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              </Link>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -240,57 +232,56 @@ export function StudentDashboard() {
             </CardHeader>
             <CardContent className="p-0">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {recentFlashcards.map((flashcard, index) => (
-                  <div
-                    key={index}
-                    className="flex flex-col bg-card rounded-sm "
-                  >
-                    <div className="flex justify-between gap-4">
-                      <div className="pt-4 pl-4">
-                        <h4>{flashcard.subject}</h4>
+                {courses
+                  .filter((_, i) => i < 3)
+                  .map((flashcard, index) => (
+                    <div
+                      key={index}
+                      className="flex flex-col bg-card rounded-sm "
+                    >
+                      <div className="flex justify-between gap-4">
+                        <div className="pt-4 pl-4">
+                          <h4>{flashcard.name}</h4>
+                        </div>
+                        <div>
+                          <Button
+                            size={"icon"}
+                            className="rounded-none bg-background"
+                          >
+                            <MoreHorizontal className="h-4 text-black w-4" />
+                          </Button>
+                        </div>
                       </div>
-                      <div>
-                        <Button
-                          size={"icon"}
-                          className="rounded-none bg-gradient-to-br from-blue-50 to-red-50"
-                        >
-                          <MoreHorizontal className="h-4 text-black w-4" />
-                        </Button>
+                      <div className="flex justify-between w-full  gap-4 p-4">
+                        <div>
+                          <p className="text-sm">Progress</p>
+                        </div>
+                        <div>
+                          <h6 className="text-sm">
+                            <span className="text-2xl">{0}</span>/{0}
+                          </h6>
+                        </div>
+                      </div>
+                      <div className="w-full grid grid-cols-10 gap-2 px-4">
+                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((item, i) => (
+                          <div
+                            key={i}
+                            className={cn(
+                              "h-10 w-full rounded",
+                              item * 4 < 5 ? "bg-primary/50" : "bg-[#ddd] "
+                            )}
+                          ></div>
+                        ))}
+                      </div>
+                      <div className="flex justify-between w-full  gap-4 mt-2 p-4">
+                        <div></div>
+                        <div className="flex gap-1 bg-[#ddd] dark:bg-neutral-700 p-2 rounded">
+                          <IoFlagSharp className="h-4 w-4 mr-1" />
+                          <p className="text-xs">June 12, 2025</p>
+                        </div>
                       </div>
                     </div>
-                    <div className="flex justify-between w-full  gap-4 p-4">
-                      <div>
-                        <p className="text-sm">Progress</p>
-                      </div>
-                      <div>
-                        <h6 className="text-sm">
-                          <span className="text-2xl">{flashcard.mastered}</span>
-                          /{flashcard.count}
-                        </h6>
-                      </div>
-                    </div>
-                    <div className="w-full grid grid-cols-10 gap-2 px-4">
-                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((item, i) => (
-                        <div
-                          key={i}
-                          className={cn(
-                            "h-10 w-full rounded",
-                            item * 4 < flashcard.mastered
-                              ? "bg-primary/50"
-                              : "bg-[#ddd] "
-                          )}
-                        ></div>
-                      ))}
-                    </div>
-                    <div className="flex justify-between w-full  gap-4 mt-2 p-4">
-                      <div></div>
-                      <div className="flex gap-1 bg-[#ddd] dark:bg-neutral-700 p-2 rounded">
-                        <IoFlagSharp className="h-4 w-4 mr-1" />
-                        <p className="text-xs">June 12, 2025</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                  ))}
               </div>
             </CardContent>
           </Card>
@@ -306,34 +297,38 @@ export function StudentDashboard() {
           <Card>
             <CardHeader className="flex-row flex gap-2 items-center justify-between">
               <CardTitle className="flex items-center gap-2 text-foreground">
-                <Users className="h-5 w-5 text-primary" />
                 Study Groups
               </CardTitle>
-              <Button size={"icon"}>
-                <Plus className="h-4 w-4" />
-              </Button>
+              <NewStudyGroup title={false} />
             </CardHeader>
-            <CardContent className="space-y-3">
-              {[
-                { name: "Calculus Study Group", members: 8, next: "Today 3PM" },
-                {
-                  name: "Chemistry Lab Prep",
-                  members: 5,
-                  next: "Tomorrow 2PM",
-                },
-              ].map((group, index) => (
-                <div key={index} className="p-3 bg-card rounded-lg border">
-                  <p className="font-medium text-sm">{group.name}</p>
-                  <div className="flex justify-between items-center mt-1">
-                    <span className="text-xs text-foreground">
-                      {group.members} members
-                    </span>
-                    <span className="text-xs text-foreground font-medium">
-                      {group.next}
-                    </span>
-                  </div>
+            <CardContent className="flex flex-col gap-3">
+              {getStudyGroups && getStudyGroups.length ? (
+                getStudyGroups
+                  .filter((_, i) => i < 3)
+                  .map((group, index) => (
+                    <Link
+                      key={index}
+                      href={`/dashboard/study-groups/${group._id}`}
+                      className=""
+                    >
+                      <div className="p-3 bg-card rounded-lg border">
+                        <p className="font-medium text-sm">{group.name}</p>
+                        <div className="flex justify-between items-center mt-1">
+                          <span className="text-xs text-foreground">
+                            {group.currentMembers} members
+                          </span>
+                          <span className="text-xs text-foreground font-medium">
+                            {group.meetingSchedule}
+                          </span>
+                        </div>
+                      </div>
+                    </Link>
+                  ))
+              ) : (
+                <div className="py-4">
+                  <p className="text-sm">No study groups found</p>
                 </div>
-              ))}
+              )}
 
               <Link href={"/dashboard/study-groups"}>
                 <Button>View all</Button>

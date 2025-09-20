@@ -32,6 +32,7 @@ import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
 import { CountryDropdown } from "./country-dropdown";
 import { universities_data } from "@/app/dashboard/(dashboard)/list-universities";
+import { BirthdayDrawerOnboarding } from "@/app/dashboard/onboarding/_components/birthday-drawer";
 
 const TOTAL_STEPS = 5;
 
@@ -59,6 +60,13 @@ export function MainOnboarding() {
   const [selectedCountry, setSelectedCountry] = useState("USA");
   const [universities, setUniversities] = useState<any[]>([]);
   const [didntFind, setDidntFind] = useState(false);
+  const [date, setDate] = useState<Date | undefined>(undefined);
+
+  console.log(
+    date?.toLocaleDateString(),
+    typeof date?.toLocaleDateString(),
+    "sjsjsjsjsj"
+  );
 
   // Fetch universities whenever country changes
   // useEffect(() => {
@@ -97,7 +105,16 @@ export function MainOnboarding() {
   };
 
   const handleNext = async () => {
-    await saveProgress(formData);
+    if (step === 1) {
+      await saveProgress({
+        ...formData,
+        //@ts-ignore
+        birthDate: date?.toLocaleDateString(),
+      });
+    } else {
+      await saveProgress(formData);
+    }
+
     if (step < TOTAL_STEPS) {
       const nextStep = step + 1;
       setCurrentStep(nextStep);
@@ -154,7 +171,7 @@ export function MainOnboarding() {
                 <User className="w-8 h-8 text-primary" />
               </div>
               <h1 className="text-xl md:text-3xl font-bold text-foreground">
-                Welcome to StudyFlow
+                Welcome to Usoro
               </h1>
               <p className="text-sm md:text-lg text-muted-foreground max-w-md mx-auto text-pretty">
                 We understand that managing your studies can feel overwhelming.
@@ -175,6 +192,7 @@ export function MainOnboarding() {
                   }
                 />
               </div>
+              <BirthdayDrawerOnboarding date={date} setDate={setDate} />
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-left block">
                   School Email Address
@@ -475,7 +493,7 @@ export function MainOnboarding() {
                 How can we support you?
               </h2>
               <p className="text-muted-foreground text-pretty">
-                Customize your experience so StudyFlow works the way you do.
+                Customize your experience so Usoro works the way you do.
               </p>
             </div>
             <div className="space-y-6 max-w-lg mx-auto">
@@ -621,7 +639,7 @@ export function MainOnboarding() {
                   }}
                   className="px-6 bg-primary hover:bg-primary/90"
                 >
-                  Start Using StudyFlow
+                  Start Using Usoro
                 </Button>
               ) : (
                 <Button

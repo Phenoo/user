@@ -27,10 +27,6 @@ export default function DashboardLayout({
     router.push("/auth");
   }
 
-  if (!user?.isOnboarding) {
-    router.push("/dashboard/onboarding");
-  }
-
   return (
     <>
       <main className="min-h-screen h-full g-gradient-to-br from-blue-50 to-red-50 dark:from-blue-900 dark:to-red-900">

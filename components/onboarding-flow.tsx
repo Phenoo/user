@@ -1,20 +1,20 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Checkbox } from "@/components/ui/checkbox"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Progress } from "@/components/ui/progress"
-import { CheckCircle, Clock, BookOpen, Target, Sparkles } from "lucide-react"
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Progress } from "@/components/ui/progress";
+import { CheckCircle, Clock, BookOpen, Target, Sparkles } from "lucide-react";
 
-const TOTAL_STEPS = 5
+const TOTAL_STEPS = 5;
 
 export function OnboardingFlow() {
-  const [currentStep, setCurrentStep] = useState(1)
+  const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
     challenges: [] as string[],
     shortTermGoal: "",
@@ -22,21 +22,21 @@ export function OnboardingFlow() {
     reminderPreference: "",
     studyTime: "",
     name: "",
-  })
+  });
 
-  const progress = (currentStep / TOTAL_STEPS) * 100
+  const progress = (currentStep / TOTAL_STEPS) * 100;
 
   const handleNext = () => {
     if (currentStep < TOTAL_STEPS) {
-      setCurrentStep(currentStep + 1)
+      setCurrentStep(currentStep + 1);
     }
-  }
+  };
 
   const handleBack = () => {
     if (currentStep > 1) {
-      setCurrentStep(currentStep - 1)
+      setCurrentStep(currentStep - 1);
     }
-  }
+  };
 
   const handleChallengeToggle = (challenge: string) => {
     setFormData((prev) => ({
@@ -44,8 +44,8 @@ export function OnboardingFlow() {
       challenges: prev.challenges.includes(challenge)
         ? prev.challenges.filter((c) => c !== challenge)
         : [...prev.challenges, challenge],
-    }))
-  }
+    }));
+  };
 
   const renderStep = () => {
     switch (currentStep) {
@@ -56,34 +56,42 @@ export function OnboardingFlow() {
               <div className="w-16 h-16 mx-auto bg-primary/10 rounded-full flex items-center justify-center">
                 <Sparkles className="w-8 h-8 text-primary" />
               </div>
-              <h1 className="text-3xl font-bold text-foreground">Welcome to StudyFlow</h1>
+              <h1 className="text-3xl font-bold text-foreground">
+                Welcome to Usoro
+              </h1>
               <p className="text-lg text-muted-foreground max-w-md mx-auto text-pretty">
-                We understand that managing your studies can feel overwhelming. You're not alone in this journey, and
-                we're here to help make it easier.
+                We understand that managing your studies can feel overwhelming.
+                You're not alone in this journey, and we're here to help make it
+                easier.
               </p>
             </div>
             <div className="space-y-4">
               <Input
                 placeholder="What should we call you?"
                 value={formData.name}
-                onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, name: e.target.value }))
+                }
                 className="max-w-sm mx-auto"
               />
-              <p className="text-sm text-muted-foreground">Let's start by getting to know you better</p>
+              <p className="text-sm text-muted-foreground">
+                Let's start by getting to know you better
+              </p>
             </div>
           </div>
-        )
+        );
 
       case 2:
         return (
           <div className="space-y-6">
             <div className="text-center space-y-2">
               <h2 className="text-2xl font-bold text-foreground">
-                {formData.name ? `${formData.name}, what` : "What"} challenges do you face?
+                {formData.name ? `${formData.name}, what` : "What"} challenges
+                do you face?
               </h2>
               <p className="text-muted-foreground text-pretty">
-                It's completely normal to struggle with these. Select all that apply - we'll help you tackle them
-                together.
+                It's completely normal to struggle with these. Select all that
+                apply - we'll help you tackle them together.
               </p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -143,9 +151,13 @@ export function OnboardingFlow() {
                       <div className="flex-1">
                         <div className="flex items-center space-x-2 mb-1">
                           <challenge.icon className="w-4 h-4 text-primary" />
-                          <h3 className="font-medium text-foreground">{challenge.label}</h3>
+                          <h3 className="font-medium text-foreground">
+                            {challenge.label}
+                          </h3>
                         </div>
-                        <p className="text-sm text-muted-foreground">{challenge.description}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {challenge.description}
+                        </p>
                       </div>
                     </div>
                   </CardContent>
@@ -153,15 +165,18 @@ export function OnboardingFlow() {
               ))}
             </div>
           </div>
-        )
+        );
 
       case 3:
         return (
           <div className="space-y-6">
             <div className="text-center space-y-2">
-              <h2 className="text-2xl font-bold text-foreground">What do you want to achieve?</h2>
+              <h2 className="text-2xl font-bold text-foreground">
+                What do you want to achieve?
+              </h2>
               <p className="text-muted-foreground text-pretty">
-                Setting clear goals helps us create a personalized experience that works for you.
+                Setting clear goals helps us create a personalized experience
+                that works for you.
               </p>
             </div>
             <div className="space-y-6 max-w-lg mx-auto">
@@ -173,7 +188,12 @@ export function OnboardingFlow() {
                   id="short-term"
                   placeholder="e.g., Finish assignments on time, improve study habits"
                   value={formData.shortTermGoal}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, shortTermGoal: e.target.value }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      shortTermGoal: e.target.value,
+                    }))
+                  }
                 />
               </div>
               <div className="space-y-2">
@@ -184,35 +204,47 @@ export function OnboardingFlow() {
                   id="long-term"
                   placeholder="e.g., Maintain a 3.5 GPA, develop better work-life balance"
                   value={formData.longTermGoal}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, longTermGoal: e.target.value }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      longTermGoal: e.target.value,
+                    }))
+                  }
                   rows={3}
                 />
               </div>
               <div className="bg-muted/50 p-4 rounded-lg">
                 <p className="text-sm text-muted-foreground">
-                  💡 <strong>Tip:</strong> The best goals are specific and achievable. We'll help you break them down
-                  into manageable steps.
+                  💡 <strong>Tip:</strong> The best goals are specific and
+                  achievable. We'll help you break them down into manageable
+                  steps.
                 </p>
               </div>
             </div>
           </div>
-        )
+        );
 
       case 4:
         return (
           <div className="space-y-6">
             <div className="text-center space-y-2">
-              <h2 className="text-2xl font-bold text-foreground">How can we support you?</h2>
+              <h2 className="text-2xl font-bold text-foreground">
+                How can we support you?
+              </h2>
               <p className="text-muted-foreground text-pretty">
-                Customize your experience so StudyFlow works the way you do.
+                Customize your experience so Usoro works the way you do.
               </p>
             </div>
             <div className="space-y-6 max-w-lg mx-auto">
               <div className="space-y-4">
-                <Label className="text-base font-medium">When do you prefer to study?</Label>
+                <Label className="text-base font-medium">
+                  When do you prefer to study?
+                </Label>
                 <RadioGroup
                   value={formData.studyTime}
-                  onValueChange={(value) => setFormData((prev) => ({ ...prev, studyTime: value }))}
+                  onValueChange={(value) =>
+                    setFormData((prev) => ({ ...prev, studyTime: value }))
+                  }
                 >
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="morning" id="morning" />
@@ -234,28 +266,41 @@ export function OnboardingFlow() {
               </div>
 
               <div className="space-y-4">
-                <Label className="text-base font-medium">How would you like to be reminded?</Label>
+                <Label className="text-base font-medium">
+                  How would you like to be reminded?
+                </Label>
                 <RadioGroup
                   value={formData.reminderPreference}
-                  onValueChange={(value) => setFormData((prev) => ({ ...prev, reminderPreference: value }))}
+                  onValueChange={(value) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      reminderPreference: value,
+                    }))
+                  }
                 >
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="gentle" id="gentle" />
-                    <Label htmlFor="gentle">Gentle nudges - I prefer subtle reminders</Label>
+                    <Label htmlFor="gentle">
+                      Gentle nudges - I prefer subtle reminders
+                    </Label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="regular" id="regular" />
-                    <Label htmlFor="regular">Regular check-ins - Keep me on track</Label>
+                    <Label htmlFor="regular">
+                      Regular check-ins - Keep me on track
+                    </Label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="minimal" id="minimal" />
-                    <Label htmlFor="minimal">Minimal notifications - I'll check in myself</Label>
+                    <Label htmlFor="minimal">
+                      Minimal notifications - I'll check in myself
+                    </Label>
                   </div>
                 </RadioGroup>
               </div>
             </div>
           </div>
-        )
+        );
 
       case 5:
         return (
@@ -264,32 +309,46 @@ export function OnboardingFlow() {
               <div className="w-16 h-16 mx-auto bg-primary/10 rounded-full flex items-center justify-center">
                 <CheckCircle className="w-8 h-8 text-primary" />
               </div>
-              <h2 className="text-2xl font-bold text-foreground">You're all set, {formData.name || "there"}!</h2>
+              <h2 className="text-2xl font-bold text-foreground">
+                You're all set, {formData.name || "there"}!
+              </h2>
               <div className="max-w-md mx-auto space-y-4">
                 <p className="text-muted-foreground text-pretty">
-                  Remember, it's completely okay to ask for help along the way. We're here to support you, and every
-                  small step counts toward your success.
+                  Remember, it's completely okay to ask for help along the way.
+                  We're here to support you, and every small step counts toward
+                  your success.
                 </p>
                 <div className="bg-primary/5 p-4 rounded-lg text-left">
-                  <h3 className="font-medium text-foreground mb-2">Your personalized plan includes:</h3>
+                  <h3 className="font-medium text-foreground mb-2">
+                    Your personalized plan includes:
+                  </h3>
                   <ul className="text-sm text-muted-foreground space-y-1">
                     {formData.challenges.length > 0 && (
-                      <li>• Strategies for {formData.challenges.slice(0, 2).join(" and ")}</li>
+                      <li>
+                        • Strategies for{" "}
+                        {formData.challenges.slice(0, 2).join(" and ")}
+                      </li>
                     )}
-                    {formData.shortTermGoal && <li>• Steps toward: {formData.shortTermGoal}</li>}
-                    {formData.studyTime && <li>• Optimized for {formData.studyTime} study sessions</li>}
+                    {formData.shortTermGoal && (
+                      <li>• Steps toward: {formData.shortTermGoal}</li>
+                    )}
+                    {formData.studyTime && (
+                      <li>
+                        • Optimized for {formData.studyTime} study sessions
+                      </li>
+                    )}
                     <li>• Progress tracking and gentle accountability</li>
                   </ul>
                 </div>
               </div>
             </div>
           </div>
-        )
+        );
 
       default:
-        return null
+        return null;
     }
-  }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center p-4">
@@ -322,14 +381,17 @@ export function OnboardingFlow() {
                 <Button
                   onClick={() => {
                     // Handle completion - redirect to main app
-                    console.log("Onboarding completed:", formData)
+                    console.log("Onboarding completed:", formData);
                   }}
                   className="px-6 bg-primary hover:bg-primary/90"
                 >
-                  Start Using StudyFlow
+                  Start Using Usoro
                 </Button>
               ) : (
-                <Button onClick={handleNext} className="px-6 bg-primary hover:bg-primary/90">
+                <Button
+                  onClick={handleNext}
+                  className="px-6 bg-primary hover:bg-primary/90"
+                >
                   Continue
                 </Button>
               )}
@@ -338,5 +400,5 @@ export function OnboardingFlow() {
         </Card>
       </div>
     </div>
-  )
+  );
 }

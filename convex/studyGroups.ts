@@ -387,7 +387,7 @@ export const getGroupByInviteCode = query({
 });
 
 export const joinGroupByInvite = mutation({
-  args: { inviteCode: v.string() },
+  args: { inviteCode: v.string(), userId: v.id("users") },
   handler: async (ctx, args) => {
     const invite = await ctx.db
       .query("studyGroupInvites")
@@ -410,13 +410,12 @@ export const joinGroupByInvite = mutation({
 
     // For demo purposes, we'll use a mock user ID
     // In a real app, you'd get this from the user context
-    const mockUserId = "user123" as Id<"users">;
 
     // Check if user is already a member
     const existingMembership = await ctx.db
       .query("studyGroupMembers")
       .withIndex("by_group_user", (q) =>
-        q.eq("studyGroupId", invite.studyGroupId).eq("userId", mockUserId)
+        q.eq("studyGroupId", invite.studyGroupId).eq("userId", args.userId)
       )
       .first();
 
@@ -427,7 +426,7 @@ export const joinGroupByInvite = mutation({
     // Add user to group
     await ctx.db.insert("studyGroupMembers", {
       studyGroupId: invite.studyGroupId,
-      userId: mockUserId,
+      userId: args.userId,
       role: "member",
       joinedAt: Date.now(),
       contributions: 0,

@@ -25,6 +25,7 @@ import type * as seedFeatureLimits from "../seedFeatureLimits.js";
 import type * as stripe from "../stripe.js";
 import type * as studyGroups from "../studyGroups.js";
 import type * as subscriptions from "../subscriptions.js";
+import type * as tasks from "../tasks.js";
 import type * as users from "../users.js";
 
 /**
@@ -48,6 +49,7 @@ declare const fullApi: ApiFromModules<{
   stripe: typeof stripe;
   studyGroups: typeof studyGroups;
   subscriptions: typeof subscriptions;
+  tasks: typeof tasks;
   users: typeof users;
 }>;
 export declare const api: FilterApi<

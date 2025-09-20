@@ -10,6 +10,7 @@ const schema = defineSchema({
     email: v.string(),
     emailVerificationTime: v.optional(v.number()),
     phone: v.optional(v.string()),
+    birthDate: v.optional(v.string()),
     phoneVerificationTime: v.optional(v.number()),
     isAnonymous: v.optional(v.boolean()),
     isOnboarding: v.optional(v.boolean()),
@@ -153,7 +154,21 @@ const schema = defineSchema({
     .index("by_courseId", ["courseId"])
     .index("by_userId_courseId", ["userId", "courseId"])
     .index("by_userId_dayOfWeek", ["userId", "dayOfWeek"]), // For full calendar view
-
+  tasks: defineTable({
+    userId: v.id("users"),
+    title: v.string(),
+    description: v.optional(v.string()),
+    priority: v.union(v.literal("low"), v.literal("medium"), v.literal("high")),
+    category: v.string(),
+    dueDate: v.optional(v.string()),
+    completed: v.boolean(),
+    createdAt: v.string(),
+    updatedAt: v.string(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_completed", ["userId", "completed"])
+    .index("by_user_priority", ["userId", "priority"])
+    .index("by_user_category", ["userId", "category"]),
   // --- Study Groups Collection ---
   studyGroups: defineTable({
     name: v.string(),

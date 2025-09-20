@@ -70,7 +70,7 @@ export default function StudyGroupDetailPage() {
 
   const copyInviteLink = async () => {
     if (inviteLink) {
-      const fullLink = `${window.location.origin}/study-groups/join/${inviteLink.inviteCode}`;
+      const fullLink = `${window.location.origin}/dashboard/study-groups/join/${inviteLink.inviteCode}`;
       await navigator.clipboard.writeText(fullLink);
       setLinkCopied(true);
       setTimeout(() => setLinkCopied(false), 2000);
@@ -110,9 +110,9 @@ export default function StudyGroupDetailPage() {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b bg-card">
-        <div className="max-w-7xl mx-auto px-6 py-4">
+        <div className="max-w-7xl mx-auto p-4">
           <div className="flex items-start flex-col gap-4">
-            <Link href="/study-groups">
+            <Link href="/dashboard/study-groups">
               <Button variant="ghost" size="sm">
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Study Groups

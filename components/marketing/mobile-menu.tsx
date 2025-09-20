@@ -3,16 +3,21 @@
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
+  SheetClose,
   SheetContent,
   SheetHeader,
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { NAV_LINKS } from "@/constants";
+import { useConvexAuth } from "convex/react";
 import { Menu } from "lucide-react";
 import Link from "next/link";
+import { LuLoaderCircle } from "react-icons/lu";
 
 const MobileMenu = () => {
+  const { isAuthenticated, isLoading } = useConvexAuth();
+
   return (
     <Sheet>
       <SheetTrigger asChild className="lg:hidden">
@@ -31,15 +36,25 @@ const MobileMenu = () => {
               href={link.href}
               className="text-base font-medium transition-colors hover:text-primary"
             >
-              {link.name}
+              <SheetClose>{link.name}</SheetClose>
             </Link>
           ))}
           <div className="pt-4 mt-4 border-t border-border">
-            <Link href="#" className="w-full">
-              <Button className="w-full" variant="blue">
-                Get Started
-              </Button>
-            </Link>
+            {isLoading ? (
+              <>
+                <div>
+                  <LuLoaderCircle className="h-5 w-5 animate-spin" />
+                </div>
+              </>
+            ) : isAuthenticated ? (
+              <Link href="/dashboard" className="hidden lg:block">
+                <Button variant="default">Go to Dashboard</Button>
+              </Link>
+            ) : (
+              <Link href="/auth" className="hidden lg:block">
+                <Button variant="default">Get Started</Button>
+              </Link>
+            )}
           </div>
         </nav>
       </SheetContent>

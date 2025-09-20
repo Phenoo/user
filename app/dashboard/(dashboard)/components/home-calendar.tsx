@@ -5,11 +5,15 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ChevronLeft, ChevronRight, Clock } from "lucide-react";
 import { useState, useEffect } from "react";
+import Link from "next/link";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 
 export function CalendarWidget() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [today, setToday] = useState(new Date());
 
+  const getEvents = useQuery(api.events.list);
   useEffect(() => {
     const updateTime = () => {
       setToday(new Date());
@@ -191,6 +195,34 @@ export function CalendarWidget() {
     return `${dayName} ${day}, ${month}`;
   };
 
+  function isToday(date: string) {
+    const d = new Date(date);
+    const today = new Date();
+    return (
+      d.getUTCFullYear() === today.getUTCFullYear() &&
+      d.getUTCMonth() === today.getUTCMonth() &&
+      d.getUTCDate() === today.getUTCDate()
+    );
+  }
+
+  // Filter events for today
+  const todayEvents = getEvents?.filter(
+    (event) => isToday(event.startDate) || isToday(event.endDate)
+  );
+
+  function formatToTime(dateString: string) {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }
+
+  function isEventOngoing(startDate: string, endDate: string) {
+    const now = new Date();
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    return now >= start && now <= end;
+  }
+
   return (
     <Card className="w-full max-w-md">
       <CardHeader className="pb-0">
@@ -251,63 +283,61 @@ export function CalendarWidget() {
         <div className="border-t pt-4">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-medium text-foreground">{formatTodayDate()}</h3>
-            <Button variant="ghost" size="sm" className="text-xs">
-              View All <ChevronRight className="h-3 w-3 ml-1" />
-            </Button>
+            <Link href={"/dashboard/schedule"}>
+              <Button variant="ghost" size="sm" className="text-xs">
+                View All <ChevronRight className="h-3 w-3 ml-1" />
+              </Button>
+            </Link>
           </div>
 
           {/* Timeline */}
           <div className="space-y-3">
-            {events.map((event, i) => (
-              <div key={event.id} className="flex gap-3 ">
-                <div>
-                  <div className="text-xs  w-12 p-1 bg-[#ddd] text-neutral-900  rounded-xl text-center">
-                    {event.time.split(" - ")[0]}
-                  </div>
+            {todayEvents &&
+              todayEvents.map((event, i) => (
+                <div key={event._id} className="flex gap-3 ">
+                  <div>
+                    <div className="text-xs  w-12 p-1 bg-[#ddd] text-neutral-900  rounded-xl text-center">
+                      {formatToTime(event.startDate)}
+                    </div>
 
-                  {i + 1 < events.length && (
-                    <div className="border-[1px] border-dashed border-q w-[1px]  h-full mx-auto"></div>
-                  )}
-                </div>
-                <div
-                  className={`flex-1 p-3 rounded-lg border relative border-l-4 text-foreground  ${
-                    event.color
-                  }   ${event.isPast ? "opacity-60" : ""} ${
-                    event.isCurrent ? "" : ""
-                  }`}
-                >
-                  <h4 className={`font-medium text-sm `}>
-                    {event.title}
-                    {event.isCurrent && (
-                      <span className="ml-2 text-xs bg-green-500 text-white px-2 py-0.5 rounded-full">
-                        Live
-                      </span>
+                    {i !== 0 && i + 1 < events.length && (
+                      <div className="border-[1px] border-dashed border-q w-[1px]  h-full mx-auto"></div>
                     )}
-                    {event.isPast && (
-                      <span className="ml-2 text-xs bg-gray-500 text-white px-2 py-0.5 rounded-full">
-                        Past
-                      </span>
-                    )}
-                  </h4>
-                  <div className={`flex items-center gap-1 mt-1 text-xs `}>
-                    <Clock className="h-3 w-3" />
-                    {event.time}
                   </div>
+                  <div
+                    className={`flex-1 p-3 rounded-lg border relative border-l-4 text-foreground  ${
+                      event.color
+                    }   ${!isEventOngoing(event.startDate, event.endDate) ? "opacity-60" : ""} ${
+                      isEventOngoing(event.startDate, event.endDate) ? "" : ""
+                    }`}
+                  >
+                    <h4 className={`font-medium text-sm `}>
+                      {event.title}
+                      {isEventOngoing(event.startDate, event.endDate) ? (
+                        <span className="ml-2 text-xs bg-green-500 text-white px-2 py-0.5 rounded-full">
+                          Live
+                        </span>
+                      ) : (
+                        <span className="ml-2 text-xs bg-gray-500 text-white px-2 py-0.5 rounded-full">
+                          Past
+                        </span>
+                      )}
+                    </h4>
+                    <div className={`flex items-center gap-1 mt-1 text-xs `}>
+                      <Clock className="h-3 w-3" />
+                      {formatToTime(event.startDate)} -{" "}
+                      {formatToTime(event.endDate)}
+                    </div>
 
-                  {event.hasJoin && (
                     <div className="flex items-center justify-between mt-3">
-                      <Button
-                        size="sm"
-                        className="h-7 px-3 text-xs"
-                        disabled={event.isPast}
-                      >
-                        {event.isCurrent
+                      <Button size="sm" className="h-7 px-3 text-xs">
+                        {isEventOngoing(event.startDate, event.endDate)
                           ? "Join Now"
-                          : event.isPast
-                          ? "Ended"
-                          : "Join"}
+                          : !isEventOngoing(event.startDate, event.endDate)
+                            ? "Ended"
+                            : "Join"}
                       </Button>
-                      <div className="flex items-center gap-1">
+                      {/* <div className="flex items-center gap-1">
                         {event.participants?.map((participant, idx) => (
                           <Avatar key={idx} className="h-6 w-6">
                             <AvatarImage
@@ -326,12 +356,11 @@ export function CalendarWidget() {
                             +{event.additionalCount}
                           </span>
                         )}
-                      </div>
+                      </div> */}
                     </div>
-                  )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
           </div>
         </div>
       </CardContent>
