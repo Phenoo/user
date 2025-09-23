@@ -90,8 +90,8 @@ export default function CardPage({
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b bg-card">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center gap-4">
+        <div className="max-w-7xl mx-auto w-full px-4 py-4">
+          <div className="flex items-start flex-col gap-4">
             <Link href={`/dashboard/flashcards/${deck._id}`}>
               <Button variant="ghost" size="sm">
                 <ArrowLeft className="h-4 w-4 mr-2" />
@@ -99,7 +99,6 @@ export default function CardPage({
               </Button>
             </Link>
             <div className="flex items-center gap-3">
-              <BookOpen className="h-6 w-6 text-primary" />
               <h1 className="text-2xl font-bold text-foreground">
                 Card {currentIndex + 1} of {cards.length}
               </h1>

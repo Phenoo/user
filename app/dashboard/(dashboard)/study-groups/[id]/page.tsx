@@ -330,7 +330,7 @@ export default function StudyGroupDetailPage() {
                         Invite Link
                       </p>
                       <p className="text-sm font-mono break-all">
-                        {`${typeof window !== "undefined" ? window.location.origin : ""}/study-groups/join/${inviteLink.inviteCode}`}
+                        {`${typeof window !== "undefined" ? window.location.origin : ""}/dashboard/study-groups/join/${inviteLink.inviteCode}`}
                       </p>
                     </div>
                     <Button

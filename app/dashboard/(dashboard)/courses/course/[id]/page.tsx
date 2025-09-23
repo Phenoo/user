@@ -57,6 +57,10 @@ import { FlashcardContainer } from "../../../flashcards/components/flashcard-con
 import { Course } from "../../_components/courses-container";
 import NewFlashcard from "../../../flashcards/components/new-flashcard";
 import { AddAssessmentSheet } from "../../_components/add-assessment-sheet";
+import { Label } from "@/components/ui/label";
+import { IoDocumentTextOutline } from "react-icons/io5";
+
+import NewStudyGroup from "../../../study-groups/_components/new-study-group";
 
 interface Schedule {
   id: string;
@@ -132,36 +136,6 @@ const mockSchedules: Record<string, Schedule[]> = {
       location: "Room 301",
       type: "Lecture",
       topic: "Graph Algorithms",
-    },
-  ],
-};
-
-const mockStudyGroups: Record<string, StudyGroup[]> = {
-  "1": [
-    {
-      id: "1",
-      name: "Algorithm Masters",
-      members: 5,
-      nextMeeting: "Tomorrow 3:00 PM",
-      description:
-        "Focus on competitive programming and algorithm optimization",
-      isJoined: true,
-    },
-    {
-      id: "2",
-      name: "Code Warriors",
-      members: 4,
-      nextMeeting: "Friday 7:00 PM",
-      description: "Weekly coding challenges and peer review sessions",
-      isJoined: false,
-    },
-    {
-      id: "3",
-      name: "Data Structure Enthusiasts",
-      members: 8,
-      nextMeeting: "Sunday 2:00 PM",
-      description: "Deep dive into advanced data structures",
-      isJoined: false,
     },
   ],
 };
@@ -260,15 +234,24 @@ export default function CoursePage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [documentFilter, setDocumentFilter] = useState("all");
   const [isAddAssessmentOpen, setIsAddAssessmentOpen] = useState(false);
+  const [deletingText, setDeletingText] = useState("");
 
   const schedules = mockSchedules[courseId] || [];
-  const studyGroups = mockStudyGroups[courseId] || [];
   const statistics = mockStatistics[courseId];
   const flashcards =
     useQuery(api.flashcards.getUserDecksByCourseId, {
       courseId: params.id as Id<"courses">,
       userId: user?._id as Id<"users">,
     }) || [];
+
+  const studyGroups = useQuery(api.studyGroups.getAllStudyGroups);
+
+  const getStudyGroupsById = studyGroups?.filter(
+    (item) => item.courseId === courseId
+  );
+
+  console.log(getStudyGroupsById, "sjsjsjsj");
+
   const documents = mockDocuments[courseId] || [];
 
   const assessments =
@@ -327,6 +310,9 @@ export default function CoursePage() {
   };
 
   const handleDelete = async () => {
+    if (deletingText !== "delete my course") {
+      return;
+    }
     try {
       await deleteCourse({
         userId: user?._id as Id<"users">,
@@ -506,7 +492,7 @@ export default function CoursePage() {
                     Join study groups and collaborate with peers
                   </p>
                   <Badge variant="secondary">
-                    {studyGroups.length} groups available
+                    {getStudyGroupsById?.length} groups available
                   </Badge>
                 </CardContent>
               </Card>
@@ -619,6 +605,7 @@ export default function CoursePage() {
                 <h2 className="text-2xl font-bold text-foreground">
                   Class Schedule
                 </h2>
+
                 <Button>
                   <Plus className="h-4 w-4 mr-2" />
                   Add to Calendar
@@ -664,48 +651,43 @@ export default function CoursePage() {
                 <h2 className="text-2xl font-bold text-foreground">
                   Study Groups
                 </h2>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Group
-                </Button>
+                <NewStudyGroup />
               </div>
 
-              <div className="grid gap-4">
-                {studyGroups.map((group) => (
-                  <Card key={group.id}>
-                    <CardContent className="p-6">
-                      <div className="flex justify-between items-start">
-                        <div className="space-y-2 flex-1">
-                          <div className="flex items-center gap-3">
-                            <h3 className="font-semibold text-lg">
-                              {group.name}
-                            </h3>
-                            {group.isJoined && <Badge>Joined</Badge>}
-                          </div>
-                          <p className="text-muted-foreground">
-                            {group.description}
-                          </p>
-                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                            <span className="flex items-center gap-1">
-                              <Users className="h-4 w-4" />
-                              {group.members} members
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Clock className="h-4 w-4" />
-                              Next: {group.nextMeeting}
-                            </span>
-                          </div>
-                        </div>
-                        <Button
-                          variant={group.isJoined ? "outline" : "default"}
+              <div className="grid gap-4 min-h-[150px]">
+                <CardContent className="flex flex-col gap-3">
+                  {getStudyGroupsById && getStudyGroupsById.length ? (
+                    getStudyGroupsById
+                      .filter((_, i) => i < 3)
+                      .map((group, index) => (
+                        <Link
+                          key={index}
+                          href={`/dashboard/study-groups/${group._id}`}
+                          className=""
                         >
-                          {group.isJoined ? "Leave" : "Join"}
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                          <div className="p-3 bg-card rounded-lg border">
+                            <p className="font-medium text-sm">{group.name}</p>
+                            <div className="flex justify-between items-center mt-1">
+                              <span className="text-xs text-foreground">
+                                {group.currentMembers} members
+                              </span>
+                              <span className="text-xs text-foreground font-medium">
+                                {group.meetingSchedule}
+                              </span>
+                            </div>
+                          </div>
+                        </Link>
+                      ))
+                  ) : (
+                    <div className="py-4">
+                      <p className="text-sm">No study groups found</p>
+                    </div>
+                  )}
+                </CardContent>
               </div>
+              <Link href={"/dashboard/study-groups"}>
+                <Button>View all</Button>
+              </Link>
             </div>
           )}
 
@@ -880,39 +862,46 @@ export default function CoursePage() {
               </div>
 
               <div className="grid gap-4">
-                {filteredDocuments.map((doc) => (
-                  <Card
-                    key={doc.id}
-                    className="hover:shadow-lg transition-shadow"
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                            <FileText className="h-5 w-5 text-foreground" />
-                          </div>
-                          <div>
-                            <h3 className="font-semibold">{doc.name}</h3>
-                            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                              <span>{doc.type}</span>
-                              <span>•</span>
-                              <span>{doc.size}</span>
-                              <span>•</span>
-                              <span>{doc.uploadDate}</span>
+                {filteredDocuments.length > 0 ? (
+                  filteredDocuments.map((doc) => (
+                    <Card
+                      key={doc.id}
+                      className="hover:shadow-lg transition-shadow"
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                              <FileText className="h-5 w-5 text-foreground" />
+                            </div>
+                            <div>
+                              <h3 className="font-semibold">{doc.name}</h3>
+                              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                <span>{doc.type}</span>
+                                <span>•</span>
+                                <span>{doc.size}</span>
+                                <span>•</span>
+                                <span>{doc.uploadDate}</span>
+                              </div>
                             </div>
                           </div>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline">{doc.category}</Badge>
+                            <Button variant="outline" size="sm">
+                              <Download className="h-4 w-4 mr-2" />
+                              Download
+                            </Button>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline">{doc.category}</Badge>
-                          <Button variant="outline" size="sm">
-                            <Download className="h-4 w-4 mr-2" />
-                            Download
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      </CardContent>
+                    </Card>
+                  ))
+                ) : (
+                  <div className="text-center mt-20 flex flex-col justify-center gap-4 items-center">
+                    <IoDocumentTextOutline className="h-10 w-10" />
+                    <h4>No document found.</h4>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -1158,11 +1147,22 @@ export default function CoursePage() {
               course <strong>{course.name}</strong>
             </AlertDialogDescription>
           </AlertDialogHeader>
+          <div className="flex flex-col gap-2">
+            <Label>
+              type <strong>&apos;delete my course&apos;</strong>
+            </Label>
+            <Input
+              placeholder=""
+              value={deletingText}
+              onChange={(e) => setDeletingText(e.target.value)}
+            />
+          </div>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-white hover:bg-destructive/50"
               onClick={handleDelete}
+              disabled={deletingText !== "delete my course"}
             >
               Continue
             </AlertDialogAction>

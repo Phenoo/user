@@ -1,9 +1,8 @@
 "use client";
-import { api } from "@/convex/_generated/api";
-import { Id } from "@/convex/_generated/dataModel";
-import { useQuery } from "convex/react";
-import { useRouter } from "next/navigation";
+
 import React from "react";
+import Link from "next/link";
+import { useQuery } from "convex/react";
 
 import {
   Card,
@@ -12,10 +11,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+
+import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
+
 import { GoArrowUpRight } from "react-icons/go";
+import { MdCalculate } from "react-icons/md";
 
 interface CourseWithGrade {
   id: string;
@@ -160,11 +163,18 @@ const CpaCard = () => {
         />
         <p className="text-xs text-muted-foreground mt-2">Target: 3.9</p>
       </CardContent>
-      <CardFooter>
-        <Link href={"/dashboard/quick-calculate"}>
-          <Button className="rounded-3xl">
-            Quick Calculate
+      <CardFooter className="space-x-4">
+        <Link href={"/dashboard/transcript"}>
+          <Button>
+            Transcript
             <GoArrowUpRight className="h-4 w-4" />
+          </Button>
+        </Link>
+
+        <Link href={"/dashboard/quick-calculate"}>
+          <Button className="bg-foreground text-background hover:bg-foreground/80">
+            Quick
+            <MdCalculate className="h-4 w-4" />
           </Button>
         </Link>
       </CardFooter>

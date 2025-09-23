@@ -28,6 +28,7 @@ import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
 import { cn } from "@/lib/utils";
+import { useParams, usePathname } from "next/navigation";
 
 const NewStudyGroup = ({ title = true }: { title?: boolean }) => {
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
@@ -49,6 +50,19 @@ const NewStudyGroup = ({ title = true }: { title?: boolean }) => {
   });
 
   const createGroup = () => {
+    if (!newGroup.name) {
+      toast.error("Group name cannot be empty.");
+      return;
+    }
+    if (!course) {
+      toast.error("Course need to be added.");
+      return;
+    }
+    if (!newGroup.description) {
+      toast.error("Group description is needed.");
+      return;
+    }
+
     try {
       createGroupService({
         name: newGroup.name,

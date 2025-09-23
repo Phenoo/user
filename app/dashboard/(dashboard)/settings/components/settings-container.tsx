@@ -43,6 +43,9 @@ import { CountryDropdown } from "@/components/country-dropdown";
 import { Checkbox } from "@/components/ui/checkbox";
 import { universities_data } from "../../list-universities";
 import ProfileSettings from "./profile-settings";
+import { BillingTabs } from "../../billing/_components/BillingTabs";
+import BillingHistory from "../../billing/_components/billing-history";
+import Link from "next/link";
 
 type SettingsSection =
   | "profile"
@@ -86,10 +89,10 @@ export function SettingsLayout() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="max-w-7xl mx-auto  py-8">
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Sidebar */}
-          <div className="lg:w-64 flex-shrink-0">
+          <div className="lg:w-52 flex-shrink-0">
             <h1 className="text-2xl font-bold mb-6">Settings</h1>
             <nav className="space-y-2">
               {sidebarItems.map((item) => {
@@ -101,7 +104,7 @@ export function SettingsLayout() {
                       setActiveSection(item.id);
                       router.push(`${pathname}?section=${activeSection}`);
                     }}
-                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors ${
+                    className={`w-full flex items-center text-sm gap-3 px-3 py-2 rounded-lg text-left transition-colors ${
                       activeSection === item.id
                         ? "bg-primary/10 text-foreground border border-primary/20"
                         : "hover:bg-muted text-muted-foreground hover:text-foreground"
@@ -113,7 +116,7 @@ export function SettingsLayout() {
                 );
               })}
               <Separator className="my-4" />
-              <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors text-destructive hover:bg-destructive/10">
+              <button className="w-full flex items-center gap-3 text-sm px-3 py-2 rounded-lg text-left transition-colors text-destructive hover:bg-destructive/10">
                 <Trash2 className="h-4 w-4" />
                 Delete Account
               </button>
@@ -647,6 +650,68 @@ function PrivacySettings() {
 }
 
 function BillingSettings() {
+  const searchParams = useSearchParams();
+
+  const billingSearch = searchParams.get("tab");
+
+  const renderContent = () => {
+    switch (billingSearch) {
+      case "overview":
+        return (
+          <div>
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-1">
+                <h4 className="font-bold text-base md:text-xl">Free Trial</h4>
+                <p className="text-sm">Credit remaining</p>
+              </div>
+              <h4 className="font-bold text-2xl md:text-4xl ">$0.00</h4>
+            </div>
+            <Card className="mt-8">
+              <CardHeader>
+                <CardTitle>Need Help?</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="p-4 border rounded-lg">
+                    <h3 className="font-medium mb-2">Billing Questions</h3>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Have questions about your bill or need to update your
+                      payment information?
+                    </p>
+                    <Button variant="outline" size="sm">
+                      Contact Support
+                    </Button>
+                  </div>
+
+                  <div className="p-4 border rounded-lg">
+                    <h3 className="font-medium mb-2">Plan Changes</h3>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Want to upgrade, downgrade, or learn more about our plans?
+                    </p>
+                    <Link href="/dashboard/pricing">
+                      <Button variant="outline" size="sm">
+                        View Plans
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        );
+      case "billing-history":
+        return <BillingHistory />;
+      case "credit-grants":
+        return <div></div>;
+      case "billingpreferences":
+        return <div></div>;
+      case "pricing":
+        return <div></div>;
+      default:
+        return <div></div>;
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -655,164 +720,9 @@ function BillingSettings() {
           Manage your subscription and billing information.
         </p>
       </div>
+      <BillingTabs />
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            Current Plan
-            <Badge variant="secondary">Student Free</Badge>
-          </CardTitle>
-          <CardDescription>
-            You're currently on the free student plan with basic features
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="text-center p-4 border rounded-lg">
-              <h4 className="font-medium">Study Sessions</h4>
-              <p className="text-2xl font-bold text-primary">∞</p>
-              <p className="text-sm text-muted-foreground">Unlimited</p>
-            </div>
-            <div className="text-center p-4 border rounded-lg">
-              <h4 className="font-medium">Goal Tracking</h4>
-              <p className="text-2xl font-bold text-primary">3</p>
-              <p className="text-sm text-muted-foreground">Active goals</p>
-            </div>
-            <div className="text-center p-4 border rounded-lg">
-              <h4 className="font-medium">Analytics</h4>
-              <p className="text-2xl font-bold text-primary">7</p>
-              <p className="text-sm text-muted-foreground">Days history</p>
-            </div>
-          </div>
-          <Button className="w-full">
-            Upgrade to Student Pro - $4.99/month
-          </Button>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Student Pro Benefits</CardTitle>
-          <CardDescription>
-            Unlock advanced features designed for serious students
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="flex items-center gap-3">
-            <div className="w-2 h-2 bg-primary rounded-full"></div>
-            <span>Unlimited goal tracking and custom categories</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="w-2 h-2 bg-primary rounded-full"></div>
-            <span>Advanced analytics and progress insights</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="w-2 h-2 bg-primary rounded-full"></div>
-            <span>Study group collaboration tools</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="w-2 h-2 bg-primary rounded-full"></div>
-            <span>Calendar integration and smart scheduling</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="w-2 h-2 bg-primary rounded-full"></div>
-            <span>Priority customer support</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="w-2 h-2 bg-primary rounded-full"></div>
-            <span>Export study data and reports</span>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Payment Method</CardTitle>
-          <CardDescription>Manage your payment information</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between p-4 border rounded-lg">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-6 bg-gradient-to-r from-blue-600 to-blue-400 rounded flex items-center justify-center text-white text-xs font-bold">
-                VISA
-              </div>
-              <div>
-                <p className="font-medium">•••• •••• •••• 4242</p>
-                <p className="text-sm text-muted-foreground">Expires 12/26</p>
-              </div>
-            </div>
-            <Button variant="outline" size="sm">
-              Edit
-            </Button>
-          </div>
-          <Button variant="outline" className="w-full bg-transparent">
-            Add New Payment Method
-          </Button>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Billing History</CardTitle>
-          <CardDescription>
-            View your past payments and invoices
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between p-3 border rounded-lg">
-              <div>
-                <p className="font-medium">Student Pro - Monthly</p>
-                <p className="text-sm text-muted-foreground">Dec 1, 2024</p>
-              </div>
-              <div className="text-right">
-                <p className="font-medium">$4.99</p>
-                <Button variant="ghost" size="sm">
-                  Download
-                </Button>
-              </div>
-            </div>
-            <div className="flex items-center justify-between p-3 border rounded-lg">
-              <div>
-                <p className="font-medium">Student Pro - Monthly</p>
-                <p className="text-sm text-muted-foreground">Nov 1, 2024</p>
-              </div>
-              <div className="text-right">
-                <p className="font-medium">$4.99</p>
-                <Button variant="ghost" size="sm">
-                  Download
-                </Button>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Student Verification</CardTitle>
-          <CardDescription>
-            Verify your student status for discounted pricing
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <Label>Student Status Verified</Label>
-              <p className="text-sm text-muted-foreground">
-                Valid until May 2025
-              </p>
-            </div>
-            <Badge
-              variant="outline"
-              className="text-green-600 border-green-600"
-            >
-              Verified
-            </Badge>
-          </div>
-          <Button variant="outline">Update Student Information</Button>
-        </CardContent>
-      </Card>
+      {renderContent()}
     </div>
   );
 }
