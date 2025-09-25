@@ -54,6 +54,8 @@ import { useRouter } from "next/navigation";
 import { Id } from "@/convex/_generated/dataModel";
 import NewStudyGroup from "../study-groups/_components/new-study-group";
 import CpaCard from "./cpa-card";
+import { GoogleMeetIntegration } from "@/components/google-meeting-integration";
+import { useState } from "react";
 
 export const data = [
   {
@@ -93,11 +95,27 @@ export const data = [
 export function StudentDashboard() {
   const user = useQuery(api.users.currentUser);
   const router = useRouter();
-  const recentFlashcards = [
-    { subject: "Biology", count: 24, mastered: 18 },
-    { subject: "Chemistry", count: 32, mastered: 20 },
-    { subject: "Physics", count: 28, mastered: 25 },
-  ];
+  const [integrations, setIntegrations] = useState({
+    googleMeet: {
+      accessToken: null as string | null,
+    },
+    zoom: {
+      accessToken: null as string | null,
+      userId: null as string | null,
+    },
+  });
+
+  const handleGoogleAuth = async () => {
+    try {
+      const response = await fetch("/api/google-meet/auth");
+      const data = await response.json();
+      if (data.authUrl) {
+        window.open(data.authUrl, "_blank", "width=500,height=600");
+      }
+    } catch (error) {
+      console.error("Error initiating Google auth:", error);
+    }
+  };
 
   const userId = user?._id;
 
@@ -293,7 +311,6 @@ export function StudentDashboard() {
         <div className="lg:col-span-4 space-y-4">
           <AISuggestionsCard />
           <OverviewEventCalendar />
-
           <Card>
             <CardHeader className="flex-row flex gap-2 items-center justify-between">
               <CardTitle className="flex items-center gap-2 text-foreground">
@@ -335,6 +352,10 @@ export function StudentDashboard() {
               </Link>
             </CardContent>
           </Card>
+          <GoogleMeetIntegration
+            accessToken={integrations.googleMeet.accessToken ?? ""}
+            onAuthRequired={handleGoogleAuth}
+          />{" "}
         </div>
       </div>
     </div>
