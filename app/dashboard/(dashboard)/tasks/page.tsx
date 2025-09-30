@@ -32,6 +32,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useMutation, useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
+import { toast } from "sonner";
+import LoadingComponent from "@/components/loader";
 
 interface Task {
   _id: string;
@@ -44,48 +49,25 @@ interface Task {
   createdAt: string;
 }
 
-// Mock data - replace with actual Convex queries
-const mockTasks: Task[] = [
-  {
-    _id: "1",
-    title: "Complete project proposal",
-    description: "Finish the Q4 project proposal for the new client",
-    priority: "high",
-    category: "Work",
-    dueDate: "2025-01-25",
-    completed: false,
-    createdAt: "2025-01-20T10:00:00Z",
-  },
-  {
-    _id: "2",
-    title: "Review study materials",
-    description: "Go through chapter 5-7 for the upcoming exam",
-    priority: "medium",
-    category: "Study",
-    dueDate: "2025-01-22",
-    completed: true,
-    createdAt: "2025-01-19T14:30:00Z",
-  },
-  {
-    _id: "3",
-    title: "Buy groceries",
-    description: "Get ingredients for weekend meal prep",
-    priority: "low",
-    category: "Personal",
-    completed: false,
-    createdAt: "2025-01-20T16:45:00Z",
-  },
-];
-
 export default function TodosPage() {
-  const [tasks, setTasks] = useState<Task[]>(mockTasks);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterPriority, setFilterPriority] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [deletingTask, setDeletingTask] = useState<Task | null>(null);
 
-  const handleCreateTask = (
+  const createTask = useMutation(api.tasks.createTask);
+  const toggleTask = useMutation(api.tasks.toggleTask);
+  const deleteTask = useMutation(api.tasks.deleteTask);
+
+  const user = useQuery(api.users.currentUser);
+
+  const tasks =
+    useQuery(api.tasks.getTasks, {
+      userId: user?._id as Id<"users">,
+    }) || [];
+
+  const handleCreateTask = async (
     newTask: Omit<Task, "_id" | "completed" | "createdAt">
   ) => {
     const task: Task = {
@@ -94,42 +76,62 @@ export default function TodosPage() {
       completed: false,
       createdAt: new Date().toISOString(),
     };
-    setTasks([task, ...tasks]);
+
+    try {
+      const response = await createTask({
+        category: task.category,
+        priority: task.priority,
+        title: task.title,
+        description: task.description,
+        dueDate: task.dueDate,
+        userId: user?._id as Id<"users">,
+      });
+
+      toast.success("New Tasks sucessfully created");
+    } catch {
+      toast.error("Creating new tasks failed");
+    }
   };
 
-  const handleUpdateTask = (taskId: string, updates: Partial<Task>) => {
-    setTasks(
-      tasks.map((task) =>
-        task._id === taskId ? { ...task, ...updates } : task
-      )
-    );
+  const handleUpdateTask = (taskId: string, updates: Partial<Task>) => {};
+
+  const handleDeleteTask = async (taskId: string) => {
+    try {
+      const response = await deleteTask({
+        id: taskId as Id<"tasks">,
+      });
+      toast.success("Task sucessfully deleted");
+    } catch {
+      toast.error("Cannot delete task");
+    }
   };
 
-  const handleDeleteTask = (taskId: string) => {
-    setTasks(tasks.filter((task) => task._id !== taskId));
+  const handleToggleTask = async (taskId: string) => {
+    try {
+      const response = await toggleTask({
+        id: taskId as Id<"tasks">,
+      });
+      toast.success("Sucessfully updated the task");
+    } catch {
+      toast.error("Updates unsucessful");
+    }
   };
 
-  const handleToggleTask = (taskId: string) => {
-    setTasks(
-      tasks.map((task) =>
-        task._id === taskId ? { ...task, completed: !task.completed } : task
-      )
-    );
-  };
+  const filteredTasks =
+    tasks &&
+    tasks.filter((task) => {
+      const matchesSearch =
+        task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        task.description?.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesPriority =
+        filterPriority === "all" || task.priority === filterPriority;
+      const matchesStatus =
+        filterStatus === "all" ||
+        (filterStatus === "completed" && task.completed) ||
+        (filterStatus === "pending" && !task.completed);
 
-  const filteredTasks = tasks.filter((task) => {
-    const matchesSearch =
-      task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      task.description?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesPriority =
-      filterPriority === "all" || task.priority === filterPriority;
-    const matchesStatus =
-      filterStatus === "all" ||
-      (filterStatus === "completed" && task.completed) ||
-      (filterStatus === "pending" && !task.completed);
-
-    return matchesSearch && matchesPriority && matchesStatus;
-  });
+      return matchesSearch && matchesPriority && matchesStatus;
+    });
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -144,8 +146,12 @@ export default function TodosPage() {
     }
   };
 
-  const completedCount = tasks.filter((task) => task.completed).length;
-  const totalCount = tasks.length;
+  const completedCount = tasks && tasks.filter((task) => task.completed).length;
+  const totalCount = tasks && tasks.length;
+
+  if (!user) {
+    return <LoadingComponent />;
+  }
 
   return (
     <div className="min-h-screen p-6">
@@ -197,7 +203,7 @@ export default function TodosPage() {
               <div>
                 <p className="text-2xl font-bold">
                   {
-                    tasks.filter((t) => t.priority === "high" && !t.completed)
+                    tasks?.filter((t) => t.priority === "high" && !t.completed)
                       .length
                   }
                 </p>
@@ -213,7 +219,7 @@ export default function TodosPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold">
-                  {tasks.filter((t) => t.dueDate && !t.completed).length}
+                  {tasks?.filter((t) => t.dueDate && !t.completed).length}
                 </p>
                 <p className="text-gray-400 text-sm">Due Soon</p>
               </div>
@@ -276,14 +282,14 @@ export default function TodosPage() {
 
         {/* Task List */}
         <div className="space-y-3">
-          {filteredTasks.length === 0 ? (
+          {filteredTasks && filteredTasks.length === 0 ? (
             <div className="bg-card rounded-xl p-8 border  text-center">
               <p className="text-gray-400">
                 No tasks found. Create your first task to get started!
               </p>
             </div>
           ) : (
-            filteredTasks.map((task) => (
+            filteredTasks?.map((task) => (
               <div
                 key={task._id}
                 className={`bg-card rounded-xl p-4 border  transition-all hover: ${

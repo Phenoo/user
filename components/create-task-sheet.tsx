@@ -66,12 +66,12 @@ export function CreateTaskSheet({ onCreateTask }: CreateTaskSheetProps) {
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button className="bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600  border-0">
+        <Button className="  border-0">
           <Plus className="w-4 h-4 mr-2" />
           Create Task
         </Button>
       </SheetTrigger>
-      <SheetContent className=" md:max-w-3xl p-4">
+      <SheetContent className="w-full  md:max-w-3xl p-4">
         <SheetHeader>
           <SheetTitle className="">Create New Task</SheetTitle>
           <SheetDescription className="text-gray-400">
@@ -118,7 +118,7 @@ export function CreateTaskSheet({ onCreateTask }: CreateTaskSheetProps) {
                   setPriority(value)
                 }
               >
-                <SelectTrigger className=" ">
+                <SelectTrigger className="w-full ">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="">
@@ -164,19 +164,8 @@ export function CreateTaskSheet({ onCreateTask }: CreateTaskSheetProps) {
           </div>
 
           <div className="flex gap-3 pt-4">
-            <Button
-              type="submit"
-              className="flex-1 bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600  border-0"
-            >
+            <Button type="submit" className="flex-1   border-0">
               Create Task
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setOpen(false)}
-              className="border-gray-700 text-gray-300 hover:bg-gray-800"
-            >
-              Cancel
             </Button>
           </div>
         </form>
