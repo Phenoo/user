@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Clock, Users, ExternalLink, Plus } from "lucide-react";
 import { toast } from "sonner";
+import { useAuthActions, useAuthToken } from "@convex-dev/auth/react";
 
 interface GoogleMeetIntegrationProps {
   accessToken?: string;
@@ -26,6 +27,8 @@ export function GoogleMeetIntegration({
   onAuthRequired,
 }: GoogleMeetIntegrationProps) {
   const [isCreating, setIsCreating] = useState(false);
+
+  const token = useAuthToken();
   const [meetingForm, setMeetingForm] = useState({
     summary: "",
     description: "",
@@ -33,6 +36,45 @@ export function GoogleMeetIntegration({
     endTime: "",
     attendees: "",
   });
+
+  async function createCalendarEvent() {
+    console.log("Creating calendar event");
+    console.log(
+      meetingForm.startTime,
+      "dhdhdhdh",
+      meetingForm.endTime,
+      "snsshshshsh"
+    );
+    const event = {
+      summary: meetingForm.summary,
+      description: meetingForm.description,
+      start: {
+        dateTime: meetingForm.startTime, // Date.toISOString() ->
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone, // America/Los_Angeles
+      },
+      end: {
+        dateTime: meetingForm.endTime, // Date.toISOString() ->
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone, // America/Los_Angeles
+      },
+    };
+    await fetch(
+      "https://www.googleapis.com/calendar/v3/calendars/primary/events",
+      {
+        method: "POST",
+        headers: {
+          Authorization: "Bearer " + token,
+        },
+        body: JSON.stringify(event),
+      }
+    )
+      .then((data) => {
+        return data.json();
+      })
+      .then((data) => {
+        console.log(data);
+        alert("Event created, check your Google Calendar!");
+      });
+  }
 
   const handleCreateMeeting = async () => {
     if (!accessToken) {
@@ -239,7 +281,7 @@ export function GoogleMeetIntegration({
             </div>
 
             <Button
-              onClick={handleCreateMeeting}
+              onClick={createCalendarEvent}
               disabled={isCreating || !meetingForm.summary}
               className="w-full"
             >
@@ -284,6 +326,7 @@ export function GoogleMeetIntegration({
               variant="outline"
               className="justify-start bg-transparent"
               disabled={!accessToken}
+              onClick={handleCreateMeeting}
             >
               <ExternalLink className="w-4 h-4 mr-2" />
               Open Google Meet

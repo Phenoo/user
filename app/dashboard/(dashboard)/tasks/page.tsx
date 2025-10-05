@@ -25,6 +25,8 @@ import {
   Trash2,
   CheckCircle2,
   Circle,
+  Clock,
+  Plus,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -37,6 +39,7 @@ import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { toast } from "sonner";
 import LoadingComponent from "@/components/loader";
+import { Card } from "@/components/ui/card";
 
 interface Task {
   _id: string;
@@ -47,18 +50,25 @@ interface Task {
   dueDate?: string;
   completed: boolean;
   createdAt: string;
+  status: "todo" | "in-progress" | "done";
+  comments: string[];
 }
 
 export default function TodosPage() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [currentView, setCurrentView] = useState<"list" | "board">("board");
+  const [newTask, setNewTask] = useState("");
+
   const [filterPriority, setFilterPriority] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [deletingTask, setDeletingTask] = useState<Task | null>(null);
 
   const createTask = useMutation(api.tasks.createTask);
+  const updateTask = useMutation(api.tasks.updateTask);
   const toggleTask = useMutation(api.tasks.toggleTask);
   const deleteTask = useMutation(api.tasks.deleteTask);
+  const [draggedTask, setDraggedTask] = useState<string | null>(null);
 
   const user = useQuery(api.users.currentUser);
 
@@ -146,8 +156,58 @@ export default function TodosPage() {
     }
   };
 
+  const handleDragStart = (e: React.DragEvent, taskId: string) => {
+    setDraggedTask(taskId);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  };
+
+  const handleDrop = (e: React.DragEvent, newStatus: Task["status"]) => {
+    e.preventDefault();
+
+    if (draggedTask) {
+      updateTask({
+        id: draggedTask as Id<"tasks">,
+        status: newStatus,
+        completed: newStatus === "done" && true,
+      });
+
+      setDraggedTask(null);
+    }
+  };
+
   const completedCount = tasks && tasks.filter((task) => task.completed).length;
   const totalCount = tasks && tasks.length;
+
+  const getTasksByStatus = (status: Task["status"]) => {
+    return tasks && tasks.filter((task) => task.status === status);
+  };
+
+  const columns = [
+    {
+      id: "todo",
+      title: "To Do",
+      color: "border-yellow-500",
+      tasks: getTasksByStatus("todo"),
+    },
+    {
+      id: "in-progress",
+      title: "In Progress",
+      color: "border-blue-500",
+      tasks: getTasksByStatus("in-progress"),
+    },
+
+    {
+      id: "done",
+      title: "Done",
+      color: "border-green-500",
+      tasks: getTasksByStatus("done"),
+    },
+  ];
 
   if (!user) {
     return <LoadingComponent />;
@@ -164,7 +224,10 @@ export default function TodosPage() {
               {completedCount} of {totalCount} tasks completed
             </p>
           </div>
-          <CreateTaskSheet onCreateTask={handleCreateTask} />
+          <CreateTaskSheet
+            //@ts-ignore
+            onCreateTask={handleCreateTask}
+          />
         </div>
 
         {/* Stats Cards */}
@@ -280,93 +343,235 @@ export default function TodosPage() {
           </div>
         </div>
 
+        <nav className="flex items-center gap-6">
+          <button
+            onClick={() => setCurrentView("list")}
+            className={
+              currentView === "list"
+                ? " border-b-2 border-blue-500 pb-1"
+                : "text-gray-400 hover:"
+            }
+          >
+            List
+          </button>
+          <button
+            onClick={() => setCurrentView("board")}
+            className={
+              currentView === "board"
+                ? " border-b-2 border-blue-500 pb-1"
+                : "text-gray-400 hover:"
+            }
+          >
+            Board
+          </button>
+        </nav>
         {/* Task List */}
-        <div className="space-y-3">
-          {filteredTasks && filteredTasks.length === 0 ? (
-            <div className="bg-card rounded-xl p-8 border  text-center">
-              <p className="text-gray-400">
-                No tasks found. Create your first task to get started!
-              </p>
-            </div>
-          ) : (
-            filteredTasks?.map((task) => (
-              <div
-                key={task._id}
-                className={`bg-card rounded-xl p-4 border  transition-all hover: ${
-                  task.completed ? "opacity-60" : ""
-                }`}
-              >
-                <div className="flex items-start gap-4">
-                  <Checkbox
-                    checked={task.completed}
-                    onCheckedChange={() => handleToggleTask(task._id)}
-                    className="mt-1 data-[state=checked]:bg-rose-500 data-[state=checked]:border-rose-500"
-                  />
 
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1">
-                        <h3
-                          className={`font-medium ${task.completed ? "line-through text-gray-500" : ""}`}
-                        >
-                          {task.title}
-                        </h3>
-                        {task.description && (
-                          <p className="text-gray-400 text-sm mt-1">
-                            {task.description}
-                          </p>
-                        )}
+        <br />
 
-                        <div className="flex items-center gap-3 mt-3">
-                          <Badge className={getPriorityColor(task.priority)}>
-                            {task.priority}
-                          </Badge>
-                          <Badge variant="outline" className=" text-gray-300">
-                            {task.category}
-                          </Badge>
-                          {task.dueDate && (
-                            <div className="flex items-center gap-1 text-gray-400 text-sm">
-                              <Calendar className="w-3 h-3" />
-                              {new Date(task.dueDate).toLocaleDateString()}
-                            </div>
-                          )}
-                        </div>
+        {currentView === "board" ? (
+          <>
+            {/* Kanban Board */}
+            <div className="max-w-7xl mx-auto w-full  pb-8">
+              <div className="grid grid-cols-3 gap-6">
+                {columns.map((column) => (
+                  <div
+                    key={column.id}
+                    className="flex flex-col"
+                    onDragOver={handleDragOver}
+                    onDrop={(e) => handleDrop(e, column.id as Task["status"])}
+                  >
+                    <div
+                      className={`flex items-center justify-between p-4 border-t-2 ${column.color} bg-card rounded-t-lg`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold ">{column.title}</h3>
+                        <span className="text-gray-400 text-sm">
+                          ({column.tasks.length})
+                        </span>
                       </div>
+                      <div className="flex items-center gap-2">
+                        {/* <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-6 w-6 p-0 text-gray-400 hover:"
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button> */}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-6 w-6 p-0 text-gray-400 hover:"
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
 
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-gray-400 hover:"
-                          >
-                            <MoreHorizontal className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent className=" ">
-                          <DropdownMenuItem
-                            onClick={() => setEditingTask(task)}
-                            className=" "
-                          >
-                            <Edit className="w-4 h-4 mr-2" />
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => setDeletingTask(task)}
-                            className="text-red-400 "
-                          >
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                    <div className="flex-1 bg-accent rounded-b-lg p-4 space-y-4 min-h-[600px]">
+                      {column.tasks.map((task) => (
+                        <Card
+                          key={task._id}
+                          draggable
+                          onDragStart={(e) => handleDragStart(e, task._id)}
+                          className="bg-card cursor-move transition-colors"
+                        >
+                          <div className="p-4">
+                            <div className="flex items-center gap-2 mb-3">
+                              <Badge className="bg-blue-600 text-white  text-xs">
+                                {task.title}
+                              </Badge>
+                              <Badge className="bg-gray-600  text-white text-xs">
+                                {task.category}
+                              </Badge>
+                              <Badge
+                                className={`${getPriorityColor(task.priority)} text-xs`}
+                              >
+                                {task.priority}
+                              </Badge>
+                            </div>
+
+                            <h4 className="font-medium  mb-3 text-balance">
+                              {task.title}
+                            </h4>
+
+                            <div className="flex items-center justify-between text-sm text-gray-400">
+                              <div className="flex items-center gap-4">
+                                <span className="flex items-center gap-1">
+                                  <Calendar className="h-3 w-3" />
+                                  {task.dueDate &&
+                                    new Date(task.dueDate).toLocaleDateString(
+                                      "en-US",
+                                      { month: "short", day: "numeric" }
+                                    )}
+                                </span>
+                                {task.comments && task.comments.length > 0 && (
+                                  <span className="flex items-center gap-1">
+                                    💬{" "}
+                                    {task.comments.map((comment, i) => (
+                                      <span key={i}>{comment}</span>
+                                    ))}
+                                  </span>
+                                )}
+                                {/* <span className="flex items-center gap-1">
+                                  <Clock className="h-3 w-3" />
+                                  {task.estimatedTime}m
+                                </span> */}
+                              </div>
+                              <div className="flex items-center gap-1"></div>
+                            </div>
+                          </div>
+                        </Card>
+                      ))}
                     </div>
                   </div>
-                </div>
+                ))}
               </div>
-            ))
-          )}
-        </div>
+            </div>
+          </>
+        ) : (
+          <div className="max-w-6xl mx-auto py-6">
+            {/* Task List */}
+            <div className="space-y-3">
+              {filteredTasks.length === 0 ? (
+                <div className="bg-gray-800 rounded-xl p-8 border border-gray-700 text-center">
+                  <p className="text-gray-400">
+                    No tasks found. Create your first task to get started!
+                  </p>
+                </div>
+              ) : (
+                filteredTasks.map((task) => (
+                  <div
+                    key={task._id}
+                    className={`bg-card rounded-xl p-4 border  transition-all  ${
+                      task.completed ? "opacity-60" : ""
+                    }`}
+                  >
+                    <div className="flex items-start gap-4">
+                      <Checkbox
+                        checked={task.completed}
+                        onCheckedChange={() => handleToggleTask(task._id)}
+                        className="mt-1 data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500"
+                      />
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1">
+                            <h3
+                              className={`font-medium ${task.completed ? "line-through text-gray-500" : ""}`}
+                            >
+                              {task.title}
+                            </h3>
+                            {task.description && (
+                              <p className="text-gray-400 text-sm mt-1">
+                                {task.description}
+                              </p>
+                            )}
+
+                            <div className="flex items-center gap-3 mt-3">
+                              <Badge
+                                className={getPriorityColor(task.priority)}
+                              >
+                                {task.priority}
+                              </Badge>
+                              <Badge
+                                variant="outline"
+                                className="border-gray-600 text-gray-300"
+                              >
+                                {task.title}
+                              </Badge>
+                              <Badge
+                                variant="outline"
+                                className="border-gray-600 text-gray-300"
+                              >
+                                {task.category}
+                              </Badge>
+                              {task.dueDate && (
+                                <div className="flex items-center gap-1 text-gray-400 text-sm">
+                                  <Calendar className="w-3 h-3" />
+                                  {new Date(task.dueDate).toLocaleDateString()}
+                                </div>
+                              )}
+                              <div className="flex items-center gap-1 text-gray-400 text-sm">
+                                <Clock className="w-3 h-3" />
+                                {/* {task.dueDate}m */}
+                              </div>
+                            </div>
+                          </div>
+
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-gray-400 hover: hover:bg-gray-700"
+                              >
+                                <MoreHorizontal className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent className="bg-gray-700 border-gray-600">
+                              <DropdownMenuItem className=" hover:bg-gray-600">
+                                <Edit className="w-4 h-4 mr-2" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleDeleteTask(task._id)}
+                                className="text-red-400 hover:bg-gray-600"
+                              >
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Edit Task Dialog */}
         <EditTaskDialog

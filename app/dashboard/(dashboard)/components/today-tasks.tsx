@@ -1,6 +1,5 @@
 "use client";
 
-import { TrendingUp } from "lucide-react";
 import {
   Label,
   PolarGrid,
@@ -9,21 +8,14 @@ import {
   RadialBarChart,
 } from "recharts";
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartConfig, ChartContainer } from "@/components/ui/chart";
+import { useQuery } from "convex/react";
+
+import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
 
 export const description = "A radial chart with text";
-
-const chartData = [
-  { browser: "safari", visitors: 200, fill: "var(--color-safari)" },
-];
 
 const chartConfig = {
   visitors: {
@@ -36,6 +28,24 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 export function TodayChartsView() {
+  const user = useQuery(api.users.currentUser);
+
+  const tasks = useQuery(api.tasks.getTasks, {
+    userId: user?._id as Id<"users">,
+  });
+  const uncompleted = tasks && tasks.filter((item) => item.completed == false);
+
+  //@ts-ignore
+  const percentage = (uncompleted?.length || 0 / tasks?.length) * 360;
+
+  const chartData = [
+    {
+      browser: "safari",
+      visitors: uncompleted?.length,
+      fill: "var(--color-safari)",
+    },
+  ];
+
   return (
     <Card className="flex flex-col">
       <CardHeader className="items-center pb-0">
@@ -48,8 +58,8 @@ export function TodayChartsView() {
         >
           <RadialBarChart
             data={chartData}
-            startAngle={0}
-            endAngle={250}
+            startAngle={90}
+            endAngle={90 + percentage}
             innerRadius={60}
             outerRadius={80}
           >
@@ -77,7 +87,7 @@ export function TodayChartsView() {
                           y={viewBox.cy}
                           className="fill-foreground text-base font-semibold"
                         >
-                          {chartData[0].visitors.toLocaleString()}
+                          {tasks && chartData[0].visitors?.toLocaleString()}
                         </tspan>
                         <tspan
                           x={viewBox.cx}

@@ -1,5 +1,6 @@
 import { ConvexError, v } from "convex/values";
 import {
+  action,
   internalMutation,
   internalQuery,
   mutation,
@@ -10,6 +11,13 @@ import { auth } from "./auth";
 export const currentUser = query({
   args: {},
   handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+
+    // 2. Check if the user is authenticated.
+    if (!identity) {
+      throw new Error("Unauthenticated. Please log in.");
+    }
+
     const userId = await auth.getUserId(ctx);
     if (!userId) {
       return null;
@@ -168,3 +176,54 @@ export const getCurrentUserOrThrow = async (ctx: any) => {
 
   return user;
 };
+
+export const getUserProfile = action({
+  args: {},
+  handler: async (ctx) => {
+    // 1. Get the user's identity.
+    const identity = await ctx.auth.getUserIdentity();
+
+    // 2. Check if the user is authenticated.
+    if (!identity) {
+      throw new Error("Unauthenticated. Please log in.");
+    }
+
+    // 3. GET THE ACCESS TOKEN!
+    // The token is available on the identity object. For Google, it's 'accessToken'.
+    const accessToken = identity.accessToken;
+
+    if (!accessToken) {
+      throw new Error(
+        "Access token not found. The user may not have granted the required scopes."
+      );
+    }
+
+    // 4. Use the access token to call a Google API.
+    // We'll call the userinfo endpoint as an example.
+    const response = await fetch(
+      "https://www.googleapis.com/oauth2/v3/userinfo",
+      {
+        headers: {
+          // The standard way to use an OAuth2 token.
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    );
+
+    console.log("eejejejej");
+    console.log(response, "dj23u3u3i3iu");
+
+    if (!response.ok) {
+      const errorBody = await response.text();
+      throw new Error(
+        `Failed to fetch user profile from Google: ${response.status} ${errorBody}`
+      );
+    }
+
+    const profileData = await response.json();
+
+    // 5. Return the data to the client.
+    // IMPORTANT: We are returning the profile data, NOT the access token itself.
+    return profileData;
+  },
+});

@@ -161,9 +161,15 @@ const schema = defineSchema({
     priority: v.union(v.literal("low"), v.literal("medium"), v.literal("high")),
     category: v.string(),
     dueDate: v.optional(v.string()),
+    status: v.union(
+      v.literal("todo"),
+      v.literal("done"),
+      v.literal("in-progress")
+    ),
     completed: v.boolean(),
     createdAt: v.string(),
     updatedAt: v.string(),
+    comments: v.array(v.string()),
   })
     .index("by_user", ["userId"])
     .index("by_user_completed", ["userId", "completed"])

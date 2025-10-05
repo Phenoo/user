@@ -26,6 +26,8 @@ export const createTask = mutation({
   handler: async (ctx, args) => {
     return await ctx.db.insert("tasks", {
       ...args,
+      status: "todo",
+      comments: [],
       completed: false,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -45,6 +47,11 @@ export const updateTask = mutation({
     category: v.optional(v.string()),
     dueDate: v.optional(v.string()),
     completed: v.optional(v.boolean()),
+    status: v.union(
+      v.literal("todo"),
+      v.literal("done"),
+      v.literal("in-progress")
+    ),
   },
   handler: async (ctx, args) => {
     const { id, ...updates } = args;
@@ -72,6 +79,7 @@ export const toggleTask = mutation({
 
     return await ctx.db.patch(args.id, {
       completed: !task.completed,
+      status: !task.completed ? "done" : "todo",
       updatedAt: new Date().toISOString(),
     });
   },

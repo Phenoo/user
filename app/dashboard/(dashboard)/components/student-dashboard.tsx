@@ -42,20 +42,20 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ModeToggle } from "@/components/mode-toggle";
-import { LoadingSkeleton } from "@/components/loading-skeleton";
-import ChartSkeleton from "@/components/loader";
-import { useQuery } from "convex/react";
+
+import { useAction, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import LoadingComponent from "@/components/loader";
 import Link from "next/link";
-import { universities_data } from "../list-universities";
 import { useRouter } from "next/navigation";
 import { Id } from "@/convex/_generated/dataModel";
 import NewStudyGroup from "../study-groups/_components/new-study-group";
 import CpaCard from "./cpa-card";
 import { GoogleMeetIntegration } from "@/components/google-meeting-integration";
 import { useState } from "react";
+
+import { useAuthToken } from "@convex-dev/auth/react";
+import { SearchDashboard } from "./search-dashboard";
 
 export const data = [
   {
@@ -95,15 +95,27 @@ export const data = [
 export function StudentDashboard() {
   const user = useQuery(api.users.currentUser);
   const router = useRouter();
-  const [integrations, setIntegrations] = useState({
-    googleMeet: {
-      accessToken: null as string | null,
-    },
-    zoom: {
-      accessToken: null as string | null,
-      userId: null as string | null,
-    },
-  });
+  const token = useAuthToken();
+  const [open, setOpen] = useState(false);
+
+  const getProfile = useAction(api.users.getUserProfile);
+
+  const [profile, setProfile] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const handleFetchProfile = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const userProfile = await getProfile();
+      setProfile(userProfile);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleGoogleAuth = async () => {
     try {
@@ -133,231 +145,241 @@ export function StudentDashboard() {
   }
 
   return (
-    <div className="min-h-screen max-w-7xl p-4 mx-auto w-full flex flex-col gap-8">
-      <div className="flex flex-col md:flex-row gap-4 justify-between ">
-        <div>
-          <h4 className="text-2xl md:text-3xl lg:text-4xl font-bold">
-            Hello {user?.name ? `, ${user.name}` : ""}!
-          </h4>
+    <>
+      <div className="min-h-screen max-w-7xl p-4 mx-auto w-full flex flex-col gap-8">
+        <div className="flex flex-col md:flex-row gap-4 justify-between ">
+          <div>
+            <h4 className="text-2xl md:text-3xl lg:text-4xl font-bold">
+              Hello {user?.name ? `, ${user.name}` : ""}!
+            </h4>
+          </div>
+          <div className="flex gap-4 items-center flex-wrap">
+            <div
+              className="flex gap-2 bg-card rounded-3xl flex-1 items-center p-1 px-4"
+              onClick={() => setOpen(true)}
+            >
+              <CiSearch className="h-5 w-5 stroke-1" />
+              <Input
+                className="bg-card min-w-[250px] border-none shadow-none"
+                placeholder="Search"
+              />
+            </div>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button className="rounded-3xl">
+                  Create
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuLabel>Create</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem>
+                  Pomodoro <GoStopwatch className="h-4 w-4 ml-auto" />
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => router.push("/dashboard/tasks")}
+                >
+                  Task
+                  <RiTaskLine className="h-4 w-4 ml-auto" />
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                  Event
+                  <LuCalendarCheck2 className="h-4 w-4 ml-auto" />
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => router.push("/dashboard/transcript")}
+                >
+                  Transcript
+                  <CgTranscript className="h-4 w-4 ml-auto" />
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
-        <div className="flex gap-4 items-center flex-wrap">
-          <div className="flex gap-2 bg-card rounded-3xl flex-1 items-center p-1 px-4">
-            <CiSearch className="h-5 w-5 stroke-1" />
-            <Input
-              className="bg-card min-w-[250px] border-none shadow-none"
-              placeholder="Search"
+
+        {/* Main Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Left Column */}
+          <div className="lg:col-span-8 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+              <CpaCard />
+              <TodayChartsView />
+              <QuoteCard />
+            </div>
+
+            {/* Study Analytics */}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5 text-primary" />
+                  Study Analytics
+                </CardTitle>
+                <Link href={"/dashboard/analytics"}>
+                  <Button variant="ghost" size="sm">
+                    View Details <ChevronRight className="h-4 w-4 ml-1" />
+                  </Button>
+                </Link>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-7 gap-2">
+                    {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(
+                      (day, index) => (
+                        <div key={day} className="text-center">
+                          <p className="text-xs text-muted-foreground mb-2">
+                            {day}
+                          </p>
+                          <div
+                            className="bg-primary/20 rounded-sm mx-auto"
+                            style={{
+                              height: `${Math.random() * 40 + 20}px`,
+                              width: "100%",
+                            }}
+                          />
+                        </div>
+                      )
+                    )}
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">
+                      This week: 28.5 hours
+                    </span>
+                    <span className="text-muted-foreground font-medium">
+                      +15% from last week
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Flashcards Progress */}
+            <Card className="bg-transparent border-0 shadow-none border-none">
+              <CardHeader className="flex flex-row items-center p-0 justify-between">
+                <CardTitle className="flex items-center gap-2 text-xl md:text-2xl">
+                  Progress
+                </CardTitle>
+                <Link href={"/dashboard/courses"}>
+                  <Button variant="ghost" size="sm" className="text-sm">
+                    View All
+                    <GoArrowUpRight className="h-4 w-4 ml-1" />
+                  </Button>
+                </Link>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {courses
+                    .filter((_, i) => i < 3)
+                    .map((flashcard, index) => (
+                      <div
+                        key={index}
+                        className="flex flex-col bg-card rounded-sm "
+                      >
+                        <div className="flex justify-between gap-4">
+                          <div className="pt-4 pl-4">
+                            <h4>{flashcard.name}</h4>
+                          </div>
+                          <div>
+                            <Button
+                              size={"icon"}
+                              className="rounded-none bg-background"
+                            >
+                              <MoreHorizontal className="h-4 text-black w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="flex justify-between w-full  gap-4 p-4">
+                          <div>
+                            <p className="text-sm">Progress</p>
+                          </div>
+                          <div>
+                            <h6 className="text-sm">
+                              <span className="text-2xl">{0}</span>/{0}
+                            </h6>
+                          </div>
+                        </div>
+                        <div className="w-full grid grid-cols-10 gap-2 px-4">
+                          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((item, i) => (
+                            <div
+                              key={i}
+                              className={cn(
+                                "h-10 w-full rounded",
+                                item * 4 < 5 ? "bg-primary/50" : "bg-[#ddd] "
+                              )}
+                            ></div>
+                          ))}
+                        </div>
+                        <div className="flex justify-between w-full  gap-4 mt-2 p-4">
+                          <div></div>
+                          <div className="flex gap-1 bg-[#ddd] dark:bg-neutral-700 p-2 rounded">
+                            <IoFlagSharp className="h-4 w-4 mr-1" />
+                            <p className="text-xs">June 12, 2025</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            <StudyResourcesSection />
+          </div>
+
+          {/* Right Column */}
+          <div className="lg:col-span-4 space-y-4">
+            <AISuggestionsCard />
+            <OverviewEventCalendar />
+            <Card>
+              <CardHeader className="flex-row flex gap-2 items-center justify-between">
+                <CardTitle className="flex items-center gap-2 text-foreground">
+                  Study Groups
+                </CardTitle>
+                <NewStudyGroup title={false} />
+              </CardHeader>
+              <CardContent className="flex flex-col gap-3">
+                {getStudyGroups && getStudyGroups.length ? (
+                  getStudyGroups
+                    .filter((_, i) => i < 3)
+                    .map((group, index) => (
+                      <Link
+                        key={index}
+                        href={`/dashboard/study-groups/${group._id}`}
+                        className=""
+                      >
+                        <div className="p-3 bg-card rounded-lg border">
+                          <p className="font-medium text-sm">{group.name}</p>
+                          <div className="flex justify-between items-center mt-1">
+                            <span className="text-xs text-foreground">
+                              {group.currentMembers} members
+                            </span>
+                            <span className="text-xs text-foreground font-medium">
+                              {group.meetingSchedule}
+                            </span>
+                          </div>
+                        </div>
+                      </Link>
+                    ))
+                ) : (
+                  <div className="py-4">
+                    <p className="text-sm">No study groups found</p>
+                  </div>
+                )}
+
+                <Link href={"/dashboard/study-groups"}>
+                  <Button>View all</Button>
+                </Link>
+              </CardContent>
+            </Card>
+            <GoogleMeetIntegration
+              accessToken={token ?? ""}
+              onAuthRequired={handleGoogleAuth}
             />
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button className="rounded-3xl">
-                Create
-                <Plus className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuLabel>Create</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem>
-                Pomodoro <GoStopwatch className="h-4 w-4 ml-auto" />
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                Task
-                <RiTaskLine className="h-4 w-4 ml-auto" />
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                Event
-                <LuCalendarCheck2 className="h-4 w-4 ml-auto" />
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => router.push("/dashboard/transcript")}
-              >
-                Transcript
-                <CgTranscript className="h-4 w-4 ml-auto" />
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
         </div>
       </div>
 
-      {/* Main Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column */}
-        <div className="lg:col-span-8 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-            <CpaCard />
-            <TodayChartsView />
-            <QuoteCard />
-          </div>
-
-          {/* Study Analytics */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-primary" />
-                Study Analytics
-              </CardTitle>
-              <Link href={"/dashboard/analytics"}>
-                <Button variant="ghost" size="sm">
-                  View Details <ChevronRight className="h-4 w-4 ml-1" />
-                </Button>
-              </Link>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="grid grid-cols-7 gap-2">
-                  {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(
-                    (day, index) => (
-                      <div key={day} className="text-center">
-                        <p className="text-xs text-muted-foreground mb-2">
-                          {day}
-                        </p>
-                        <div
-                          className="bg-primary/20 rounded-sm mx-auto"
-                          style={{
-                            height: `${Math.random() * 40 + 20}px`,
-                            width: "100%",
-                          }}
-                        />
-                      </div>
-                    )
-                  )}
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">
-                    This week: 28.5 hours
-                  </span>
-                  <span className="text-muted-foreground font-medium">
-                    +15% from last week
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Flashcards Progress */}
-          <Card className="bg-transparent border-0 shadow-none border-none">
-            <CardHeader className="flex flex-row items-center p-0 justify-between">
-              <CardTitle className="flex items-center gap-2 text-xl md:text-2xl">
-                Progress
-              </CardTitle>
-              <Link href={"/dashboard/courses"}>
-                <Button variant="ghost" size="sm" className="text-sm">
-                  View All
-                  <GoArrowUpRight className="h-4 w-4 ml-1" />
-                </Button>
-              </Link>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {courses
-                  .filter((_, i) => i < 3)
-                  .map((flashcard, index) => (
-                    <div
-                      key={index}
-                      className="flex flex-col bg-card rounded-sm "
-                    >
-                      <div className="flex justify-between gap-4">
-                        <div className="pt-4 pl-4">
-                          <h4>{flashcard.name}</h4>
-                        </div>
-                        <div>
-                          <Button
-                            size={"icon"}
-                            className="rounded-none bg-background"
-                          >
-                            <MoreHorizontal className="h-4 text-black w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                      <div className="flex justify-between w-full  gap-4 p-4">
-                        <div>
-                          <p className="text-sm">Progress</p>
-                        </div>
-                        <div>
-                          <h6 className="text-sm">
-                            <span className="text-2xl">{0}</span>/{0}
-                          </h6>
-                        </div>
-                      </div>
-                      <div className="w-full grid grid-cols-10 gap-2 px-4">
-                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((item, i) => (
-                          <div
-                            key={i}
-                            className={cn(
-                              "h-10 w-full rounded",
-                              item * 4 < 5 ? "bg-primary/50" : "bg-[#ddd] "
-                            )}
-                          ></div>
-                        ))}
-                      </div>
-                      <div className="flex justify-between w-full  gap-4 mt-2 p-4">
-                        <div></div>
-                        <div className="flex gap-1 bg-[#ddd] dark:bg-neutral-700 p-2 rounded">
-                          <IoFlagSharp className="h-4 w-4 mr-1" />
-                          <p className="text-xs">June 12, 2025</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          <StudyResourcesSection />
-        </div>
-
-        {/* Right Column */}
-        <div className="lg:col-span-4 space-y-4">
-          <AISuggestionsCard />
-          <OverviewEventCalendar />
-          <Card>
-            <CardHeader className="flex-row flex gap-2 items-center justify-between">
-              <CardTitle className="flex items-center gap-2 text-foreground">
-                Study Groups
-              </CardTitle>
-              <NewStudyGroup title={false} />
-            </CardHeader>
-            <CardContent className="flex flex-col gap-3">
-              {getStudyGroups && getStudyGroups.length ? (
-                getStudyGroups
-                  .filter((_, i) => i < 3)
-                  .map((group, index) => (
-                    <Link
-                      key={index}
-                      href={`/dashboard/study-groups/${group._id}`}
-                      className=""
-                    >
-                      <div className="p-3 bg-card rounded-lg border">
-                        <p className="font-medium text-sm">{group.name}</p>
-                        <div className="flex justify-between items-center mt-1">
-                          <span className="text-xs text-foreground">
-                            {group.currentMembers} members
-                          </span>
-                          <span className="text-xs text-foreground font-medium">
-                            {group.meetingSchedule}
-                          </span>
-                        </div>
-                      </div>
-                    </Link>
-                  ))
-              ) : (
-                <div className="py-4">
-                  <p className="text-sm">No study groups found</p>
-                </div>
-              )}
-
-              <Link href={"/dashboard/study-groups"}>
-                <Button>View all</Button>
-              </Link>
-            </CardContent>
-          </Card>
-          <GoogleMeetIntegration
-            accessToken={integrations.googleMeet.accessToken ?? ""}
-            onAuthRequired={handleGoogleAuth}
-          />{" "}
-        </div>
-      </div>
-    </div>
+      <SearchDashboard open={open} setOpen={setOpen} />
+    </>
   );
 }
