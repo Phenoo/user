@@ -1,6 +1,7 @@
+import "./globals.css";
+
 import type { Metadata } from "next";
 import { Urbanist, Lato } from "next/font/google";
-import "./globals.css";
 import { ThemeProvider } from "@/providers/theme-provider";
 import { ConvexClientProvider } from "@/providers/convex-provider";
 import { ConvexAuthNextjsServerProvider } from "@convex-dev/auth/nextjs/server";
@@ -8,7 +9,7 @@ import { Toaster } from "@/components/ui/sonner";
 import ModalProvider from "@/components/modal-provider";
 import { NextIntlClientProvider } from "next-intl";
 
-import { getMessages } from "next-intl/server";
+import GoogleAnalytics from "@/components/GoogleAnalytics";
 
 const urbanist = Urbanist({
   variable: "--font-body",
@@ -34,6 +35,8 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const GA_ID = process.env.NEXT_PUBLIC_GA_ID;
+
   return (
     <ConvexAuthNextjsServerProvider>
       <html lang="en" suppressHydrationWarning>
@@ -48,6 +51,8 @@ export default async function RootLayout({
                 enableColorScheme
               >
                 {children}
+                {GA_ID && <GoogleAnalytics GA_MEASUREMENT_ID={GA_ID} />}
+
                 <ModalProvider />
                 <Toaster />
               </ThemeProvider>
