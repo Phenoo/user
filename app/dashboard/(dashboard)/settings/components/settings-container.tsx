@@ -13,16 +13,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-
 import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
+
 import {
   User,
   Settings,
@@ -36,12 +28,7 @@ import {
 } from "lucide-react";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
-import { Id } from "@/convex/_generated/dataModel";
-import { CountryDropdown } from "@/components/country-dropdown";
-import { Checkbox } from "@/components/ui/checkbox";
-import { universities_data } from "../../list-universities";
+
 import ProfileSettings from "./profile-settings";
 import { BillingTabs } from "../../billing/_components/BillingTabs";
 import BillingHistory from "../../billing/_components/billing-history";
@@ -88,43 +75,11 @@ export function SettingsLayout() {
   }, [searchSection, router]);
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-7xl mx-auto  py-8">
-        <div className="flex flex-col lg:flex-row gap-8">
-          {/* Sidebar */}
-          <div className="lg:w-52 flex-shrink-0">
-            <h1 className="text-2xl font-bold mb-6">Settings</h1>
-            <nav className="space-y-2">
-              {sidebarItems.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => {
-                      setActiveSection(item.id);
-                      router.push(`${pathname}?section=${activeSection}`);
-                    }}
-                    className={`w-full flex items-center text-sm gap-3 px-3 py-2 rounded-lg text-left transition-colors ${
-                      activeSection === item.id
-                        ? "bg-primary/10 text-foreground border border-primary/20"
-                        : "hover:bg-muted text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    <Icon className="h-4 w-4" />
-                    {item.label}
-                  </button>
-                );
-              })}
-              <Separator className="my-4" />
-              <button className="w-full flex items-center gap-3 text-sm px-3 py-2 rounded-lg text-left transition-colors text-destructive hover:bg-destructive/10">
-                <Trash2 className="h-4 w-4" />
-                Delete Account
-              </button>
-            </nav>
-          </div>
-
+    <div className="min-h-screen bg-background w-full">
+      <div className="max-w-7xl mx-auto w-full  py-8">
+        <div className="flex flex-col w-full lg:flex-row gap-8">
           {/* Main Content */}
-          <div className="flex-1">
+          <div className="flex-1 px-4 w-full">
             {activeSection === "profile" && <ProfileSettings />}
             {activeSection === "study" && <StudyPreferences />}
             {activeSection === "timer" && <TimerSettings />}

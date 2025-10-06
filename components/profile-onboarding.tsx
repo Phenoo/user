@@ -62,22 +62,6 @@ export function MainOnboarding() {
   const [didntFind, setDidntFind] = useState(false);
   const [date, setDate] = useState<Date | undefined>(undefined);
 
-  console.log(
-    date?.toLocaleDateString(),
-    typeof date?.toLocaleDateString(),
-    "sjsjsjsjsj"
-  );
-
-  // Fetch universities whenever country changes
-  // useEffect(() => {
-  //   if (!formData.location) return;
-  //   fetch(
-  //     `http://universities.hipolabs.com/search?country=${formData.location}`
-  //   )
-  //     .then((res) => res.json())
-  //     .then((data) => setUniversities(data))
-  //     .catch((err) => console.error(err));
-  // }, [formData.location]);
   useEffect(() => {
     if (!formData.location) return;
 
@@ -155,7 +139,7 @@ export function MainOnboarding() {
         reminderPreference: user.reminderPreference || "",
         studyTime: user.studyTime || "",
         name: user.name || "",
-        isOnboarding: false,
+        isOnboarding: user.isOnboarding as boolean,
         userId: user._id,
       });
     }
@@ -246,7 +230,15 @@ export function MainOnboarding() {
                   <Label htmlFor="school" className="text-base font-medium">
                     School/University
                   </Label>
-                  <Select>
+                  <Select
+                    onValueChange={(e) => {
+                      setFormData((prev) => ({
+                        ...prev,
+                        school: e,
+                      }));
+                    }}
+                    disabled={!formData.location}
+                  >
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="School/University" />
                     </SelectTrigger>

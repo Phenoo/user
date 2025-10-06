@@ -1,7 +1,7 @@
 "use client";
 
 import { useConvexAuth, useQuery } from "convex/react";
-import { useRouter } from "next/navigation";
+import { redirect, useRouter } from "next/navigation";
 
 import React from "react";
 import { StudentDashboard } from "./components/student-dashboard";
@@ -25,8 +25,8 @@ const Dashboardpage = () => {
     router.push("/auth");
   }
 
-  if (!user?.isOnboarding) {
-    router.push("/dashboard/onboarding");
+  if (user && user?.isOnboarding === false) {
+    redirect("/dashboard/onboarding");
   }
 
   return <StudentDashboard />;

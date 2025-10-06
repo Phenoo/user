@@ -76,8 +76,6 @@
   --sidebar-ring: oklch(0.65 0.12 15);
 }
 
-
-
 @theme inline {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
@@ -128,7 +126,6 @@
   }
 }
 
-
 h1, h2, h3, h5, h4, h6 {
   font-family: var(--font-title), sans-serif;
   font-optical-sizing: auto;
@@ -138,7 +135,6 @@ p, button, span, input, label, div {
   font-family: var(--font-sans), sans-serif;
   font-optical-sizing: auto;
 }
-
 
 ::-webkit-scrollbar {
   width: 4px;
@@ -156,7 +152,6 @@ p, button, span, input, label, div {
 .cardcalendar {
   border-top: 8px  solid !important;
 }
-
 
 .tableradius {
   border-radius: 50% !important;
@@ -180,7 +175,6 @@ p, button, span, input, label, div {
   box-shadow: 0 4px 30px rgba(0, 0, 0, 0.4);
   border: 1px solid rgba(14, 14, 14, 0.3);
 }
-
 
 /* From Uiverse.io by bociKond */ 
 .spinner {
@@ -242,14 +236,9 @@ p, button, span, input, label, div {
   }
 }
 
-
 .active-nav {
   background: #ef6438;
 }
-
-
-
-
 
 img {
   user-select: none;

@@ -15,11 +15,6 @@ const urbanist = Urbanist({
   variable: "--font-body",
   subsets: ["latin"],
 });
-const lato = Lato({
-  variable: "--font-title",
-  subsets: ["latin"],
-  weight: ["400", "900", "700"],
-});
 
 export const metadata: Metadata = {
   title: {
@@ -40,7 +35,7 @@ export default async function RootLayout({
   return (
     <ConvexAuthNextjsServerProvider>
       <html lang="en" suppressHydrationWarning>
-        <body className={`antialiased ${urbanist.className} ${lato.className}`}>
+        <body className={`antialiased ${urbanist.className} `}>
           <ConvexClientProvider>
             <NextIntlClientProvider>
               <ThemeProvider

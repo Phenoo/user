@@ -24,7 +24,7 @@ const Logo = () => {
   const isDarkMode = resolvedTheme === "dark";
   return (
     <Link href={!isAuthenticated ? "/" : "/dashboard"}>
-      <div className="backdrop-blur-md  bg-glass h-16 flex justify-center items-center overflow-hidden w-fit rounded-3xl p-1">
+      <div className="backdrop-blur-md  bg-transparent h-16 flex justify-center items-center overflow-hidden w-fit rounded-3xl p-1">
         {isDarkMode ? (
           <img
             src={"/mainlogo.svg"}
