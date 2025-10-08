@@ -12,7 +12,7 @@ bg-gradient-to-r from-[oklch(0.65_0.12_15)] via-[oklch(0.6_0.15_320)] to-[oklch(
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center">
-          <div className="bg-white bg-opacity-30 rounded-full p-2 mr-3">
+          <div className="bg-white bg-opacity-30 text-black rounded-full p-2 mr-3">
             <IoSparklesSharp className="h-4 w-4" />
           </div>
           <h3 className="text-white text-lg font-semibold">AI Suggestions</h3>

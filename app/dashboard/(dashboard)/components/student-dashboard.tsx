@@ -56,6 +56,7 @@ import { useState } from "react";
 
 import { useAuthToken } from "@convex-dev/auth/react";
 import { SearchDashboard } from "./search-dashboard";
+import { StudyAnalytics } from "../pomodoro/_components/study-analytics";
 
 export const data = [
   {
@@ -99,6 +100,10 @@ export function StudentDashboard() {
   const [open, setOpen] = useState(false);
 
   const getProfile = useAction(api.users.getUserProfile);
+
+  const weeklyStats = useQuery(api.sessions.getWeeklyStats, {
+    userId: user?._id as Id<"users">,
+  });
 
   const [profile, setProfile] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -155,12 +160,12 @@ export function StudentDashboard() {
           </div>
           <div className="flex gap-4 items-center flex-wrap">
             <div
-              className="flex gap-2 bg-card rounded-3xl flex-1 items-center p-1 px-4"
+              className="flex gap-2 bg-card  rounded-3xl flex-1 items-center p-1 px-4"
               onClick={() => setOpen(true)}
             >
               <CiSearch className="h-5 w-5 stroke-1" />
               <Input
-                className="bg-card min-w-[250px] border-none shadow-none"
+                className=" min-w-[250px] dark:bg-transparent bg-transparent border-none shadow-none"
                 placeholder="Search"
               />
             </div>
@@ -210,50 +215,13 @@ export function StudentDashboard() {
             </div>
 
             {/* Study Analytics */}
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5 text-primary" />
-                  Study Analytics
-                </CardTitle>
-                <Link href={"/dashboard/analytics"}>
-                  <Button variant="ghost" size="sm">
-                    View Details <ChevronRight className="h-4 w-4 ml-1" />
-                  </Button>
-                </Link>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-7 gap-2">
-                    {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(
-                      (day, index) => (
-                        <div key={day} className="text-center">
-                          <p className="text-xs text-muted-foreground mb-2">
-                            {day}
-                          </p>
-                          <div
-                            className="bg-primary/20 rounded-sm mx-auto"
-                            style={{
-                              height: `${Math.random() * 40 + 20}px`,
-                              width: "100%",
-                            }}
-                          />
-                        </div>
-                      )
-                    )}
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">
-                      This week: 28.5 hours
-                    </span>
-                    <span className="text-muted-foreground font-medium">
-                      +15% from last week
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
+            {weeklyStats && (
+              <StudyAnalytics
+                totalHours={weeklyStats.totalHours}
+                percentageChange={15}
+                dailyHours={weeklyStats.dailyHours}
+              />
+            )}
             {/* Flashcards Progress */}
             <Card className="bg-transparent border-0 shadow-none border-none">
               <CardHeader className="flex flex-row items-center p-0 justify-between">

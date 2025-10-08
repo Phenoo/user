@@ -89,7 +89,12 @@ export function SettingsSidebar({
       <nav className="space-y-1">
         <div className="flex justify-between">
           <div></div>
-          <Button variant={"outline"} size={"icon"} onClick={onClose}>
+          <Button
+            variant={"outline"}
+            className="md:hidden"
+            size={"icon"}
+            onClick={onClose}
+          >
             <X className="h-4 w-4" />
           </Button>
         </div>

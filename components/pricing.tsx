@@ -6,7 +6,6 @@ import { CheckIcon } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
-import Container from "./container";
 import { PLAN, PLANS } from "@/constants/plans";
 import { useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";

@@ -477,6 +477,28 @@ const schema = defineSchema({
     .index("by_user", ["userId"])
     .index("by_user_active", ["userId", "isActive"])
     .index("by_user_type", ["userId", "type"]),
+  pomodoroSessions: defineTable({
+    courseId: v.id("courses"),
+    type: v.union(
+      v.literal("pomodoro"),
+      v.literal("shortBreak"),
+      v.literal("longBreak")
+    ),
+    duration: v.number(),
+    completedAt: v.number(),
+    userId: v.id("users"),
+  })
+    .index("by_user", ["userId"])
+    .index("by_course", ["courseId"])
+    .index("by_date", ["completedAt"]),
+
+  settings: defineTable({
+    userId: v.id("users"),
+    pomodoroDuration: v.number(),
+    shortBreakDuration: v.number(),
+    longBreakDuration: v.number(),
+    soundEnabled: v.boolean(),
+  }),
 });
 
 export default schema;
