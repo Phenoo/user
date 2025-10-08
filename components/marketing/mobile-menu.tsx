@@ -11,9 +11,10 @@ import {
 } from "@/components/ui/sheet";
 import { NAV_LINKS } from "@/constants";
 import { useConvexAuth } from "convex/react";
-import { Menu } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import Link from "next/link";
 import { LuLoaderCircle } from "react-icons/lu";
+import Logo from "../logo";
 
 const MobileMenu = () => {
   const { isAuthenticated, isLoading } = useConvexAuth();
@@ -27,7 +28,16 @@ const MobileMenu = () => {
       </SheetTrigger>
       <SheetContent side="right" className="w-full sm:w-[300px] pt-12">
         <SheetHeader className="mb-8">
-          <SheetTitle className="text-left">Menu</SheetTitle>
+          <div className="flex justify-between items-center gap-4">
+            <SheetTitle className="text-left">
+              <Logo />
+            </SheetTitle>
+            <SheetClose>
+              <Button size={"icon"} variant={"outline"}>
+                <X className="w-4 h-4" />
+              </Button>
+            </SheetClose>
+          </div>
         </SheetHeader>
         <nav className="flex flex-col space-y-4 px-4">
           {NAV_LINKS.map((link, index) => (
@@ -39,7 +49,7 @@ const MobileMenu = () => {
               <SheetClose>{link.name}</SheetClose>
             </Link>
           ))}
-          <div className="pt-4 mt-4 border-t border-border">
+          <div className="pt-4 mt-4 border-t  border-border">
             {isLoading ? (
               <>
                 <div>
@@ -47,12 +57,16 @@ const MobileMenu = () => {
                 </div>
               </>
             ) : isAuthenticated ? (
-              <Link href="/dashboard" className="hidden lg:block">
-                <Button variant="default">Go to Dashboard</Button>
+              <Link href="/dashboard" className="">
+                <SheetClose>
+                  <Button variant="default">Go to Dashboard</Button>
+                </SheetClose>
               </Link>
             ) : (
-              <Link href="/auth" className="hidden lg:block">
-                <Button variant="default">Get Started</Button>
+              <Link href="/auth" className="">
+                <SheetClose>
+                  <Button variant="default">Get Started</Button>
+                </SheetClose>
               </Link>
             )}
           </div>

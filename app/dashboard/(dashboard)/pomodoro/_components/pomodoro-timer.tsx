@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Play, Pause, RotateCcw, Settings } from "lucide-react";
 import Link from "next/link";
@@ -9,6 +9,8 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import CoursesSelect from "@/components/courses-select";
 import { toast } from "sonner";
+import { useRouter, useSearchParams } from "next/navigation";
+import { usePomodoroContext } from "@/contexts/pomodoro-context";
 
 type SessionType = "focus" | "shortBreak" | "longBreak";
 
@@ -20,40 +22,44 @@ interface PomodoroSettings {
   soundEnabled: boolean;
 }
 
-interface Course {
-  _id: Id<"courses">;
-  name: string;
-  color: string;
-}
-
 interface PomodoroTimerProps {
   settings: PomodoroSettings;
   onSessionComplete: () => void;
 }
 
 export function PomodoroTimer({
-  settings,
+  settings: propSettings,
   onSessionComplete,
 }: PomodoroTimerProps) {
   const createSession = useMutation(api.sessions.create);
+  const router = useRouter();
 
-  const [sessionType, setSessionType] = useState<SessionType>("focus");
-  const [timeLeft, setTimeLeft] = useState(settings.focusDuration * 60);
-  const [isRunning, setIsRunning] = useState(false);
-  const [completedSessions, setCompletedSessions] = useState(0);
+  const {
+    sessionType,
+    timeLeft,
+    isRunning,
+    completedSessions,
+    selectedCourse,
+    settings,
+    totalTime,
+    setSessionType,
+    setTimeLeft,
+    setIsRunning,
+    setCompletedSessions,
+    setSelectedCourse,
+    setSettings,
+  } = usePomodoroContext();
+
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const [selectedCourse, setSelectedCourse] = useState<string>("");
+  const searchParams = useSearchParams().get("course");
 
   const user = useQuery(api.users.currentUser);
 
-  const totalTime =
-    sessionType === "focus"
-      ? settings.focusDuration * 60
-      : sessionType === "shortBreak"
-        ? settings.shortBreakDuration * 60
-        : settings.longBreakDuration * 60;
+  useEffect(() => {
+    setSettings(propSettings);
+  }, [propSettings, setSettings]);
 
   const progress = ((totalTime - timeLeft) / totalTime) * 100;
 
@@ -64,9 +70,14 @@ export function PomodoroTimer({
   }, []);
 
   useEffect(() => {
+    setSelectedCourse(searchParams as string);
+  }, [searchParams]);
+
+  useEffect(() => {
     if (isRunning && timeLeft > 0) {
       intervalRef.current = setInterval(() => {
-        setTimeLeft((prev) => {
+        //@ts-ignore
+        setTimeLeft((prev: number) => {
           if (prev <= 1) {
             handleSessionComplete();
             return 0;
@@ -188,8 +199,9 @@ export function PomodoroTimer({
   return (
     <div className="flex flex-col items-center gap-8">
       <CoursesSelect
-        course={selectedCourse}
+        course={searchParams || selectedCourse}
         onChange={(e) => {
+          router.push(`/dashboard/pomodoro?course=${e}`);
           setSelectedCourse(e);
         }}
       />

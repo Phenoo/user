@@ -180,7 +180,9 @@ export function StudentDashboard() {
               <DropdownMenuContent>
                 <DropdownMenuLabel>Create</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => router.push("/dashboard/pomodoro")}
+                >
                   Pomodoro <GoStopwatch className="h-4 w-4 ml-auto" />
                 </DropdownMenuItem>
                 <DropdownMenuItem
