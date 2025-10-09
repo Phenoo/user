@@ -58,47 +58,6 @@ const Footer = () => {
                 </li>
               </ul>
             </Container>
-            <Container delay={0.2} className="h-auto">
-              <div className="mt-10 md:mt-0 flex flex-col">
-                <h3 className="text-base font-medium text-foreground">
-                  Solutions
-                </h3>
-                <ul className="mt-4 text-sm text-muted-foreground space-y-4">
-                  <li>
-                    <Link
-                      href="#"
-                      className="link hover:text-foreground transition-all duration-300"
-                    >
-                      Content Creators
-                    </Link>
-                  </li>
-                  <li className="mt-2">
-                    <Link
-                      href="#"
-                      className="link hover:text-foreground transition-all duration-300"
-                    >
-                      Businesses
-                    </Link>
-                  </li>
-                  <li className="mt-2">
-                    <Link
-                      href="#"
-                      className="link hover:text-foreground transition-all duration-300"
-                    >
-                      Education
-                    </Link>
-                  </li>
-                  <li className="mt-2">
-                    <Link
-                      href="#"
-                      className="link hover:text-foreground transition-all duration-300"
-                    >
-                      Enterprise
-                    </Link>
-                  </li>
-                </ul>
-              </div>
-            </Container>
           </div>
           <div className="md:grid md:grid-cols-2 md:gap-8">
             <Container delay={0.3} className="h-auto">
@@ -148,7 +107,7 @@ const Footer = () => {
                   </li>
                   <li className="mt-2">
                     <Link
-                      href="#"
+                      href="/privacy"
                       className="link hover:text-foreground transition-all duration-300"
                     >
                       Privacy Policy
@@ -156,7 +115,7 @@ const Footer = () => {
                   </li>
                   <li className="mt-2">
                     <Link
-                      href="#"
+                      href="/terms-and-conditions"
                       className="link hover:text-foreground transition-all duration-300"
                     >
                       Terms & Conditions
