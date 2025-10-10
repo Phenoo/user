@@ -64,7 +64,7 @@ export function SettingsLayout() {
 
   const pathname = usePathname();
 
-  const searchSection = searchParams.get("section");
+  const searchSection = searchParams.get("section") || "profile";
 
   useEffect(() => {
     if (searchSection) {
@@ -607,7 +607,7 @@ function PrivacySettings() {
 function BillingSettings() {
   const searchParams = useSearchParams();
 
-  const billingSearch = searchParams.get("tab");
+  const billingSearch = searchParams.get("tab") || "overview";
 
   const renderContent = () => {
     switch (billingSearch) {

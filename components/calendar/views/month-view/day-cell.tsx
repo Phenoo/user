@@ -161,7 +161,7 @@ export function DayCell({ cell, events, eventPositions }: IProps) {
 
           {showMobileMore && (
             <div className="flex justify-end items-end mx-2">
-              <span className="text-[0.6rem] font-semibold text-accent-foreground">
+              <span className="text-[0.6rem] font-semibold text-foreground/80">
                 +{showMoreCount}
               </span>
             </div>

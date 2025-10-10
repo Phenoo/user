@@ -255,7 +255,7 @@ export function StudentDashboard() {
                               size={"icon"}
                               className="rounded-none bg-background"
                             >
-                              <MoreHorizontal className="h-4 text-black w-4" />
+                              <MoreHorizontal className="h-4 text-foreground w-4" />
                             </Button>
                           </div>
                         </div>
@@ -284,7 +284,7 @@ export function StudentDashboard() {
                           <div></div>
                           <div className="flex gap-1 bg-[#ddd] dark:bg-neutral-700 p-2 rounded">
                             <IoFlagSharp className="h-4 w-4 mr-1" />
-                            <p className="text-xs">June 12, 2025</p>
+                            <p className="text-xs">See More</p>
                           </div>
                         </div>
                       </div>

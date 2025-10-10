@@ -44,7 +44,7 @@
   --background: oklch(0.08 0.02 320);
   --foreground: oklch(0.95 0 0);
   --card: oklch(0.21 0.006 285.885);
-
+  
   --card-foreground: oklch(0.95 0 0);
   --popover: oklch(0.12 0.03 320); /* complement the theme */
   --popover-foreground: oklch(0.95 0 0);
@@ -124,6 +124,10 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+body, html {
+  scroll-behavior: smooth;
 }
 
 h1, h2, h3, h5, h4, h6 {

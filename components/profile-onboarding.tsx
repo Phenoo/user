@@ -62,6 +62,8 @@ export function MainOnboarding() {
   const [didntFind, setDidntFind] = useState(false);
   const [date, setDate] = useState<Date | undefined>(undefined);
 
+  const settings = useMutation(api.settings.createUserSettings);
+
   useEffect(() => {
     if (!formData.location) return;
 
@@ -627,6 +629,9 @@ export function MainOnboarding() {
                 <Button
                   onClick={async () => {
                     await saveProgress({ ...formData, isOnboarding: true });
+                    await settings({
+                      userId: user?._id as Id<"users">,
+                    });
                     router.push("/dashboard/pricing");
                   }}
                   className="px-6 bg-primary hover:bg-primary/90"

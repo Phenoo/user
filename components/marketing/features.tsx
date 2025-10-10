@@ -14,7 +14,7 @@ const Features = () => {
               AI-Powered studying <br /> made{" "}
               <span className="font-subheading italic">simple</span>
             </h2>
-            <p className="text-base md:text-lg text-center text-accent-foreground/80 mt-6">
+            <p className="text-base md:text-lg text-center text-foreground/80/80 mt-6">
               Transform your studying with AI-powered automation. Create
               campaigns faster, generate better content, and make smarter
               decisions in minutes.

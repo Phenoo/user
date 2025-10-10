@@ -60,13 +60,13 @@ export function StudyAnalytics({
         {/* Stats summary */}
         <div className="flex items-center justify-between pt-4 border-t border-border">
           <div className="text-foreground">
-            <span className="text-sm md:text-base">This week: </span>
+            <span className="text-sm ">This week: </span>
             <span className="font-semibold text-sm md:text-base">
               {totalHours.toFixed(1)} hours
             </span>
           </div>
           <div
-            className={`text-sm md:text-base ${percentageChange >= 0 ? "text-green-400" : "text-red-400"}`}
+            className={`text-sm  ${percentageChange >= 0 ? "text-green-400" : "text-red-400"}`}
           >
             {percentageChange >= 0 ? "+" : ""}
             {percentageChange}% from last week

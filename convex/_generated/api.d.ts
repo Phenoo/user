@@ -23,6 +23,7 @@ import type * as flashcards from "../flashcards.js";
 import type * as http from "../http.js";
 import type * as seedFeatureLimits from "../seedFeatureLimits.js";
 import type * as sessions from "../sessions.js";
+import type * as settings from "../settings.js";
 import type * as stripe from "../stripe.js";
 import type * as studyGroups from "../studyGroups.js";
 import type * as subscriptions from "../subscriptions.js";
@@ -48,6 +49,7 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   seedFeatureLimits: typeof seedFeatureLimits;
   sessions: typeof sessions;
+  settings: typeof settings;
   stripe: typeof stripe;
   studyGroups: typeof studyGroups;
   subscriptions: typeof subscriptions;

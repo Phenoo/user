@@ -276,6 +276,12 @@ const schema = defineSchema({
     deckId: v.id("flashcardDecks"),
     front: v.string(),
     back: v.string(),
+    imageUrl: v.optional(v.string()), // Support for images in flashcards
+    confidence: v.optional(
+      v.union(v.literal("hard"), v.literal("good"), v.literal("easy"))
+    ), // 3-level confidence rating for spaced repetition
+    nextReviewDate: v.optional(v.number()), // When card should be reviewed next
+    // Existing fields
     difficulty: v.union(
       v.literal("Easy"),
       v.literal("Medium"),
@@ -291,7 +297,8 @@ const schema = defineSchema({
   })
     .index("by_userId", ["userId"])
     .index("by_deckId", ["deckId"])
-    .index("by_userId_deckId", ["userId", "deckId"]),
+    .index("by_userId_deckId", ["userId", "deckId"])
+    .index("by_nextReview", ["nextReviewDate"]),
 
   courseProgress: defineTable({
     userId: v.id("users"),
@@ -492,13 +499,44 @@ const schema = defineSchema({
     .index("by_course", ["courseId"])
     .index("by_date", ["completedAt"]),
 
-  settings: defineTable({
+  userSettings: defineTable({
     userId: v.id("users"),
-    pomodoroDuration: v.number(),
-    shortBreakDuration: v.number(),
-    longBreakDuration: v.number(),
-    soundEnabled: v.boolean(),
-  }),
+    // Notification settings
+    emailNotifications: v.boolean(),
+    pushNotifications: v.boolean(),
+    studyReminders: v.boolean(),
+    reminderTime: v.optional(v.string()), // Format: "HH:MM"
+    weeklyReport: v.boolean(),
+
+    // Timer/Pomodoro settings
+    pomodoroMinutes: v.number(),
+    shortBreakMinutes: v.number(),
+    longBreakMinutes: v.number(),
+    sessionsBeforeLongBreak: v.number(),
+    autoStartBreaks: v.boolean(),
+    autoStartPomodoros: v.boolean(),
+
+    // Study preferences
+    dailyStudyGoal: v.number(), // in minutes
+    studyMode: v.union(
+      v.literal("focused"),
+      v.literal("relaxed"),
+      v.literal("intensive")
+    ),
+    showTimer: v.boolean(),
+    playSound: v.boolean(),
+
+    // GPA settings
+    gpaTarget: v.optional(v.number()),
+    gpaScale: v.union(v.literal("4.0"), v.literal("5.0")),
+
+    // Display preferences
+    theme: v.union(v.literal("light"), v.literal("dark"), v.literal("system")),
+    language: v.string(),
+
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_user", ["userId"]),
 });
 
 export default schema;

@@ -17,16 +17,13 @@ import { Label } from "@/components/ui/label";
 
 import { IoSparklesSharp } from "react-icons/io5";
 
-import "@/styles/button.css";
 import { FileIcon } from "lucide-react";
+import GenerateButton from "@/components/generate-button";
 const ButtonUpload = () => {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <button className="button">
-          <IoSparklesSharp className="button__icon h-4 w-4" />
-          <span className="button__text">Upload</span>
-        </button>
+        <GenerateButton title="Upload" />
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>

@@ -112,7 +112,7 @@ export default function StudentSection() {
             <br />
             <span className="font-subheading italic">dashboard</span>
           </h2>
-          <p className="text-base md:text-lg text-accent-foreground/80 mt-4">
+          <p className="text-base md:text-lg text-foreground/80/80 mt-4">
             Gain detailed insights into your marketing performance and campaign
             metrics with our advanced analytics tools.
           </p>

@@ -32,7 +32,7 @@
 <rect x="407" y="204" width="77" height="127" rx="8" fill="url(#paint3_linear_682_207)" fill-opacity="0.2"/>
 <rect x="407.5" y="204.5" width="76" height="126" rx="7.5" stroke="#404040" stroke-opacity="0.8"/>
 <g filter="url(#filter0_d_682_207)">
-<path d="M253 231.5H379" stroke="white" stroke-width="2" stroke-linecap="round"/>
+<path d="M253 231.5H379" stroke="white" stroke-width="2" strokeLinecap="round"/>
 </g>
 <mask id="path-32-inside-3_682_207" fill="white">
 <path d="M588 144C588 135.163 595.163 128 604 128H1110C1118.84 128 1126 135.163 1126 144V422H588V144Z"/>
@@ -56,7 +56,7 @@
 <rect x="974" y="268" width="77" height="63" rx="8" fill="url(#paint6_linear_682_207)" fill-opacity="0.2"/>
 <rect x="974.5" y="268.5" width="76" height="62" rx="7.5" stroke="#404040" stroke-opacity="0.8"/>
 <g filter="url(#filter1_d_682_207)">
-<path d="M820 291.5H946" stroke="white" stroke-width="2" stroke-linecap="round"/>
+<path d="M820 291.5H946" stroke="white" stroke-width="2" strokeLinecap="round"/>
 </g>
 <defs>
 <filter id="filter0_d_682_207" x="246.6" y="226.1" width="138.8" height="12.8" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">

@@ -1,6 +1,5 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { internal } from "./_generated/api";
 
 // Get user's flashcard decks
 export const getUserDecks = query({
@@ -35,8 +34,6 @@ export const getDeckCards = query({
   },
 });
 
-// by_courseId
-
 export const getCards = query({
   args: { userId: v.id("users"), deckId: v.id("flashcardDecks") },
   handler: async (ctx, args) => {
@@ -46,6 +43,7 @@ export const getCards = query({
       .collect();
   },
 });
+
 // Create flashcard deck
 export const createDeck = mutation({
   args: {
@@ -92,6 +90,7 @@ export const createFlashcard = mutation({
     deckId: v.id("flashcardDecks"),
     front: v.string(),
     back: v.string(),
+    imageUrl: v.optional(v.string()),
     difficulty: v.union(
       v.literal("Easy"),
       v.literal("Medium"),
@@ -123,11 +122,51 @@ export const createFlashcard = mutation({
   },
 });
 
-// Update flashcard performance
+export const deleteFlashcard = mutation({
+  args: {
+    cardId: v.id("flashcards"),
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const card = await ctx.db.get(args.cardId);
+    if (!card) {
+      throw new Error("Card not found");
+    }
+
+    // Verify ownership
+    if (card.userId !== args.userId) {
+      throw new Error("Unauthorized");
+    }
+
+    // Delete the card
+    await ctx.db.delete(args.cardId);
+
+    // Update deck card count
+    const deck = await ctx.db.get(card.deckId);
+    if (deck) {
+      const newTotalCards = Math.max(0, deck.totalCards - 1);
+      const newMasteredCards = card.isMastered
+        ? Math.max(0, deck.masteredCards - 1)
+        : deck.masteredCards;
+
+      await ctx.db.patch(card.deckId, {
+        totalCards: newTotalCards,
+        masteredCards: newMasteredCards,
+        updatedAt: Date.now(),
+      });
+    }
+
+    return true;
+  },
+});
+
 export const updateCardPerformance = mutation({
   args: {
     cardId: v.id("flashcards"),
-    isCorrect: v.boolean(),
+    isCorrect: v.optional(v.boolean()),
+    confidence: v.optional(
+      v.union(v.literal("hard"), v.literal("good"), v.literal("easy"))
+    ),
   },
   handler: async (ctx, args) => {
     const card = await ctx.db.get(args.cardId);
@@ -138,19 +177,51 @@ export const updateCardPerformance = mutation({
       updatedAt: Date.now(),
     };
 
-    if (args.isCorrect) {
-      updates.timesCorrect = card.timesCorrect + 1;
-      // Mark as mastered if answered correctly 3+ times
-      if (card.timesCorrect + 1 >= 3 && !card.isMastered) {
+    if (args.confidence) {
+      updates.confidence = args.confidence;
+
+      // Calculate next review date based on confidence
+      const intervals = {
+        hard: 1000 * 60 * 60 * 4, // 4 hours
+        good: 1000 * 60 * 60 * 24, // 1 day
+        easy: 1000 * 60 * 60 * 24 * 7, // 7 days
+      };
+
+      updates.nextReviewDate = Date.now() + intervals[args.confidence];
+
+      // Update correct/incorrect counts based on confidence
+      if (args.confidence === "hard") {
+        updates.timesIncorrect = card.timesIncorrect + 1;
+      } else {
+        updates.timesCorrect = card.timesCorrect + 1;
+      }
+
+      // Mark as mastered if confidence is "easy"
+      if (args.confidence === "easy" && !card.isMastered) {
         updates.isMastered = true;
         updates.masteredAt = Date.now();
-      }
-    } else {
-      updates.timesIncorrect = card.timesIncorrect + 1;
-      // Unmaster if answered incorrectly
-      if (card.isMastered) {
+      } else if (args.confidence === "hard" && card.isMastered) {
+        // Unmaster if answered with "hard"
         updates.isMastered = false;
         updates.masteredAt = undefined;
+      }
+    }
+    // Legacy support for isCorrect parameter
+    else if (args.isCorrect !== undefined) {
+      if (args.isCorrect) {
+        updates.timesCorrect = card.timesCorrect + 1;
+        // Mark as mastered if answered correctly 3+ times
+        if (card.timesCorrect + 1 >= 3 && !card.isMastered) {
+          updates.isMastered = true;
+          updates.masteredAt = Date.now();
+        }
+      } else {
+        updates.timesIncorrect = card.timesIncorrect + 1;
+        // Unmaster if answered incorrectly
+        if (card.isMastered) {
+          updates.isMastered = false;
+          updates.masteredAt = undefined;
+        }
       }
     }
 
@@ -169,6 +240,28 @@ export const updateCardPerformance = mutation({
     }
 
     return true;
+  },
+});
+
+export const getCardsDueForReview = query({
+  args: {
+    deckId: v.id("flashcardDecks"),
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    const cards = await ctx.db
+      .query("flashcards")
+      .withIndex("by_deckId", (q) => q.eq("deckId", args.deckId))
+      .collect();
+
+    // Return cards that are due for review or haven't been reviewed yet
+    return cards.filter(
+      (card) =>
+        card.userId === args.userId &&
+        !card.isMastered &&
+        (!card.nextReviewDate || card.nextReviewDate <= now)
+    );
   },
 });
 
@@ -310,6 +403,7 @@ export const updateFlashcard = mutation({
     cardId: v.id("flashcards"),
     front: v.string(),
     back: v.string(),
+    imageUrl: v.optional(v.string()),
     difficulty: v.union(
       v.literal("Easy"),
       v.literal("Medium"),

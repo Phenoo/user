@@ -16,45 +16,37 @@ interface MetadataProps {
 }
 
 export const generateMetadata = ({
-  title = `Usoro - AI-Powered Project Management & Team Collaboration`,
-  description = `Usoro is an intelligent project management platform that transforms how teams work together. Leverage AI to automate workflows, enhance collaboration, and boost productivity. Experience smarter project management today.`,
-  icons = [
-    {
-      rel: "icon",
-      url: "/icons/icon-dark.png",
-      media: "(prefers-color-scheme: light)",
-    },
-    {
-      rel: "icon",
-      url: "/icons/icon.png",
-      media: "(prefers-color-scheme: dark)",
-    },
-  ],
+  description = `Master any subject faster with AI-powered flashcards, spaced repetition, and smart study tools. Join thousands of students studying smarter, not harder.`,
+
   noIndex = false,
   keywords = [
-    "AI marketing automation",
-    "social media marketing",
-    "content generation",
-    "marketing analytics",
-    "campaign management",
-    "multilingual marketing",
-    "AI copywriting",
-    "marketing workflow",
-    "performance tracking",
-    "digital marketing tools",
+    "AI study app",
+    "flashcards for students",
+    "spaced repetition",
+    "exam prep tool",
+    "study smarter",
+    "learning productivity",
+    "exam prep",
+    "student productivity",
+    "memorization techniques",
+    "online learning",
+    "learning app",
+    "study planner",
+    "active recall",
+    "test preparation",
   ],
-  author = process.env.NEXT_PUBLIC_AUTHOR_NAME,
+  author = "Eze",
   type = "website",
 }: MetadataProps = {}): Metadata => {
   const metadataBase = new URL(
-    process.env.NEXT_PUBLIC_APP_URL || "https://vertra-ai.vercel.app"
+    process.env.NEXT_PUBLIC_APP_URL || "http://usoro.app"
   );
 
   return {
     metadataBase,
     title: {
-      template: `%s | ${process.env.NEXT_PUBLIC_APP_NAME}`,
-      default: title,
+      template: "%s | Usoro - AI-Powered Flashcards & Study Tools for Students",
+      default: "Usoro - Study",
     },
     description,
     keywords,
@@ -66,6 +58,36 @@ export const generateMetadata = ({
       address: false,
       telephone: false,
     },
-    icons,
+    openGraph: {
+      title: "Usoro - AI-Powered Flashcards & Study Tools for Students",
+      description:
+        "Master any subject faster with AI-powered flashcards and spaced repetition. Study smarter, not harder.",
+      url: "https://usoro.app",
+      siteName: "Usoro",
+      images: [
+        {
+          url: "/og-image.png",
+          width: 1200,
+          height: 630,
+          alt: "Usoro - AI-Powered Flashcards & Study Tools for Students",
+        },
+      ],
+      locale: "en_US",
+      type: "website",
+    },
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: {
+        index: true,
+        follow: true,
+        "max-video-preview": -1,
+        "max-image-preview": "large",
+        "max-snippet": -1,
+      },
+    },
+    verification: {
+      google: "G-1C0HV5XF3N",
+    },
   };
 };

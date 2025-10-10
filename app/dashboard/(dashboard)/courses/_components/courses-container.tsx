@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Plus, BookOpen, Calendar, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -39,7 +39,6 @@ import { api } from "@/convex/_generated/api";
 import { cn } from "@/lib/utils";
 import { Id } from "@/convex/_generated/dataModel";
 import { RequireIndicator } from "@/components/require-indicator";
-import { get } from "http";
 import ButtonUpload from "./button-upload";
 
 export interface Course {

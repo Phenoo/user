@@ -21,13 +21,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Plus, BookOpen } from "lucide-react";
+import { Plus, BookOpen, Sparkles, Brain } from "lucide-react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import CoursesSelect from "@/components/courses-select";
 import { FlashcardContainer } from "./flashcard-container";
 import { Button } from "@/components/ui/button";
+import GenerateButton from "@/components/generate-button";
 
 interface Flashcard {
   id: string;
@@ -88,28 +89,11 @@ export default function FlashcardsPageContainer() {
   const decks =
     useQuery(api.flashcards.getUserDecks, { userId: userId! }) || [];
   const createDeckMutation = useMutation(api.flashcards.createDeck);
-  const updateCardPerformance = useMutation(
-    api.flashcards.updateCardPerformance
-  );
 
-  const [selectedDeck, setSelectedDeck] = useState<string>("");
-  const [currentCardIndex, setCurrentCardIndex] = useState(0);
-  const [isFlipped, setIsFlipped] = useState(false);
-  const [studyMode, setStudyMode] = useState<"all" | "unmastered" | "review">(
-    "all"
-  );
   const [isCreateDeckOpen, setIsCreateDeckOpen] = useState(false);
-  const [sessionStats, setSessionStats] = useState({
-    correct: 0,
-    incorrect: 0,
-    total: 0,
-  });
-
-  const selectedDeckCards =
-    useQuery(
-      api.flashcards.getDeckCards,
-      selectedDeck ? { deckId: selectedDeck as Id<"flashcardDecks"> } : "skip"
-    ) || [];
+  const [isAIGenerateOpen, setIsAIGenerateOpen] = useState(false);
+  const [aiNotes, setAiNotes] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const [newDeck, setNewDeck] = useState({
     name: "",
@@ -121,54 +105,6 @@ export default function FlashcardsPageContainer() {
     isPublic: false,
     tags: [] as string[],
   });
-
-  const studyCards = selectedDeckCards.filter((card) => {
-    if (studyMode === "unmastered") return !card.isMastered;
-    if (studyMode === "review") return card.lastStudied && !card.isMastered;
-    return true;
-  });
-
-  const currentCard = studyCards[currentCardIndex];
-
-  const nextCard = () => {
-    if (currentCardIndex < studyCards.length - 1) {
-      setCurrentCardIndex(currentCardIndex + 1);
-      setIsFlipped(false);
-    }
-  };
-
-  const previousCard = () => {
-    if (currentCardIndex > 0) {
-      setCurrentCardIndex(currentCardIndex - 1);
-      setIsFlipped(false);
-    }
-  };
-
-  const handleAnswer = async (correct: boolean) => {
-    if (!currentCard) return;
-
-    try {
-      await updateCardPerformance({
-        cardId: currentCard._id,
-        isCorrect: correct,
-      });
-
-      setSessionStats((prev) => ({
-        correct: correct ? prev.correct + 1 : prev.correct,
-        incorrect: correct ? prev.incorrect : prev.incorrect + 1,
-        total: prev.total + 1,
-      }));
-
-      // Auto-advance to next card
-      setTimeout(() => {
-        if (currentCardIndex < studyCards.length - 1) {
-          nextCard();
-        }
-      }, 500);
-    } catch (error) {
-      console.error("Failed to update card performance:", error);
-    }
-  };
 
   const createDeck = async () => {
     try {
@@ -183,7 +119,6 @@ export default function FlashcardsPageContainer() {
         courseId: newDeck.courseId as Id<"courses">,
         createdBy: userId!,
       });
-      setSelectedDeck(deckId);
       setIsCreateDeckOpen(false);
       setNewDeck({
         name: "",
@@ -200,181 +135,209 @@ export default function FlashcardsPageContainer() {
     }
   };
 
-  // Keyboard navigation
-  useEffect(() => {
-    const handleKeyPress = (e: KeyboardEvent) => {
-      if (e.key === " " || e.key === "Enter") {
-        e.preventDefault();
-        setIsFlipped(!isFlipped);
-      } else if (e.key === "ArrowLeft") {
-        previousCard();
-      } else if (e.key === "ArrowRight") {
-        nextCard();
-      } else if (e.key === "1") {
-        handleAnswer(false);
-      } else if (e.key === "2") {
-        handleAnswer(true);
-      }
-    };
+  const generateFlashcardsFromNotes = async () => {
+    if (!aiNotes.trim()) return;
 
-    window.addEventListener("keydown", handleKeyPress);
-    return () => window.removeEventListener("keydown", handleKeyPress);
-  }, [isFlipped, currentCardIndex, studyCards.length]);
+    setIsGenerating(true);
+    try {
+      // This would call an AI API to generate flashcards
+      // For now, we'll create a placeholder deck
+      await createDeckMutation({
+        userId: userId!,
+        color: "border-t-purple-500",
+        description: "AI-generated from notes",
+        difficulty: "Medium",
+        name: "AI Generated Deck",
+        isPublic: false,
+        tags: ["ai-generated"],
+        courseId: newDeck.courseId as Id<"courses">,
+        createdBy: userId!,
+      });
+
+      setIsAIGenerateOpen(false);
+      setAiNotes("");
+    } catch (error) {
+      console.error("Failed to generate flashcards:", error);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   return (
-    <>
-      <div className="min-h-screen bg-background">
-        {/* Header */}
-        <header className="border-b bg-card">
-          <div className="max-w-7xl mx-auto px-6 py-4">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-bold text-foreground">
-                  Flashcards Study
-                </h1>
-              </div>
-              <div className="flex gap-2 ml-auto">
-                <Sheet
-                  open={isCreateDeckOpen}
-                  onOpenChange={setIsCreateDeckOpen}
-                >
-                  <SheetTrigger asChild>
-                    <Button variant="outline">
-                      <Plus className="h-4 w-4 mr-2" />
-                      New Deck
-                    </Button>
-                  </SheetTrigger>
-                  <SheetContent className="md:max-w-2xl w-full">
-                    <SheetHeader>
-                      <SheetTitle>Create Flashcard Deck</SheetTitle>
-                    </SheetHeader>
-                    <div className="space-y-4 p-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="deck-name">Deck Name</Label>
-                        <Input
-                          id="deck-name"
-                          value={newDeck.name}
-                          onChange={(e) =>
-                            setNewDeck((prev) => ({
-                              ...prev,
-                              name: e.target.value,
-                            }))
-                          }
-                          placeholder="e.g., Programming Fundamentals"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="deck-description">Description</Label>
-                        <Textarea
-                          id="deck-description"
-                          value={newDeck.description}
-                          onChange={(e) =>
-                            setNewDeck((prev) => ({
-                              ...prev,
-                              description: e.target.value,
-                            }))
-                          }
-                          placeholder="Brief description of the deck"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="deck-subject">Subject</Label>
-
-                        <CoursesSelect
-                          course={newDeck.courseId}
-                          onChange={(e) => {
-                            setNewDeck((prev) => ({
-                              ...prev,
-                              courseId: e,
-                            }));
-                          }}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Difficulty</Label>
-                        <Select
-                          value={newDeck.difficulty}
-                          onValueChange={(value: any) =>
-                            setNewDeck((prev) => ({
-                              ...prev,
-                              difficulty: value,
-                            }))
-                          }
-                        >
-                          <SelectTrigger className="w-full">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Easy">Easy</SelectItem>
-                            <SelectItem value="Medium">Medium</SelectItem>
-                            <SelectItem value="Hard">Hard</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Color</Label>
-                        <div className="flex gap-2">
-                          {cardColors.map((color) => (
-                            <button
-                              key={color.bg}
-                              onClick={() =>
-                                setNewDeck((prev) => ({
-                                  ...prev,
-                                  color: color.border,
-                                }))
-                              }
-                              className={`w-8 h-8 rounded-sm ${color.bg} ${
-                                newDeck.color === color.border
-                                  ? "ring-2 ring-foreground"
-                                  : ""
-                              }`}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                      <Button onClick={createDeck} className="w-full">
-                        Create Deck
-                      </Button>
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="border-b bg-card">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
+              <Brain className="h-8 w-8 text-primary" />
+              <h1 className="text-2xl font-bold text-foreground">
+                Flashcards Study
+              </h1>
+            </div>
+            <div className="flex gap-2 ml-auto">
+              <Sheet open={isAIGenerateOpen} onOpenChange={setIsAIGenerateOpen}>
+                <SheetTrigger asChild>
+                  <GenerateButton title="Cards" />
+                </SheetTrigger>
+                <SheetContent className="md:max-w-2xl w-full">
+                  <SheetHeader>
+                    <SheetTitle>AI-Assisted Flashcard Generation</SheetTitle>
+                  </SheetHeader>
+                  <div className="space-y-4 p-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="ai-notes">Paste Your Notes or Text</Label>
+                      <Textarea
+                        id="ai-notes"
+                        value={aiNotes}
+                        onChange={(e) => setAiNotes(e.target.value)}
+                        placeholder="Paste your study notes, lecture transcripts, or any text you want to convert into flashcards..."
+                        className="min-h-[300px]"
+                      />
                     </div>
-                  </SheetContent>
-                </Sheet>
-              </div>
+                    <Button
+                      onClick={generateFlashcardsFromNotes}
+                      className="w-full"
+                      disabled={isGenerating || !aiNotes.trim()}
+                    >
+                      {isGenerating ? "Generating..." : "Generate Flashcards"}
+                    </Button>
+                  </div>
+                </SheetContent>
+              </Sheet>
+
+              <Sheet open={isCreateDeckOpen} onOpenChange={setIsCreateDeckOpen}>
+                <SheetTrigger asChild>
+                  <Button variant="outline">
+                    <Plus className="h-4 w-4 mr-2" />
+                    New Deck
+                  </Button>
+                </SheetTrigger>
+                <SheetContent className="md:max-w-2xl w-full">
+                  <SheetHeader>
+                    <SheetTitle>Create Flashcard Deck</SheetTitle>
+                  </SheetHeader>
+                  <div className="space-y-4 p-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="deck-name">Deck Name</Label>
+                      <Input
+                        id="deck-name"
+                        value={newDeck.name}
+                        onChange={(e) =>
+                          setNewDeck((prev) => ({
+                            ...prev,
+                            name: e.target.value,
+                          }))
+                        }
+                        placeholder="e.g., Programming Fundamentals"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="deck-description">Description</Label>
+                      <Textarea
+                        id="deck-description"
+                        value={newDeck.description}
+                        onChange={(e) =>
+                          setNewDeck((prev) => ({
+                            ...prev,
+                            description: e.target.value,
+                          }))
+                        }
+                        placeholder="Brief description of the deck"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="deck-subject">Subject</Label>
+                      <CoursesSelect
+                        course={newDeck.courseId}
+                        onChange={(e) => {
+                          setNewDeck((prev) => ({
+                            ...prev,
+                            courseId: e,
+                          }));
+                        }}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Difficulty</Label>
+                      <Select
+                        value={newDeck.difficulty}
+                        onValueChange={(value: any) =>
+                          setNewDeck((prev) => ({
+                            ...prev,
+                            difficulty: value,
+                          }))
+                        }
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Easy">Easy</SelectItem>
+                          <SelectItem value="Medium">Medium</SelectItem>
+                          <SelectItem value="Hard">Hard</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Color</Label>
+                      <div className="flex gap-2">
+                        {cardColors.map((color) => (
+                          <button
+                            key={color.bg}
+                            onClick={() =>
+                              setNewDeck((prev) => ({
+                                ...prev,
+                                color: color.border,
+                              }))
+                            }
+                            className={`w-8 h-8 rounded-sm ${color.bg} ${
+                              newDeck.color === color.border
+                                ? "ring-2 ring-foreground"
+                                : ""
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                    <Button onClick={createDeck} className="w-full">
+                      Create Deck
+                    </Button>
+                  </div>
+                </SheetContent>
+              </Sheet>
             </div>
           </div>
-        </header>
+        </div>
+      </header>
 
-        <div className="max-w-7xl mx-auto p-6">
-          {decks && decks.length > 0 ? (
-            <FlashcardContainer decks={decks} />
-          ) : (
-            <div className="text-center py-12">
-              <BookOpen className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-              <h2 className="text-2xl font-bold mb-2">No Cards to Study</h2>
-              <p className="text-muted-foreground mb-6">
-                {studyMode === "unmastered"
-                  ? "All cards in this deck are mastered! Try switching to 'All Cards' mode."
-                  : "This deck doesn't have any cards yet. Add some cards to start studying."}
-              </p>
+      <div className="max-w-7xl mx-auto p-6">
+        {decks && decks.length > 0 ? (
+          <FlashcardContainer decks={decks} />
+        ) : (
+          <div className="text-center py-12">
+            <BookOpen className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+            <h2 className="text-2xl font-bold mb-2">No Decks Yet</h2>
+            <p className="text-muted-foreground mb-6">
+              Create your first flashcard deck to start studying effectively
+              with active recall and spaced repetition.
+            </p>
+            <div className="flex gap-4 justify-center">
               <Button onClick={() => setIsCreateDeckOpen(true)}>
                 <Plus className="h-4 w-4 mr-2" />
-                Add First Deck
+                Create Deck
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setIsAIGenerateOpen(true)}
+              >
+                <Sparkles className="h-4 w-4 mr-2" />
+                AI Generate
               </Button>
             </div>
-          )}
-        </div>
-
-        <style jsx>{`
-          .transform-style-preserve-3d {
-            transform-style: preserve-3d;
-          }
-          .backface-hidden {
-            backface-visibility: hidden;
-          }
-          .rotate-y-180 {
-            transform: rotateY(180deg);
-          }
-        `}</style>
+          </div>
+        )}
       </div>
-    </>
+    </div>
   );
 }

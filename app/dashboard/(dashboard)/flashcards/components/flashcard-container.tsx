@@ -18,15 +18,16 @@ export interface FlashcardItemProps {
 
 export function FlashcardContainer({ decks }: { decks: FlashcardDeck[] }) {
   const [activeTab, setActiveTab] = useState("all");
+
   return (
     <div className="w-full">
       <div className="grid w-fit grid-cols-3 bg-muted p-1 gap-2  rounded-3xl mb-6">
         <div
           className={cn(
-            "text-sm py-2 md:py-4 px-4 md:px-6 h-9  cursor-pointer hover:bg-rose-100 rounded-3xl flex items-center justify-center transition-colors",
+            "text-sm py-4 px-6 cursor-pointer rounded-3xl  h-9 text-foreground  flex items-center justify-center transition-colors",
             activeTab === "all"
               ? "bg-primary text-foreground font-bold"
-              : "hover:bg-rose-100 text-foreground"
+              : "hover:bg-rose-100 hover:text-black"
           )}
           onClick={() => setActiveTab("all")}
         >
@@ -35,10 +36,10 @@ export function FlashcardContainer({ decks }: { decks: FlashcardDeck[] }) {
         <div
           onClick={() => setActiveTab("unmastered")}
           className={cn(
-            "text-sm py-4 px-6 cursor-pointer rounded-3xl  h-9 text-background  flex items-center justify-center transition-colors",
+            "text-sm py-4 px-6 cursor-pointer rounded-3xl  h-9 text-foreground  flex items-center justify-center transition-colors",
             activeTab === "unmastered"
               ? "bg-primary text-foreground font-bold"
-              : "hover:bg-rose-100 text-foreground"
+              : "hover:bg-rose-100 hover:text-black"
           )}
         >
           Unmastered
@@ -46,10 +47,10 @@ export function FlashcardContainer({ decks }: { decks: FlashcardDeck[] }) {
         <div
           onClick={() => setActiveTab("review")}
           className={cn(
-            "text-sm py-4 px-6 cursor-pointer rounded-3xl  h-9 text-background  flex items-center justify-center transition-colors",
+            "text-sm py-4 px-6 cursor-pointer rounded-3xl  h-9 text-foreground  flex items-center justify-center transition-colors",
             activeTab === "review"
               ? "bg-primary text-foreground font-bold"
-              : "hover:bg-rose-100 text-foreground"
+              : "hover:bg-rose-100 hover:text-black"
           )}
         >
           Review

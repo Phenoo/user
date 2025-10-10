@@ -20,6 +20,8 @@ import { Id } from "@/convex/_generated/dataModel";
 import { GoArrowUpRight } from "react-icons/go";
 import { MdCalculate } from "react-icons/md";
 
+import { CiSettings } from "react-icons/ci";
+
 interface CourseWithGrade {
   id: string;
   name: string;
@@ -150,7 +152,15 @@ const CpaCard = () => {
   return (
     <Card className="">
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm">Current GPA</CardTitle>
+        <div className="flex justify-between items-center">
+          <CardTitle className="text-sm">Current GPA</CardTitle>
+
+          <Link href={"/dashboard/settings?section=goals"}>
+            <Button size={"icon"} variant={"outline"}>
+              <CiSettings className="h-4 w-4" />
+            </Button>
+          </Link>
+        </div>
       </CardHeader>
       <CardContent>
         <div className="flex items-baseline gap-2">

@@ -33,7 +33,7 @@ export function FlashcardItem({ item }: { item: FlashcardItemProps }) {
         <div className="flex items-center gap-1 text-xs text-muted-foreground">
           <Users className="h-3 w-3" />
           <span>
-            {item.participants} participant{item.participants !== 1 ? "s" : ""}
+            {item.participants} reviews{item.participants !== 1 ? "s" : ""}
           </span>
         </div>
       </CardContent>

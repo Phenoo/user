@@ -1,7 +1,6 @@
 import "./globals.css";
 
-import type { Metadata } from "next";
-import { Urbanist, Lato } from "next/font/google";
+import { Urbanist } from "next/font/google";
 import { ThemeProvider } from "@/providers/theme-provider";
 import { ConvexClientProvider } from "@/providers/convex-provider";
 import { ConvexAuthNextjsServerProvider } from "@convex-dev/auth/nextjs/server";
@@ -10,20 +9,14 @@ import ModalProvider from "@/components/modal-provider";
 import { NextIntlClientProvider } from "next-intl";
 
 import GoogleAnalytics from "@/components/GoogleAnalytics";
+import { generateMetadata } from "@/utils";
 
 const urbanist = Urbanist({
   variable: "--font-body",
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  title: {
-    template: "%s | Usoro - Study",
-    default: "Usoro - Study",
-  },
-  description:
-    "Student Management System, which centralises academic planning and make students focus on what really matters.",
-};
+export const metadata = generateMetadata();
 
 export default async function RootLayout({
   children,
