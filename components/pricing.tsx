@@ -7,14 +7,17 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
 import { PLAN, PLANS } from "@/constants/plans";
-import { useAction } from "convex/react";
+import { useAction, useConvexAuth, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { usePathname, useRouter } from "next/navigation";
+import Link from "next/link";
 
 type Plan = "monthly" | "annually";
 
 const Pricing = () => {
   const [billPlan, setBillPlan] = useState<Plan>("monthly");
+  const { isAuthenticated } = useConvexAuth();
+  const user = useQuery(api.users.currentUser);
 
   const pathname = usePathname();
   const handleSwitch = () => {
@@ -61,12 +64,136 @@ const Pricing = () => {
         </div>
 
         <div className="grid w-full grid-cols-1 lg:grid-cols-3 md:grid-cols-2 pt-8 lg:pt-12 gap-4 lg:gap-6 max-w-5xl mx-auto">
-          {PLANS.map((plan, idx) => (
-            <Plan key={plan.id} plan={plan} billPlan={billPlan} />
-          ))}
+          {isAuthenticated
+            ? PLANS.map((plan, idx) => (
+                <AuthPlan key={plan.id + idx} plan={plan} billPlan={billPlan} />
+              ))
+            : PLANS.map((plan, idx) => (
+                <Plan key={plan.id + idx} plan={plan} billPlan={billPlan} />
+              ))}
         </div>
       </div>
     </section>
+  );
+};
+
+const AuthPlan = ({ plan, billPlan }: { plan: PLAN; billPlan: Plan }) => {
+  const router = useRouter();
+  const upgrade = useAction(api.stripe.pay);
+  const user = useQuery(api.users.currentUser);
+
+  const handleUpgrade = async (productId: string) => {
+    console.log(productId, "ksdkdk");
+    if (!user) return;
+
+    try {
+      const response = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productId,
+          email: user.email,
+          userId: user._id,
+        }),
+      });
+
+      const { checkoutUrl } = await response.json();
+      window.location.href = checkoutUrl;
+    } catch (error) {
+      console.error("Upgrade error:", error);
+    } finally {
+    }
+  };
+
+  return (
+    <div
+      className={cn(
+        "flex flex-col relative rounded-2xl lg:rounded-3xl transition-all bg-background/ items-start w-full border border-foreground/10 overflow-hidden",
+        plan.title === "Pro" && "border-primary"
+      )}
+    >
+      {plan.title === "Pro" && (
+        <div className="absolute top-1/2 inset-x-0 mx-auto h-12 -rotate-45 w-full bg-primary rounded-2xl lg:rounded-3xl blur-[8rem] -z-10"></div>
+      )}
+
+      <div className="p-4 md:p-8 flex rounded-t-2xl lg:rounded-t-3xl flex-col items-start w-full relative">
+        <h2 className="font-medium text-xl text-foreground pt-5">
+          {plan.title}
+        </h2>
+        <h3 className="mt-3 text-3xl font-medium md:text-5xl">
+          {plan.title === "Free" ? (
+            "Free"
+          ) : (
+            <NumberFlow
+              value={
+                billPlan === "monthly" ? plan.monthlyPrice : plan.annuallyPrice
+              }
+              suffix={billPlan === "monthly" ? "/mo" : "/yr"}
+              format={{
+                currency: "USD",
+                style: "currency",
+                currencySign: "standard",
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0,
+                currencyDisplay: "narrowSymbol",
+              }}
+            />
+          )}
+        </h3>
+        <p className="text-sm md:text-base text-muted-foreground mt-2">
+          {plan.desc}
+        </p>
+      </div>
+      <div className="flex flex-col items-start w-full px-4 py-2 md:px-8">
+        {plan.title === "Free" ? (
+          <Link href={"/dashboaed"} className="w-full">
+            <Button className="w-full">Continue</Button>
+          </Link>
+        ) : (
+          <Button
+            size="lg"
+            variant={plan.title === "Starter" ? "blue" : "default"}
+            className="w-full"
+            onClick={() =>
+              handleUpgrade(
+                billPlan === "monthly" ? plan.monthlyId : plan.yearlyId
+              )
+            }
+          >
+            {plan.buttonText}
+          </Button>
+        )}
+        {plan.title !== "Free" && (
+          <div className="h-8 overflow-hidden w-full mx-auto">
+            <AnimatePresence mode="wait">
+              <motion.span
+                key={billPlan}
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: -20, opacity: 0 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+                className="text-sm text-center text-muted-foreground mt-3 mx-auto block"
+              >
+                {billPlan === "monthly"
+                  ? "Billed monthly"
+                  : "Billed in one annual payment"}
+              </motion.span>
+            </AnimatePresence>
+          </div>
+        )}
+      </div>
+      <div className="flex flex-col items-start w-full p-5 mb-4 ml-1 gap-y-2">
+        <span className="text-base text-left mb-2">Includes:</span>
+        {plan.features.map((feature, index) => (
+          <div key={index} className="flex items-center justify-start gap-2">
+            <div className="flex items-center justify-center">
+              <CheckIcon className="size-5" />
+            </div>
+            <span>{feature}</span>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 };
 
@@ -123,16 +250,20 @@ const Plan = ({ plan, billPlan }: { plan: PLAN; billPlan: Plan }) => {
       </div>
       <div className="flex flex-col items-start w-full px-4 py-2 md:px-8">
         {plan.title === "Free" ? (
-          <Button className="w-full">Continue</Button>
+          <Link href={"/auth"} className="w-full">
+            <Button className="w-full">Continue</Button>
+          </Link>
         ) : (
-          <Button
-            size="lg"
-            variant={plan.title === "Starter" ? "blue" : "default"}
-            className="w-full"
-            onClick={handleBuy}
-          >
-            {plan.buttonText}
-          </Button>
+          <Link href={`/auth`} className="w-full">
+            <Button
+              size="lg"
+              variant={plan.title === "Starter" ? "blue" : "default"}
+              className="w-full"
+              // onClick={handleBuy}
+            >
+              {plan.buttonText}
+            </Button>
+          </Link>
         )}
         {plan.title !== "Free" && (
           <div className="h-8 overflow-hidden w-full mx-auto">

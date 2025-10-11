@@ -1,5 +1,6 @@
 import Logo from "@/components/logo";
 import Pricing from "@/components/pricing";
+import { api } from "@/lib/polar";
 
 import type { Metadata } from "next";
 
@@ -7,7 +8,7 @@ export const metadata: Metadata = {
   title: "Pricing",
 };
 
-export default function PricingPage() {
+export default async function PricingPage() {
   return (
     <div className="min-h-screen max-w-7xl mx-auto px-6 w-full py-8 ">
       {/* Header */}

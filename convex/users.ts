@@ -104,6 +104,27 @@ export const getUserByStripeCustomerId = query({
   },
 });
 
+export const updateUserSubscription = mutation({
+  args: {
+    userId: v.string(),
+    tier: v.optional(v.string()),
+    status: v.optional(v.string()),
+    stripeCustomerId: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId as any);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    await ctx.db.patch(args.userId as any, {
+      subscriptionTier: args.tier,
+      subscriptionStatus: args.status,
+      stripeCustomerId: args.stripeCustomerId,
+    });
+  },
+});
+
 //update subscription
 export const updateSubscription = internalMutation({
   args: {

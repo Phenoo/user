@@ -32,17 +32,8 @@ const schema = defineSchema({
     subscriptionPlan: v.optional(
       v.union(v.literal("FREE"), v.literal("STUDENT"), v.literal("STUDENTPRO"))
     ),
-    subscriptionStatus: v.optional(
-      v.union(
-        v.literal("active"),
-        v.literal("canceled"),
-        v.literal("incomplete"),
-        v.literal("incomplete_expired"),
-        v.literal("past_due"),
-        v.literal("trialing"),
-        v.literal("unpaid")
-      )
-    ),
+    subscriptionTier: v.optional(v.string()),
+    subscriptionStatus: v.optional(v.string()),
     subscriptionCancelAtPeriodEnd: v.optional(v.boolean()),
   })
     .index("by_name", ["name"])
