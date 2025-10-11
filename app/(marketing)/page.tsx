@@ -7,20 +7,21 @@ import Features from "@/components/marketing/features";
 import Hero from "@/components/marketing/hero";
 import Integration from "@/components/marketing/integration";
 import LanguageSupport from "@/components/marketing/lang-support";
-import { FeaturesSection } from "@/components/marketing/section-features";
 import Pricing from "@/components/pricing";
 import { api } from "@/lib/polar";
-import Link from "next/link";
 
 const HomePage = async () => {
   const products = await api.products.list({ isArchived: false });
 
   console.log(products);
+
   return (
     <Wrapper className="py-20 relative">
       <Hero />
       <Companies />
-
+      {products.result.items.map((item, i) => (
+        <div key={item.id}>{item.id}</div>
+      ))}
       <Features />
       <Analysis />
       <Integration />
