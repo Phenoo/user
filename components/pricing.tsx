@@ -16,7 +16,6 @@ type Plan = "monthly" | "annually";
 
 const Pricing = () => {
   const [billPlan, setBillPlan] = useState<Plan>("monthly");
-  const { isAuthenticated, isLoading } = useConvexAuth();
 
   const pathname = usePathname();
   const handleSwitch = () => {
@@ -63,13 +62,9 @@ const Pricing = () => {
         </div>
 
         <div className="grid w-full grid-cols-1 lg:grid-cols-3 md:grid-cols-2 pt-8 lg:pt-12 gap-4 lg:gap-6 max-w-5xl mx-auto">
-          {isLoading && isAuthenticated
-            ? PLANS.map((plan, idx) => (
-                <AuthPlan key={plan.id + idx} plan={plan} billPlan={billPlan} />
-              ))
-            : PLANS.map((plan, idx) => (
-                <Plan key={plan.id + idx} plan={plan} billPlan={billPlan} />
-              ))}
+          {PLANS.map((plan, idx) => (
+            <AuthPlan key={plan.id + idx} plan={plan} billPlan={billPlan} />
+          ))}
         </div>
       </div>
     </section>
@@ -78,7 +73,8 @@ const Pricing = () => {
 
 const AuthPlan = ({ plan, billPlan }: { plan: PLAN; billPlan: Plan }) => {
   const user = useQuery(api.users.currentUser);
-
+  const { isAuthenticated, isLoading } = useConvexAuth();
+  const router = useRouter();
   const handleUpgrade = async (productId: string) => {
     console.log(productId, "ksdkdk");
     if (!user) return;
@@ -101,6 +97,10 @@ const AuthPlan = ({ plan, billPlan }: { plan: PLAN; billPlan: Plan }) => {
     } finally {
     }
   };
+
+  if (isLoading) {
+    return <></>;
+  }
 
   return (
     <div
@@ -151,11 +151,15 @@ const AuthPlan = ({ plan, billPlan }: { plan: PLAN; billPlan: Plan }) => {
             size="lg"
             variant={plan.title === "Starter" ? "blue" : "default"}
             className="w-full"
-            onClick={() =>
-              handleUpgrade(
-                billPlan === "monthly" ? plan.monthlyId : plan.yearlyId
-              )
-            }
+            onClick={() => {
+              if (isAuthenticated) {
+                handleUpgrade(
+                  billPlan === "monthly" ? plan.monthlyId : plan.yearlyId
+                );
+              } else {
+                router.push("/auth");
+              }
+            }}
           >
             {plan.buttonText}
           </Button>
