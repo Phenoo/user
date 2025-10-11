@@ -20,7 +20,7 @@ export const PLANS: PLAN[] = [
     monthlyPrice: 5,
     annuallyPrice: 54,
     buttonText: "Get Starter",
-    monthlyId: process.env.NEXT_PUBLIC_STRIPE_STUDENT_PRICE_ID!,
+    monthlyId: process.env.STRIPE_STUDENT_YEARLY_PRICE_ID!,
     yearlyId: process.env.STRIPE_STUDENT_YEARLY_PRICE_ID!,
     features: [
       "Task manager & to-do lists",
@@ -41,7 +41,7 @@ export const PLANS: PLAN[] = [
     annuallyPrice: 54,
     badge: "Most Popular",
     buttonText: "Upgrade to Pro",
-    monthlyId: process.env.NEXT_PUBLIC_STRIPE_STUDENT_PRICE_ID!,
+    monthlyId: process.env.STRIPE_STUDENT_YEARLY_PRICE_ID!,
     yearlyId: process.env.STRIPE_STUDENT_YEARLY_PRICE_ID!,
     features: [
       "Unlimited subjects/courses",
@@ -61,8 +61,8 @@ export const PLANS: PLAN[] = [
     monthlyPrice: 12,
     annuallyPrice: 120,
     badge: "AI Powered",
-    monthlyId: process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID!,
-    yearlyId: process.env.NEXT_PUBLIC_STRIPE_PRO_YEARLY_PRICE_ID!,
+    monthlyId: process.env.STRIPE_PRO_PRICE_ID!,
+    yearlyId: process.env.STRIPE_PRO_YEARLY_PRICE_ID!,
     buttonText: "Upgrade to Scholar",
     features: [
       "Everything in Pro",
@@ -80,13 +80,13 @@ export const PLANS: PLAN[] = [
 export function getPlan(priceId: string) {
   let message;
   switch (priceId) {
-    case process.env.NEXT_PUBLIC_STRIPE_STUDENT_PRICE_ID:
+    case process.env.STRIPE_STUDENT_PRICE_ID:
       message = "STUDENT";
-    case process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID:
+    case process.env.STRIPE_PRO_PRICE_ID:
       message = "STUDENTPRO";
-    case process.env.NEXT_PUBLIC_STRIPE_STUDENT_YEARLY_PRICE_ID:
+    case process.env.STRIPE_STUDENT_YEARLY_PRICE_ID:
       message = "STUDENT_YEAR";
-    case process.env.NEXT_PUBLIC_STRIPE_PRO_YEARLY_PRICE_ID:
+    case process.env.STRIPE_PRO_YEARLY_PRICE_ID:
       message = "STUDENTPRO_YEAR";
   }
 

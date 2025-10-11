@@ -16,8 +16,7 @@ type Plan = "monthly" | "annually";
 
 const Pricing = () => {
   const [billPlan, setBillPlan] = useState<Plan>("monthly");
-  const { isAuthenticated } = useConvexAuth();
-  const user = useQuery(api.users.currentUser);
+  const { isAuthenticated, isLoading } = useConvexAuth();
 
   const pathname = usePathname();
   const handleSwitch = () => {
@@ -64,7 +63,7 @@ const Pricing = () => {
         </div>
 
         <div className="grid w-full grid-cols-1 lg:grid-cols-3 md:grid-cols-2 pt-8 lg:pt-12 gap-4 lg:gap-6 max-w-5xl mx-auto">
-          {isAuthenticated
+          {isLoading && isAuthenticated
             ? PLANS.map((plan, idx) => (
                 <AuthPlan key={plan.id + idx} plan={plan} billPlan={billPlan} />
               ))
@@ -78,8 +77,6 @@ const Pricing = () => {
 };
 
 const AuthPlan = ({ plan, billPlan }: { plan: PLAN; billPlan: Plan }) => {
-  const router = useRouter();
-  const upgrade = useAction(api.stripe.pay);
   const user = useQuery(api.users.currentUser);
 
   const handleUpgrade = async (productId: string) => {
