@@ -153,9 +153,7 @@ const AuthPlan = ({ plan, billPlan }: { plan: PLAN; billPlan: Plan }) => {
             className="w-full"
             onClick={() => {
               if (isAuthenticated) {
-                handleUpgrade(
-                  billPlan === "monthly" ? plan.monthlyId : plan.yearlyId
-                );
+                handleUpgrade("dd1cbd71-24f0-4a4a-90c6-b2b4259347b9");
               } else {
                 router.push("/auth");
               }
