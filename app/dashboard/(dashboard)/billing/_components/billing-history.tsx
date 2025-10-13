@@ -12,6 +12,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { BillingPortalButton } from "@/components/billing-portal-button";
+
 const BillingHistory = () => {
   const getStatusIcon = (status: string) => {
     switch (status) {

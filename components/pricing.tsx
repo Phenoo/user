@@ -16,7 +16,7 @@ type Plan = "monthly" | "annually";
 
 const Pricing = () => {
   const [billPlan, setBillPlan] = useState<Plan>("monthly");
-
+  const { isAuthenticated, isLoading } = useConvexAuth();
   const pathname = usePathname();
   const handleSwitch = () => {
     setBillPlan((prev) => (prev === "monthly" ? "annually" : "monthly"));
@@ -62,9 +62,17 @@ const Pricing = () => {
         </div>
 
         <div className="grid w-full grid-cols-1 lg:grid-cols-3 md:grid-cols-2 pt-8 lg:pt-12 gap-4 lg:gap-6 max-w-5xl mx-auto">
-          {PLANS.map((plan, idx) => (
-            <AuthPlan key={plan.id + idx} plan={plan} billPlan={billPlan} />
-          ))}
+          {isLoading ? (
+            <></>
+          ) : isAuthenticated ? (
+            PLANS.map((plan, idx) => (
+              <AuthPlan key={plan.id + idx} plan={plan} billPlan={billPlan} />
+            ))
+          ) : (
+            PLANS.map((plan, idx) => (
+              <Plan key={plan.id + idx} plan={plan} billPlan={billPlan} />
+            ))
+          )}
         </div>
       </div>
     </section>
@@ -73,10 +81,10 @@ const Pricing = () => {
 
 const AuthPlan = ({ plan, billPlan }: { plan: PLAN; billPlan: Plan }) => {
   const user = useQuery(api.users.currentUser);
+
   const { isAuthenticated, isLoading } = useConvexAuth();
   const router = useRouter();
   const handleUpgrade = async (productId: string) => {
-    console.log(productId, "ksdkdk");
     if (!user) return;
 
     try {
@@ -153,7 +161,9 @@ const AuthPlan = ({ plan, billPlan }: { plan: PLAN; billPlan: Plan }) => {
             className="w-full"
             onClick={() => {
               if (isAuthenticated) {
-                handleUpgrade("dd1cbd71-24f0-4a4a-90c6-b2b4259347b9");
+                handleUpgrade(
+                  billPlan === "monthly" ? plan.monthlyId : plan.yearlyId
+                );
               } else {
                 router.push("/auth");
               }
@@ -197,17 +207,6 @@ const AuthPlan = ({ plan, billPlan }: { plan: PLAN; billPlan: Plan }) => {
 };
 
 const Plan = ({ plan, billPlan }: { plan: PLAN; billPlan: Plan }) => {
-  const router = useRouter();
-  const upgrade = useAction(api.stripe.pay);
-
-  const handleBuy = async () => {
-    const url = await upgrade({
-      price: billPlan === "monthly" ? plan.monthlyId : plan.yearlyId,
-    });
-    if (!url) return;
-    router.push(url);
-  };
-
   return (
     <div
       className={cn(

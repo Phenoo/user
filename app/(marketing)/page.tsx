@@ -19,9 +19,11 @@ const HomePage = async () => {
     <Wrapper className="py-20 relative">
       <Hero />
       <Companies />
-      {/* {products.result.items.map((item, i) => (
-        <div key={item.id}>{item.id}</div>
-      ))} */}
+      {products.result.items
+        .filter((sd, i) => sd.recurringInterval === "month")
+        .map((item, i) => (
+          <div key={item.id}>{item.id}</div>
+        ))}
       <Features />
       <Analysis />
       <Integration />

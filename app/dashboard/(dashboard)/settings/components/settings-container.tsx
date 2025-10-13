@@ -25,14 +25,23 @@ import {
   Target,
   Trash2,
   CreditCard,
+  ArrowLeft,
 } from "lucide-react";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import ProfileSettings from "./profile-settings";
 import { BillingTabs } from "../../billing/_components/BillingTabs";
-import BillingHistory from "../../billing/_components/billing-history";
 import Link from "next/link";
+import { api as polar } from "@/lib/polar";
+import { useMutation, useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { SubscriptionHistory } from "../../billing/_components/subscription-history";
+import { InvoiceTable } from "../../billing/_components/invoice-table";
+import { BillingOverview } from "../../billing/_components/billing-overview";
+import { Id } from "@/convex/_generated/dataModel";
+import { toast } from "sonner";
+import { api as polarClient } from "@/lib/polar";
 
 type SettingsSection =
   | "profile"
@@ -605,79 +614,144 @@ function PrivacySettings() {
 }
 
 function BillingSettings() {
+  const router = useRouter();
   const searchParams = useSearchParams();
+  const activeTab = searchParams.get("tab") || "overview";
 
-  const billingSearch = searchParams.get("tab") || "overview";
+  const user = useQuery(api.users.currentUser);
+  const cancelSub = useMutation(api.subscriptions.cancelSubscription);
+  const subscription = useQuery(
+    api.subscriptions.getCurrentSubscription,
+    user ? { userId: user._id } : "skip"
+  );
+  const invoices = useQuery(
+    api.subscriptions.getInvoices,
+    user ? { userId: user._id } : "skip"
+  );
+  const totalSpent =
+    invoices?.reduce((sum, invoice) => sum + invoice.amount, 0) || 0;
+  const nextBillingDate = subscription?.currentPeriodEnd;
+
+  const handleOpen = async () => {
+    if (!subscription) {
+      toast.error("No subscription for user");
+      return;
+    }
+
+    const polarSubscription = await polarClient.subscriptions.get({
+      id: subscription.polarSubscriptionId, // Assert non-null since we found a subscription
+    });
+    const portalSession = await polarClient.customerSessions.create({
+      customerId: subscription.polarCustomerId,
+    });
+
+    const a = document.createElement("a");
+    a.href = portalSession.customerPortalUrl;
+    a.target = "_blank"; // opens in new tab
+    a.rel = "noopener noreferrer"; // security best practice
+    a.click(); // simulate click
+  };
 
   const renderContent = () => {
-    switch (billingSearch) {
+    switch (activeTab) {
       case "overview":
         return (
-          <div>
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-col gap-1">
-                <h4 className="font-bold text-base md:text-xl">Free Trial</h4>
-                <p className="text-sm">Credit remaining</p>
-              </div>
-              <h4 className="font-bold text-2xl md:text-4xl ">$0.00</h4>
-            </div>
-            <Card className="mt-8">
-              <CardHeader>
-                <CardTitle>Need Help?</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="p-4 border rounded-lg">
-                    <h3 className="font-medium mb-2">Billing Questions</h3>
-                    <p className="text-sm text-muted-foreground mb-3">
-                      Have questions about your bill or need to update your
-                      payment information?
-                    </p>
-                    <Button variant="outline" size="sm">
-                      Contact Support
-                    </Button>
-                  </div>
-
-                  <div className="p-4 border rounded-lg">
-                    <h3 className="font-medium mb-2">Plan Changes</h3>
-                    <p className="text-sm text-muted-foreground mb-3">
-                      Want to upgrade, downgrade, or learn more about our plans?
-                    </p>
-                    <Link href="/dashboard/pricing">
-                      <Button variant="outline" size="sm">
-                        View Plans
-                      </Button>
-                    </Link>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          <BillingOverview
+            //@ts-ignore
+            subscription={subscription || null}
+            totalSpent={totalSpent}
+            nextBillingDate={nextBillingDate}
+          />
         );
+
+      case "payment-methods":
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle>Payment Methods</CardTitle>
+              <CardDescription>
+                Manage your payment methods and billing information
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-12">
+                <p className="text-muted-foreground mb-4">
+                  Payment methods are managed through Polar
+                </p>
+                <Button variant="outline" onClick={handleOpen}>
+                  Open Polar Dashboard
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        );
+
       case "billing-history":
-        return <BillingHistory />;
-      case "credit-grants":
-        return <div></div>;
-      case "billingpreferences":
-        return <div></div>;
-      case "pricing":
-        return <div></div>;
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle>Billing History</CardTitle>
+              <CardDescription>
+                View all your past invoices and payments
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {invoices && invoices.length > 0 ? (
+                <InvoiceTable invoices={invoices} />
+              ) : (
+                <div className="text-center py-12">
+                  <p className="text-muted-foreground">
+                    No billing history available
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        );
+
+      case "subscription-history":
+        return (
+          <SubscriptionHistory
+            events={subscription ? [subscription as any] : []}
+          />
+        );
+
       default:
-        return <div></div>;
+        return null;
     }
   };
 
-  return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-semibold">Billing & Plans</h2>
-        <p className="text-muted-foreground mt-1">
-          Manage your subscription and billing information.
-        </p>
+  if (
+    user === undefined ||
+    subscription === undefined ||
+    invoices === undefined
+  ) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
-      <BillingTabs />
+    );
+  }
 
-      {renderContent()}
+  return (
+    <div className="min-h-screen bg-background">
+      <header className="border-b">
+        <div className="container mx-auto px-4 py-6">
+          <div>
+            <h1 className="text-3xl font-bold">Billing & Plans</h1>
+            <p className="text-muted-foreground mt-1">
+              Manage your subscription and billing information
+            </p>
+          </div>
+        </div>
+      </header>
+
+      <main className="container mx-auto px-4 py-8">
+        <div className="space-y-6">
+          <BillingTabs />
+          {renderContent()}
+        </div>
+      </main>
     </div>
   );
 }

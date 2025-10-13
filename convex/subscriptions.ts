@@ -1,110 +1,292 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { query, mutation } from "./_generated/server";
+import { Id } from "./_generated/dataModel";
 
-// Get user subscription status
-export const getUserSubscription = query({
+// Get current user's subscription
+export const getCurrentSubscription = query({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
-    const user = await ctx.db.get(args.userId);
-    if (!user) return null;
-
-    return {
-      plan: user.subscriptionPlan || "FREE",
-      status: user.subscriptionStatus,
-      cancelAtPeriodEnd: user.subscriptionCancelAtPeriodEnd,
-      stripeCustomerId: user.stripeCustomerId,
-    };
-  },
-});
-
-// Log subscription events for webhook processing
-export const logSubscriptionEvent = mutation({
-  args: {
-    userId: v.id("users"),
-    stripeEventId: v.string(),
-    eventType: v.string(),
-    subscriptionId: v.optional(v.string()),
-    customerId: v.optional(v.string()),
-    data: v.any(),
-  },
-  handler: async (ctx, args) => {
-    // Check if event already processed
-    const existingEvent = await ctx.db
-      .query("subscriptionEvents")
-      .withIndex("by_stripe_event", (q) =>
-        q.eq("stripeEventId", args.stripeEventId)
-      )
+    const subscription = await ctx.db
+      .query("subscriptions")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .filter((q) => q.neq(q.field("status"), "canceled"))
       .first();
 
-    if (existingEvent) {
-      return { processed: true, eventId: existingEvent._id };
-    }
-
-    const eventId = await ctx.db.insert("subscriptionEvents", {
-      userId: args.userId,
-      stripeEventId: args.stripeEventId,
-      eventType: args.eventType,
-      subscriptionId: args.subscriptionId,
-      customerId: args.customerId,
-      processed: false,
-      data: args.data,
-      createdAt: Date.now(),
-    });
-
-    return { processed: false, eventId };
+    return subscription;
   },
 });
 
-// Check subscription limits
-export const checkSubscriptionLimits = query({
-  args: { userId: v.id("users") },
-  handler: async (ctx, args) => {
-    const user = await ctx.db.get(args.userId);
-    if (!user) return null;
-
-    const plan = user.subscriptionPlan || "FREE";
-
-    // Get current usage
-    const flashcardDecks = await ctx.db
-      .query("flashcardDecks")
-      .withIndex("by_creator", (q) => q.eq("createdBy", args.userId))
-      .collect();
-
-    const studyGroupMemberships = await ctx.db
-      .query("studyGroupMembers")
-      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+// Get all available products/plans
+export const getProducts = query({
+  args: {},
+  handler: async (ctx) => {
+    const products = await ctx.db
+      .query("products")
       .filter((q) => q.eq(q.field("isActive"), true))
       .collect();
 
-    // Define limits based on plan
-    const limits = {
-      FREE: { flashcardDecks: 5, studyGroups: 2, cardsPerDeck: 50 },
-      STUDENT: { flashcardDecks: -1, studyGroups: -1, cardsPerDeck: -1 },
-      PRO: { flashcardDecks: -1, studyGroups: -1, cardsPerDeck: -1 },
-      STUDENTPRO: { flashcardDecks: -1, studyGroups: -1, cardsPerDeck: -1 },
-      STUDENTPRO_YEAR: {
-        flashcardDecks: -1,
-        studyGroups: -1,
-        cardsPerDeck: -1,
-      },
-      STUDENT_YEAR: { flashcardDecks: -1, studyGroups: -1, cardsPerDeck: -1 },
-    };
+    return products;
+  },
+});
 
-    const planLimits = limits[plan];
+// Get user's billing history
+export const getInvoices = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const invoices = await ctx.db
+      .query("invoices")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .order("desc")
+      .take(20);
 
-    return {
-      plan,
-      usage: {
-        flashcardDecks: flashcardDecks.length,
-        studyGroups: studyGroupMemberships.length,
-      },
-      limits: planLimits,
-      canCreateDeck:
-        planLimits.flashcardDecks === -1 ||
-        flashcardDecks.length < planLimits.flashcardDecks,
-      canJoinGroup:
-        planLimits.studyGroups === -1 ||
-        studyGroupMemberships.length < planLimits.studyGroups,
-    };
+    return invoices;
+  },
+});
+
+// Create or update subscription from webhook
+// export const upsertSubscription = mutation({
+//   args: {
+//     userId: v.id("users"),
+//     polarSubscriptionId: v.string(),
+//     polarCustomerId: v.string(),
+//     productId: v.string(),
+//     productName: v.string(),
+//     status: v.string(),
+//     currentPeriodStart: v.optional(v.number()),
+//     currentPeriodEnd: v.optional(v.number()),
+//     cancelAtPeriodEnd: v.boolean(),
+//     canceledAt: v.optional(v.number()),
+//     trialStart: v.optional(v.number()),
+//     trialEnd: v.optional(v.number()),
+//   },
+//   handler: async (ctx, args) => {
+//     const existing = await ctx.db
+//       .query("subscriptions")
+//       .withIndex("by_polar_subscription", (q) =>
+//         q.eq("polarSubscriptionId", args.polarSubscriptionId)
+//       )
+//       .first();
+
+//     if (existing) {
+//       await ctx.db.patch(existing._id, {
+//         status: args.status as any,
+//         currentPeriodStart: args.currentPeriodStart,
+//         currentPeriodEnd: args.currentPeriodEnd,
+//         cancelAtPeriodEnd: args.cancelAtPeriodEnd,
+//         canceledAt: args.canceledAt,
+//       });
+//       return existing._id;
+//     } else {
+//       return await ctx.db.insert("subscriptions", {
+//         ...args,
+//         status: args.status as any,
+//       });
+//     }
+//   },
+// });
+export const upsertSubscription = mutation({
+  args: {
+    userId: v.id("users"),
+    polarSubscriptionId: v.string(),
+    polarCustomerId: v.string(),
+    productId: v.string(),
+    productName: v.string(),
+    priceId: v.string(),
+    status: v.string(),
+    currentPeriodStart: v.number(),
+    currentPeriodEnd: v.number(),
+    cancelAtPeriodEnd: v.boolean(),
+    canceledAt: v.optional(v.number()),
+    trialStart: v.optional(v.number()),
+    trialEnd: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("subscriptions")
+      .withIndex("by_polar_subscription", (q) =>
+        q.eq("polarSubscriptionId", args.polarSubscriptionId)
+      )
+      .first();
+
+    if (existing) {
+      const planChanged = existing.productId !== args.productId;
+
+      if (planChanged) {
+        await ctx.db.insert("subscriptionChanges", {
+          userId: args.userId,
+          subscriptionId: existing._id,
+          changeType: "plan_change",
+          fromProductId: existing.productId,
+          toProductId: args.productId,
+          toPriceId: args.priceId,
+          effectiveDate: Date.now(),
+        });
+      }
+
+      await ctx.db.patch(existing._id, {
+        productId: args.productId,
+        productName: args.productName,
+        status: args.status as any,
+        currentPeriodStart: args.currentPeriodStart,
+        currentPeriodEnd: args.currentPeriodEnd,
+        cancelAtPeriodEnd: args.cancelAtPeriodEnd,
+        canceledAt: args.canceledAt,
+        previousProductId: planChanged
+          ? existing.productId
+          : existing.previousProductId,
+        lastPlanChangeAt: planChanged ? Date.now() : existing.lastPlanChangeAt,
+      });
+      return existing._id;
+    } else {
+      return await ctx.db.insert("subscriptions", {
+        ...args,
+        status: args.status as any,
+      });
+    }
+  },
+});
+
+export const cancelSubscription = mutation({
+  args: {
+    userId: v.id("users"),
+    polarSubscriptionId: v.string(),
+    status: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("subscriptions")
+      .withIndex("by_polar_subscription", (q) =>
+        q.eq("polarSubscriptionId", args.polarSubscriptionId)
+      )
+      .first();
+
+    if (existing) {
+      await ctx.db.patch(existing?._id, {
+        status: args.status as any,
+      });
+    }
+
+    return existing?._id;
+  },
+});
+// Sync products from Polar
+export const syncProduct = mutation({
+  args: {
+    polarProductId: v.string(),
+    name: v.string(),
+    description: v.optional(v.string()),
+    prices: v.array(
+      v.object({
+        id: v.string(),
+        amount: v.number(),
+        currency: v.string(),
+        interval: v.union(v.literal("month"), v.literal("year")),
+        intervalCount: v.number(),
+      })
+    ),
+    features: v.array(v.string()),
+    isActive: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("products")
+      .withIndex("by_polar_product", (q) =>
+        q.eq("polarProductId", args.polarProductId)
+      )
+      .first();
+
+    if (existing) {
+      await ctx.db.patch(existing._id, args);
+      return existing._id;
+    } else {
+      return await ctx.db.insert("products", args);
+    }
+  },
+});
+
+// Get subscription history with all status changes
+export const getSubscriptionHistory = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const subscriptions = await ctx.db
+      .query("subscriptions")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .order("desc")
+      .collect();
+
+    return subscriptions;
+  },
+});
+
+// Record invoice from webhook
+export const recordInvoice = mutation({
+  args: {
+    userId: v.id("users"),
+    polarInvoiceId: v.string(),
+    subscriptionId: v.string(),
+    amount: v.number(),
+    currency: v.string(),
+    status: v.string(),
+    invoiceDate: v.number(),
+    paidAt: v.optional(v.number()),
+    invoiceUrl: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("invoices")
+      .withIndex("by_polar_invoice", (q) =>
+        q.eq("polarInvoiceId", args.polarInvoiceId)
+      )
+      .first();
+
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        status: args.status as any,
+        paidAt: args.paidAt,
+      });
+      return existing._id;
+    } else {
+      return await ctx.db.insert("invoices", {
+        ...args,
+        status: args.status as any,
+        subscriptionId: args.subscriptionId,
+      });
+    }
+  },
+});
+
+export const getPlanChangeHistory = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const changes = await ctx.db
+      .query("subscriptionChanges")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .order("desc")
+      .take(20);
+
+    return changes;
+  },
+});
+
+export const recordPlanChange = mutation({
+  args: {
+    userId: v.id("users"),
+    subscriptionId: v.id("subscriptions"),
+    changeType: v.union(
+      v.literal("upgrade"),
+      v.literal("downgrade"),
+      v.literal("plan_change"),
+      v.literal("canceled"),
+      v.literal("reactivated")
+    ),
+    fromProductId: v.optional(v.string()),
+    toProductId: v.optional(v.string()),
+    fromPriceId: v.optional(v.string()),
+    toPriceId: v.optional(v.string()),
+    effectiveDate: v.number(),
+    prorationAmount: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db.insert("subscriptionChanges", args);
   },
 });

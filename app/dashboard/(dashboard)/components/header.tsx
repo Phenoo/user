@@ -39,7 +39,7 @@ const HeaderComponent = () => {
   };
 
   useEffect(() => {
-    if (user?.endsOn && user?.endsOn < Date.now()) {
+    if (user?.endsOn && new Date(user?.endsOn) > new Date()) {
       setSubscribed(true);
     } else {
       setSubscribed(false);

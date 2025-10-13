@@ -107,8 +107,10 @@ export const getUserByStripeCustomerId = query({
 export const updateUserSubscription = mutation({
   args: {
     userId: v.string(),
+    subscriptionId: v.optional(v.string()),
     tier: v.optional(v.string()),
     status: v.optional(v.string()),
+    endsOn: v.optional(v.string()),
     stripeCustomerId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -119,6 +121,8 @@ export const updateUserSubscription = mutation({
 
     await ctx.db.patch(args.userId as any, {
       subscriptionTier: args.tier,
+      endsOn: args.endsOn,
+      subscriptionId: args.subscriptionId,
       subscriptionStatus: args.status,
       stripeCustomerId: args.stripeCustomerId,
     });
@@ -130,7 +134,7 @@ export const updateSubscription = internalMutation({
   args: {
     subscriptionId: v.string(),
     userId: v.id("users"),
-    endsOn: v.number(),
+    endsOn: v.string(),
     subscriptionStatus: v.optional(
       v.union(
         v.literal("active"),
@@ -155,27 +159,6 @@ export const updateSubscription = internalMutation({
       endsOn: endsOn,
       subscriptionPlan: subscriptionPlan,
       subscriptionStatus: subscriptionStatus,
-    });
-  },
-});
-
-//update subscription by id
-export const updateSubscriptionById = internalMutation({
-  args: { subscriptionId: v.string(), endsOn: v.number() },
-  handler: async (ctx, { subscriptionId, endsOn }) => {
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_subscriptionId", (q) =>
-        q.eq("subscriptionId", subscriptionId)
-      )
-      .unique();
-
-    if (!user) {
-      throw new Error("User not found!");
-    }
-
-    await ctx.db.patch(user._id, {
-      endsOn: endsOn,
     });
   },
 });

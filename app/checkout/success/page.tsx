@@ -4,8 +4,9 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, ArrowRight, Home } from "lucide-react";
+import { ArrowRight, Home } from "lucide-react";
 import Link from "next/link";
+import { CiCircleCheck } from "react-icons/ci";
 
 export default function CheckoutSuccessPage() {
   const searchParams = useSearchParams();
@@ -62,7 +63,7 @@ export default function CheckoutSuccessPage() {
       <Card className="max-w-2xl w-full mx-4">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <CheckCircle className="h-16 w-16 text-green-500" />
+            <CiCircleCheck className="h-16 w-16 text-green-500" />
           </div>
           <CardTitle className="text-3xl font-bold text-green-600">
             Payment Successful!
@@ -83,15 +84,15 @@ export default function CheckoutSuccessPage() {
             <h3 className="font-semibold mb-4">What happens next?</h3>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-green-500" />
+                <CiCircleCheck className="h-4 w-4 text-green-500" />
                 Your account has been upgraded immediately
               </li>
               <li className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-green-500" />
+                <CiCircleCheck className="h-4 w-4 text-green-500" />
                 You now have access to all premium features
               </li>
               <li className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-green-500" />
+                <CiCircleCheck className="h-4 w-4 text-green-500" />
                 You can manage your subscription in your dashboard
               </li>
             </ul>

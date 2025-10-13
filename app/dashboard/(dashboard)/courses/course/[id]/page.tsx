@@ -250,8 +250,6 @@ export default function CoursePage() {
     (item) => item.courseId === courseId
   );
 
-  console.log(getStudyGroupsById, "sjsjsjsj");
-
   const documents = mockDocuments[courseId] || [];
 
   const assessments =

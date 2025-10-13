@@ -9,6 +9,7 @@ export async function POST(request: Request) {
     const checkout = await api.checkouts.create({
       products: [productId],
       successUrl: `${process.env.POLAR_SUCCESS_URL}checkout/success?session_id=${productId}`,
+
       customerEmail: email,
       metadata: {
         userId,

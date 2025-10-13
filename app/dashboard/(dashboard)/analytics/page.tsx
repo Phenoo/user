@@ -1,7 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, BarChart3, Clock, Target, Brain } from "lucide-react";
-import { SubscriptionGuard } from "@/components/subscription-guard";
 
 import type { Metadata } from "next";
 

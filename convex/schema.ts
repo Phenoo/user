@@ -27,7 +27,7 @@ const schema = defineSchema({
     schoolEmail: v.optional(v.string()),
     stripeCustomerId: v.optional(v.string()),
     updatedAt: v.optional(v.number()),
-    endsOn: v.optional(v.number()),
+    endsOn: v.optional(v.string()),
     subscriptionId: v.optional(v.string()),
     subscriptionPlan: v.optional(
       v.union(v.literal("FREE"), v.literal("STUDENT"), v.literal("STUDENTPRO"))
@@ -42,18 +42,71 @@ const schema = defineSchema({
     .index("by_subscriptionId", ["subscriptionId"])
     .index("by_school", ["school"])
     .index("by_location", ["location"]),
-  subscriptionEvents: defineTable({
+  subscriptions: defineTable({
     userId: v.id("users"),
-    stripeEventId: v.string(),
-    eventType: v.string(),
-    subscriptionId: v.optional(v.string()),
-    customerId: v.optional(v.string()),
-    processed: v.boolean(),
-    data: v.any(), // Store the full Stripe event data
-    createdAt: v.number(),
+    polarSubscriptionId: v.string(),
+    polarCustomerId: v.string(),
+    productId: v.string(),
+    productName: v.string(),
+    status: v.union(
+      v.literal("active"),
+      v.literal("canceled"),
+      v.literal("incomplete"),
+      v.literal("incomplete_expired"),
+      v.literal("past_due"),
+      v.literal("trialing"),
+      v.literal("unpaid")
+    ),
+    currentPeriodStart: v.optional(v.number()),
+    currentPeriodEnd: v.optional(v.number()),
+    cancelAtPeriodEnd: v.boolean(),
+    canceledAt: v.optional(v.number()),
+    trialStart: v.optional(v.number()),
+    trialEnd: v.optional(v.number()),
+    previousProductId: v.optional(v.string()),
+    previousPriceId: v.optional(v.string()),
+    lastPlanChangeAt: v.optional(v.number()),
   })
-    .index("by_stripe_event", ["stripeEventId"])
-    .index("by_user", ["userId"]),
+    .index("by_user", ["userId"])
+    .index("by_polar_subscription", ["polarSubscriptionId"]),
+
+  products: defineTable({
+    polarProductId: v.string(),
+    name: v.string(),
+    description: v.optional(v.string()),
+    prices: v.array(
+      v.object({
+        id: v.string(),
+        amount: v.number(),
+        currency: v.string(),
+        interval: v.union(v.literal("month"), v.literal("year")),
+        intervalCount: v.number(),
+      })
+    ),
+    features: v.array(v.string()),
+    isActive: v.boolean(),
+  }).index("by_polar_product", ["polarProductId"]),
+
+  invoices: defineTable({
+    userId: v.id("users"),
+    subscriptionId: v.string(),
+    polarInvoiceId: v.string(),
+    amount: v.number(),
+    currency: v.string(),
+    status: v.union(
+      v.literal("draft"),
+      v.literal("open"),
+      v.literal("paid"),
+      v.literal("uncollectible"),
+      v.literal("void")
+    ),
+    invoiceDate: v.number(),
+    paidAt: v.optional(v.number()),
+    invoiceUrl: v.optional(v.string()),
+  })
+    .index("by_polar_invoice", ["polarInvoiceId"])
+    .index("by_user", ["userId"])
+    .index("by_subscription", ["subscriptionId"]),
   courses: defineTable({
     userId: v.id("users"), // Link to the user who owns this course
     name: v.string(), // e.g., "Introduction to Programming"
@@ -350,38 +403,6 @@ const schema = defineSchema({
     .index("by_user", ["userId"])
     .index("by_deck", ["deckId"])
     .index("by_user_date", ["userId", "createdAt"]),
-  usageTracking: defineTable({
-    userId: v.id("users"),
-    feature: v.union(
-      v.literal("COURSES_CREATED"),
-      v.literal("DECKS_CREATED"),
-      v.literal("CARDS_CREATED"),
-      v.literal("AI_GENERATIONS"),
-      v.literal("DATA_EXPORTS"),
-      v.literal("ANALYTICS_VIEWS")
-    ),
-    count: v.number(),
-    lastReset: v.number(), // timestamp of last monthly reset
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-    .index("by_user", ["userId"])
-    .index("by_user_feature", ["userId", "feature"]),
-  featureLimits: defineTable({
-    plan: v.union(
-      v.literal("FREE"),
-      v.literal("STUDENT"),
-      v.literal("STUDENTPRO")
-    ),
-    feature: v.string(),
-    limit: v.number(), // -1 for unlimited
-    isActive: v.boolean(),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-    .index("by_plan", ["plan"])
-    .index("by_plan_feature", ["plan", "feature"])
-    .index("by_active", ["isActive"]),
 
   aiSuggestions: defineTable({
     userId: v.id("users"),
@@ -527,6 +548,97 @@ const schema = defineSchema({
 
     createdAt: v.number(),
     updatedAt: v.number(),
+  }).index("by_user", ["userId"]),
+
+  subscriptionChanges: defineTable({
+    userId: v.id("users"),
+    subscriptionId: v.id("subscriptions"),
+    changeType: v.union(
+      v.literal("upgrade"),
+      v.literal("downgrade"),
+      v.literal("plan_change"),
+      v.literal("canceled"),
+      v.literal("reactivated")
+    ),
+    fromProductId: v.optional(v.string()),
+    toProductId: v.optional(v.string()),
+    fromPriceId: v.optional(v.string()),
+    toPriceId: v.optional(v.string()),
+    effectiveDate: v.number(),
+    prorationAmount: v.optional(v.number()),
+  })
+    .index("by_user", ["userId"])
+    .index("by_subscription", ["subscriptionId"]),
+
+  usageTracking: defineTable({
+    userId: v.id("users"),
+    feature: v.union(
+      v.literal("COURSES_CREATED"),
+      v.literal("DECKS_CREATED"),
+      v.literal("CARDS_CREATED"),
+      v.literal("AI_GENERATIONS"),
+      v.literal("DATA_EXPORTS"),
+      v.literal("ANALYTICS_VIEWS")
+    ),
+    count: v.number(),
+    lastReset: v.number(), // timestamp of last monthly reset
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_feature", ["userId", "feature"]),
+
+  featureLimits: defineTable({
+    plan: v.union(
+      v.literal("FREE"),
+      v.literal("STUDENT"),
+      v.literal("STUDENTPRO")
+    ),
+    feature: v.string(),
+    limit: v.number(), // -1 for unlimited
+    isActive: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_plan", ["plan"])
+    .index("by_plan_feature", ["plan", "feature"])
+    .index("by_active", ["isActive"]),
+
+  conversations: defineTable({
+    userId: v.string(),
+    title: v.string(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_user", ["userId"]),
+
+  // Chat messages
+  messages: defineTable({
+    conversationId: v.id("conversations"),
+    role: v.union(v.literal("user"), v.literal("assistant")),
+    content: v.string(),
+    createdAt: v.number(),
+  }).index("by_conversation", ["conversationId"]),
+
+  // Generated content (essays, summaries, study guides)
+  generatedContent: defineTable({
+    userId: v.string(),
+    type: v.union(
+      v.literal("essay"),
+      v.literal("summary"),
+      v.literal("study_guide")
+    ),
+    prompt: v.string(),
+    content: v.string(),
+    createdAt: v.number(),
+  }).index("by_user_and_type", ["userId", "type"]),
+  assignments: defineTable({
+    userId: v.string(),
+    title: v.string(),
+    description: v.string(),
+    dueDate: v.optional(v.string()),
+    subject: v.optional(v.string()),
+    extractedFrom: v.string(), // Original text that was parsed
+    createdAt: v.number(),
   }).index("by_user", ["userId"]),
 });
 
