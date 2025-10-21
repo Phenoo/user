@@ -117,7 +117,7 @@ export function YouTubeQuotaMonitor() {
 
   useEffect(() => {
     checkQuota();
-  }, []);
+  });
 
   return (
     <Card className="w-full max-w-md">
