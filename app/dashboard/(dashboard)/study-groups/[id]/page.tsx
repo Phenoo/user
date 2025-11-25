@@ -11,6 +11,14 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
   Users,
   ArrowLeft,
   Calendar,
@@ -30,11 +38,15 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import StudyTogetherMode from "../_components/study-together-mode";
+import SharedContent from "../_components/shared-content";
+import GroupInvites from "../_components/group-invites";
 
 export default function StudyGroupDetailPage() {
   const params = useParams();
   const groupId = params.id as string;
 
+  const currentUser = useQuery(api.users.currentUser);
   const group = useQuery(api.studyGroups.getStudyGroup, {
     groupId: groupId as Id<"studyGroups">,
   });
@@ -52,16 +64,26 @@ export default function StudyGroupDetailPage() {
 
   const [newMessage, setNewMessage] = useState("");
   const [linkCopied, setLinkCopied] = useState(false);
+  const [showUploadDialog, setShowUploadDialog] = useState(false);
+  const [showSettingsDialog, setShowSettingsDialog] = useState(false);
+
+  const isOrganizer =
+    currentUser && group && group.organizerId === currentUser._id;
 
   const handleSendMessage = async () => {
     if (!newMessage.trim()) return;
 
-    // await sendMessage({
-    //   groupId: groupId as Id<"studyGroups">,
-    //   message: newMessage,
-    // });
-
-    setNewMessage("");
+    try {
+      await sendMessage({
+        studyGroupId: groupId as Id<"studyGroups">,
+        userId: currentUser?._id as Id<"users">,
+        message: newMessage,
+        messageType: "text",
+      });
+      setNewMessage("");
+    } catch (error) {
+      console.error("Failed to send message:", error);
+    }
   };
 
   const handleGenerateInviteLink = async () => {
@@ -135,12 +157,14 @@ export default function StudyGroupDetailPage() {
       <div className="max-w-7xl mx-auto p-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Content */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 space-y-6">
             <Tabs defaultValue="chat" className="space-y-6">
-              <TabsList className="grid w-full grid-cols-3">
+              <TabsList className="grid w-full grid-cols-5">
                 <TabsTrigger value="chat">Chat</TabsTrigger>
                 <TabsTrigger value="resources">Resources</TabsTrigger>
                 <TabsTrigger value="schedule">Schedule</TabsTrigger>
+                <TabsTrigger value="study-together">Study Together</TabsTrigger>
+                <TabsTrigger value="shared">Shared</TabsTrigger>
               </TabsList>
 
               <TabsContent value="chat" className="space-y-4">
@@ -209,10 +233,36 @@ export default function StudyGroupDetailPage() {
                         <FileText className="h-5 w-5" />
                         Shared Resources
                       </CardTitle>
-                      <Button size="sm">
-                        <Upload className="h-4 w-4 mr-2" />
-                        Upload
-                      </Button>
+                      <Dialog
+                        open={showUploadDialog}
+                        onOpenChange={setShowUploadDialog}
+                      >
+                        <DialogTrigger asChild>
+                          <Button size="sm">
+                            <Upload className="h-4 w-4 mr-2" />
+                            Upload
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Upload Resource</DialogTitle>
+                            <DialogDescription>
+                              Share files, documents, or links with your study
+                              group
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="space-y-4 pt-4">
+                            <div className="text-center py-8 text-muted-foreground">
+                              <Upload className="h-12 w-12 mx-auto mb-4" />
+                              <p>File upload functionality coming soon!</p>
+                              <p className="text-sm">
+                                You can share content using the "Shared" tab for
+                                now.
+                              </p>
+                            </div>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
                     </div>
                   </CardHeader>
                   <CardContent>
@@ -270,6 +320,26 @@ export default function StudyGroupDetailPage() {
                   </CardContent>
                 </Card>
               </TabsContent>
+
+              {/* Study Together Mode */}
+              <TabsContent value="study-together" className="space-y-4">
+                {currentUser && (
+                  <StudyTogetherMode
+                    studyGroupId={groupId as Id<"studyGroups">}
+                    userId={currentUser._id}
+                  />
+                )}
+              </TabsContent>
+
+              {/* Shared Content */}
+              <TabsContent value="shared" className="space-y-4">
+                {currentUser && (
+                  <SharedContent
+                    studyGroupId={groupId as Id<"studyGroups">}
+                    userId={currentUser._id}
+                  />
+                )}
+              </TabsContent>
             </Tabs>
           </div>
 
@@ -299,15 +369,61 @@ export default function StudyGroupDetailPage() {
                 </div>
 
                 <div className="flex gap-2">
+                  <Dialog
+                    open={showSettingsDialog}
+                    onOpenChange={setShowSettingsDialog}
+                  >
+                    <DialogTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 bg-transparent"
+                      >
+                        <Settings className="h-4 w-4 mr-2" />
+                        Settings
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Group Settings</DialogTitle>
+                        <DialogDescription>
+                          Manage your study group preferences and settings
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-4 pt-4">
+                        <div className="text-center py-8 text-muted-foreground">
+                          <Settings className="h-12 w-12 mx-auto mb-4" />
+                          <p>Group settings panel coming soon!</p>
+                          <p className="text-sm">
+                            {isOrganizer
+                              ? "As an organizer, you'll be able to modify group settings here."
+                              : "Contact the group organizer to modify settings."}
+                          </p>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
                   <Button
                     variant="outline"
                     size="sm"
-                    className="flex-1 bg-transparent"
+                    onClick={() => {
+                      // Scroll to the invite section if user is organizer
+                      if (isOrganizer) {
+                        const inviteSection = document.querySelector(
+                          "[data-invite-section]"
+                        );
+                        if (inviteSection) {
+                          inviteSection.scrollIntoView({ behavior: "smooth" });
+                        }
+                      }
+                    }}
+                    disabled={!isOrganizer}
+                    title={
+                      isOrganizer
+                        ? "Scroll to invite section"
+                        : "Only organizers can invite members"
+                    }
                   >
-                    <Settings className="h-4 w-4 mr-2" />
-                    Settings
-                  </Button>
-                  <Button variant="outline" size="sm">
                     <UserPlus className="h-4 w-4" />
                   </Button>
                 </div>
@@ -315,64 +431,15 @@ export default function StudyGroupDetailPage() {
             </Card>
 
             {/* Invite Members */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Share2 className="h-5 w-5" />
-                  Invite Members
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {inviteLink ? (
-                  <div className="space-y-3">
-                    <div className="p-3 bg-muted rounded-lg">
-                      <p className="text-xs text-muted-foreground mb-1">
-                        Invite Link
-                      </p>
-                      <p className="text-sm font-mono break-all">
-                        {`${typeof window !== "undefined" ? window.location.origin : ""}/dashboard/study-groups/join/${inviteLink.inviteCode}`}
-                      </p>
-                    </div>
-                    <Button
-                      onClick={copyInviteLink}
-                      variant="outline"
-                      size="sm"
-                      className="w-full bg-transparent"
-                    >
-                      {linkCopied ? (
-                        <>
-                          <CheckCircle className="h-4 w-4 mr-2" />
-                          Copied!
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="h-4 w-4 mr-2" />
-                          Copy Link
-                        </>
-                      )}
-                    </Button>
-                    <p className="text-xs text-muted-foreground">
-                      Link expires:{" "}
-                      {new Date(inviteLink.expiresAt).toLocaleDateString()}
-                    </p>
-                  </div>
-                ) : (
-                  <div className="text-center space-y-3">
-                    <p className="text-sm text-muted-foreground">
-                      Generate an invite link to share with others
-                    </p>
-                    <Button
-                      onClick={handleGenerateInviteLink}
-                      size="sm"
-                      className="w-full"
-                    >
-                      <Share2 className="h-4 w-4 mr-2" />
-                      Generate Invite Link
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            {isOrganizer && currentUser && (
+              <div data-invite-section>
+                <GroupInvites
+                  studyGroupId={groupId as Id<"studyGroups">}
+                  userId={currentUser._id}
+                  isOrganizer={isOrganizer}
+                />
+              </div>
+            )}
 
             {/* Members */}
             <Card>

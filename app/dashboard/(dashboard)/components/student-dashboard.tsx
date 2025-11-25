@@ -57,6 +57,8 @@ import { useState } from "react";
 import { useAuthToken } from "@convex-dev/auth/react";
 import { SearchDashboard } from "./search-dashboard";
 import { StudyAnalytics } from "../pomodoro/_components/study-analytics";
+import { useEffect } from "react";
+import { safeSessionStorage } from "@/lib/storage-helpers";
 
 export const data = [
   {
@@ -98,6 +100,7 @@ export function StudentDashboard() {
   const router = useRouter();
   const token = useAuthToken();
   const [open, setOpen] = useState(false);
+  const [googleMeetToken, setGoogleMeetToken] = useState<string | null>(null);
 
   const getProfile = useAction(api.users.getUserProfile);
 
@@ -122,16 +125,69 @@ export function StudentDashboard() {
     }
   };
 
+  // Handle OAuth callback
+  useEffect(() => {
+    // Ensure we're running on the client side
+    if (typeof window === "undefined") return;
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const googleToken = urlParams.get("google_token");
+    const error = urlParams.get("error");
+
+    if (googleToken) {
+      setGoogleMeetToken(googleToken);
+      // Store token in sessionStorage for persistence
+      safeSessionStorage.setItem("google_meet_token", googleToken);
+      // Clean up URL
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
+    }
+
+    if (error) {
+      console.error("Google OAuth error:", error);
+      let errorMessage = "Failed to connect Google account";
+      if (error === "no_code") {
+        errorMessage = "Authorization code not received from Google";
+      } else if (error === "callback_error") {
+        errorMessage = "Error processing Google authorization";
+      }
+      alert(errorMessage);
+    }
+
+    // Check if we have a stored token
+    const storedToken = safeSessionStorage.getItem("google_meet_token");
+    if (storedToken && !googleToken) {
+      setGoogleMeetToken(storedToken);
+    }
+  }, []);
+
   const handleGoogleAuth = async () => {
     try {
       const response = await fetch("/api/google-meet/auth");
       const data = await response.json();
+
+      if (!response.ok) {
+        console.error("Auth error:", data);
+        alert(
+          `Google OAuth setup error: ${data.error}\n\n${data.details || ""}`
+        );
+        return;
+      }
+
       if (data.authUrl) {
         window.open(data.authUrl, "_blank", "width=500,height=600");
       }
     } catch (error) {
       console.error("Error initiating Google auth:", error);
+      alert(
+        "Failed to initiate Google authentication. Please check your internet connection and try again."
+      );
     }
+  };
+
+  const handleGoogleDisconnect = () => {
+    setGoogleMeetToken(null);
+    safeSessionStorage.removeItem("google_meet_token");
   };
 
   const userId = user?._id;
@@ -191,7 +247,9 @@ export function StudentDashboard() {
                   Task
                   <RiTaskLine className="h-4 w-4 ml-auto" />
                 </DropdownMenuItem>
-                <DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => router.push("/dashboard/schedule")}
+                >
                   Event
                   <LuCalendarCheck2 className="h-4 w-4 ml-auto" />
                 </DropdownMenuItem>
@@ -251,12 +309,46 @@ export function StudentDashboard() {
                             <h4>{flashcard.name}</h4>
                           </div>
                           <div>
-                            <Button
-                              size={"icon"}
-                              className="rounded-none bg-background"
-                            >
-                              <MoreHorizontal className="h-4 text-foreground w-4" />
-                            </Button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  size={"icon"}
+                                  className="rounded-none bg-background"
+                                >
+                                  <MoreHorizontal className="h-4 text-foreground w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    router.push(
+                                      `/dashboard/courses/course/${flashcard._id}`
+                                    )
+                                  }
+                                >
+                                  View Course
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    router.push(
+                                      `/dashboard/flashcards?course=${flashcard._id}`
+                                    )
+                                  }
+                                >
+                                  Study Flashcards
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    router.push(
+                                      `/dashboard/courses/course/${flashcard._id}#assignments`
+                                    )
+                                  }
+                                >
+                                  View Assignments
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </div>
                         </div>
                         <div className="flex justify-between w-full  gap-4 p-4">
@@ -342,8 +434,9 @@ export function StudentDashboard() {
               </CardContent>
             </Card>
             <GoogleMeetIntegration
-              accessToken={token ?? ""}
+              accessToken={googleMeetToken ?? ""}
               onAuthRequired={handleGoogleAuth}
+              onDisconnect={handleGoogleDisconnect}
             />
           </div>
         </div>
