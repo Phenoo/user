@@ -132,7 +132,7 @@ export function YouTubeSection({
 
           {/* Debug Components */}
           <div className="flex flex-col lg:flex-row gap-4 justify-center">
-            <YouTubeDebug apiKey={process.env.NEXT_PUBLIC_YOUTUBE_API_KEY} />
+            <YouTubeDebug apiKey={process.env.YOUTUBE_API_KEY} />
             <YouTubeQuotaMonitor />
           </div>
         </div>

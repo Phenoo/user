@@ -24,7 +24,7 @@ export function YouTubeDebug({ apiKey, onTestAPI }: YouTubeDebugProps) {
       setTestResult({
         status: "error",
         message:
-          "No API key found. Please set NEXT_PUBLIC_YOUTUBE_API_KEY in your environment variables.",
+          "No API key found. Please set YOUTUBE_API_KEY in your environment variables.",
       });
       return;
     }
@@ -182,8 +182,8 @@ export function YouTubeDebug({ apiKey, onTestAPI }: YouTubeDebugProps) {
           <h4 className="font-medium">Quick Fixes</h4>
           <div className="space-y-2 text-sm">
             <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded">
-              <strong>1. Check API Key:</strong> Make sure
-              NEXT_PUBLIC_YOUTUBE_API_KEY is set in your .env.local file
+              <strong>1. Check API Key:</strong> Make sure YOUTUBE_API_KEY is
+              set in your .env.local file
             </div>
             <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded">
               <strong>2. Enable API:</strong> Go to Google Cloud Console → APIs

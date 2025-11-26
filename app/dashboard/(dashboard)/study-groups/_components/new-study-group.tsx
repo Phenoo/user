@@ -23,8 +23,9 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { Switch } from "@/components/ui/switch";
 import CoursesSelect from "@/components/courses-select";
-import { Plus } from "lucide-react";
+import { Plus, Lock, Globe } from "lucide-react";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
 import { cn } from "@/lib/utils";
@@ -47,6 +48,8 @@ const NewStudyGroup = ({ title = true }: { title?: boolean }) => {
     location: "",
     googleCalendarLink: "",
     zoomLink: "",
+    isPublic: true, // Default to public
+    aiModeration: false,
   });
 
   const createGroup = () => {
@@ -77,6 +80,8 @@ const NewStudyGroup = ({ title = true }: { title?: boolean }) => {
         courseId: course as Id<"courses">,
         organizerId: userId as Id<"users">,
         tags: [],
+        isPublic: newGroup.isPublic,
+        aiModeration: newGroup.aiModeration,
       });
 
       toast.success("Study Group successfully created.");
@@ -91,6 +96,8 @@ const NewStudyGroup = ({ title = true }: { title?: boolean }) => {
         location: "",
         googleCalendarLink: "",
         zoomLink: "",
+        isPublic: true,
+        aiModeration: false,
       });
     } catch {
       toast.error("Study Group creation failed.");
@@ -146,6 +153,55 @@ const NewStudyGroup = ({ title = true }: { title?: boolean }) => {
               }
               placeholder="Describe your study group..."
             />
+          </div>
+
+          <div className="space-y-4 border-t pt-4">
+            <h4 className="font-medium text-sm">Privacy & Moderation</h4>
+            
+            <div className="flex items-center justify-between space-x-2">
+              <div className="flex items-center space-x-2">
+                {newGroup.isPublic ? (
+                  <Globe className="h-4 w-4 text-green-500" />
+                ) : (
+                  <Lock className="h-4 w-4 text-orange-500" />
+                )}
+                <div>
+                  <Label htmlFor="is-public" className="text-sm font-medium">
+                    {newGroup.isPublic ? "Public Group" : "Private Group"}
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    {newGroup.isPublic
+                      ? "Anyone can discover and join this group"
+                      : "Only invited members can join this group"}
+                  </p>
+                </div>
+              </div>
+              <Switch
+                id="is-public"
+                checked={newGroup.isPublic}
+                onCheckedChange={(checked) =>
+                  setNewGroup((prev) => ({ ...prev, isPublic: checked }))
+                }
+              />
+            </div>
+
+            <div className="flex items-center justify-between space-x-2">
+              <div>
+                <Label htmlFor="ai-moderation" className="text-sm font-medium">
+                  AI Moderation
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Enable AI to moderate group chat and maintain quality
+                </p>
+              </div>
+              <Switch
+                id="ai-moderation"
+                checked={newGroup.aiModeration}
+                onCheckedChange={(checked) =>
+                  setNewGroup((prev) => ({ ...prev, aiModeration: checked }))
+                }
+              />
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">

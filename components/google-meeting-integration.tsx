@@ -16,17 +16,22 @@ import { Badge } from "@/components/ui/badge";
 import { Calendar, Clock, Users, ExternalLink, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { useAuthActions, useAuthToken } from "@convex-dev/auth/react";
+import { useUsageTracking } from "@/hooks/use-usage-tracking";
+import { UsageIndicator } from "./usage-tracking/usage-indicator";
 
 interface GoogleMeetIntegrationProps {
   accessToken?: string;
   onAuthRequired: () => void;
+  onDisconnect?: () => void;
 }
 
 export function GoogleMeetIntegration({
   accessToken,
   onAuthRequired,
+  onDisconnect,
 }: GoogleMeetIntegrationProps) {
   const [isCreating, setIsCreating] = useState(false);
+  const { trackUsage } = useUsageTracking();
 
   const token = useAuthToken();
   const [meetingForm, setMeetingForm] = useState({
@@ -37,44 +42,12 @@ export function GoogleMeetIntegration({
     attendees: "",
   });
 
-  async function createCalendarEvent() {
-    console.log("Creating calendar event");
-    console.log(
-      meetingForm.startTime,
-      "dhdhdhdh",
-      meetingForm.endTime,
-      "snsshshshsh"
-    );
-    const event = {
-      summary: meetingForm.summary,
-      description: meetingForm.description,
-      start: {
-        dateTime: meetingForm.startTime, // Date.toISOString() ->
-        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone, // America/Los_Angeles
-      },
-      end: {
-        dateTime: meetingForm.endTime, // Date.toISOString() ->
-        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone, // America/Los_Angeles
-      },
-    };
-    await fetch(
-      "https://www.googleapis.com/calendar/v3/calendars/primary/events",
-      {
-        method: "POST",
-        headers: {
-          Authorization: "Bearer " + token,
-        },
-        body: JSON.stringify(event),
-      }
-    )
-      .then((data) => {
-        return data.json();
-      })
-      .then((data) => {
-        console.log(data);
-        alert("Event created, check your Google Calendar!");
-      });
-  }
+  const handleDisconnect = () => {
+    if (onDisconnect) {
+      onDisconnect();
+      toast.success("Google account disconnected");
+    }
+  };
 
   const handleCreateMeeting = async () => {
     if (!accessToken) {
@@ -82,15 +55,33 @@ export function GoogleMeetIntegration({
       return;
     }
 
+    if (!meetingForm.summary || !meetingForm.startTime || !meetingForm.endTime) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    // Track usage before creating meeting
+    const usageTracked = await trackUsage("GOOGLE_MEET_CREATED");
+    if (!usageTracked) {
+      return; // Usage limit reached or error occurred
+    }
+
     setIsCreating(true);
     try {
+      // Convert datetime-local format to ISO string
+      const startTimeISO = new Date(meetingForm.startTime).toISOString();
+      const endTimeISO = new Date(meetingForm.endTime).toISOString();
+
       const response = await fetch("/api/google-meet/create", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          ...meetingForm,
+          summary: meetingForm.summary,
+          description: meetingForm.description,
+          startTime: startTimeISO,
+          endTime: endTimeISO,
           attendees: meetingForm.attendees
             .split(",")
             .map((email) => email.trim())
@@ -106,8 +97,9 @@ export function GoogleMeetIntegration({
       }
 
       toast.success(
-        `Google Meet created successfully: ${data.meeting.meetingCode}`
+        `Google Meet created successfully! Meeting code: ${data.meeting.meetingCode || 'N/A'}`
       );
+      
       // Reset form
       setMeetingForm({
         summary: "",
@@ -167,16 +159,28 @@ export function GoogleMeetIntegration({
                 </CardDescription>
               </div>
             </div>
-            <Badge
-              variant="secondary"
-              className={
-                accessToken
-                  ? "bg-green-500/20 text-green-400 border-green-500/30"
-                  : "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"
-              }
-            >
-              {accessToken ? "Connected" : "Setup Required"}
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Badge
+                variant="secondary"
+                className={
+                  accessToken
+                    ? "bg-green-500/20 text-green-400 border-green-500/30"
+                    : "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"
+                }
+              >
+                {accessToken ? "Connected" : "Setup Required"}
+              </Badge>
+              {accessToken && onDisconnect && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleDisconnect}
+                  className="h-7 text-xs"
+                >
+                  Disconnect
+                </Button>
+              )}
+            </div>
           </div>
         </CardHeader>
         {!accessToken && (
@@ -280,13 +284,20 @@ export function GoogleMeetIntegration({
               </div>
             </div>
 
-            <Button
-              onClick={createCalendarEvent}
-              disabled={isCreating || !meetingForm.summary}
-              className="w-full"
-            >
-              {isCreating ? "Creating Meeting..." : "Create Google Meet"}
-            </Button>
+            <div className="space-y-3">
+              <UsageIndicator
+                feature="GOOGLE_MEET_CREATED"
+                showDetails={true}
+                className="mb-2"
+              />
+              <Button
+                onClick={handleCreateMeeting}
+                disabled={isCreating || !meetingForm.summary}
+                className="w-full"
+              >
+                {isCreating ? "Creating Meeting..." : "Create Google Meet"}
+              </Button>
+            </div>
           </CardContent>
         </Card>
       )}

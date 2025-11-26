@@ -157,6 +157,7 @@ export const initializeDefaultLimits = mutation({
       { plan: "FREE" as const, feature: "AI_GENERATIONS", limit: 10 },
       { plan: "FREE" as const, feature: "DATA_EXPORTS", limit: 1 },
       { plan: "FREE" as const, feature: "ANALYTICS_VIEWS", limit: 5 },
+      { plan: "FREE" as const, feature: "GOOGLE_MEET_CREATED", limit: 2 },
 
       // STUDENT plan limits
       { plan: "STUDENT" as const, feature: "COURSES_CREATED", limit: 10 },
@@ -165,6 +166,7 @@ export const initializeDefaultLimits = mutation({
       { plan: "STUDENT" as const, feature: "AI_GENERATIONS", limit: 50 },
       { plan: "STUDENT" as const, feature: "DATA_EXPORTS", limit: 5 },
       { plan: "STUDENT" as const, feature: "ANALYTICS_VIEWS", limit: -1 },
+      { plan: "STUDENT" as const, feature: "GOOGLE_MEET_CREATED", limit: 10 },
 
       // STUDENTPRO plan limits (unlimited)
       { plan: "STUDENTPRO" as const, feature: "COURSES_CREATED", limit: -1 },
@@ -173,6 +175,11 @@ export const initializeDefaultLimits = mutation({
       { plan: "STUDENTPRO" as const, feature: "AI_GENERATIONS", limit: -1 },
       { plan: "STUDENTPRO" as const, feature: "DATA_EXPORTS", limit: -1 },
       { plan: "STUDENTPRO" as const, feature: "ANALYTICS_VIEWS", limit: -1 },
+      {
+        plan: "STUDENTPRO" as const,
+        feature: "GOOGLE_MEET_CREATED",
+        limit: -1,
+      },
     ];
 
     for (const limitData of defaultLimits) {

@@ -40,6 +40,8 @@ import { cn } from "@/lib/utils";
 import { Id } from "@/convex/_generated/dataModel";
 import { RequireIndicator } from "@/components/require-indicator";
 import ButtonUpload from "./button-upload";
+import { useUsageTracking } from "@/hooks/use-usage-tracking";
+import { UsageIndicator } from "@/components/usage-tracking/usage-indicator";
 
 export interface Course {
   _id: string;
@@ -71,6 +73,7 @@ export default function CoursescontainerPage() {
   const [selectedYear, setSelectedYear] = useState("all");
   const [selectedSession, setSelectedSession] = useState("all");
   const addCourse = useMutation(api.courses.addCourse);
+  const { trackUsage } = useUsageTracking();
 
   const user = useQuery(api.users.currentUser);
 
@@ -152,6 +155,12 @@ export default function CoursescontainerPage() {
     }
 
     try {
+      // Track usage before creating course
+      const usageTracked = await trackUsage("COURSES_CREATED");
+      if (!usageTracked) {
+        return; // Usage limit reached or error occurred
+      }
+
       await addCourse({
         userId: user?._id!,
         name: newCourse.name,

@@ -1,17 +1,35 @@
-import { type NextRequest, NextResponse } from "next/server"
-import { createGoogleMeetService } from "@/lib/google-meet"
+import { type NextRequest } from "next/server";
+import { createGoogleMeetService } from "@/lib/google-meet";
+import {
+  CommonErrors,
+  successResponse,
+  validateRequiredFields,
+  handleApiError,
+} from "@/lib/api-helpers";
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { summary, description, startTime, endTime, attendees, accessToken } = body
+    const body = await request.json();
+    const { summary, description, startTime, endTime, attendees, accessToken } =
+      body;
 
+    // Validate access token
     if (!accessToken) {
-      return NextResponse.json({ error: "Access token is required" }, { status: 401 })
+      return CommonErrors.unauthorized("Access token is required");
     }
 
-    const googleMeetService = createGoogleMeetService()
-    googleMeetService.setAccessToken(accessToken)
+    // Validate required fields
+    const validationError = validateRequiredFields(body, [
+      "summary",
+      "startTime",
+      "endTime",
+    ]);
+    if (validationError) {
+      return validationError;
+    }
+
+    const googleMeetService = createGoogleMeetService();
+    googleMeetService.setAccessToken(accessToken);
 
     const meeting = await googleMeetService.createMeeting({
       summary,
@@ -19,11 +37,11 @@ export async function POST(request: NextRequest) {
       startTime,
       endTime,
       attendees,
-    })
+    });
 
-    return NextResponse.json({ meeting })
+    return successResponse({ meeting }, "Google Meet created successfully");
   } catch (error) {
-    console.error("Error creating Google Meet:", error)
-    return NextResponse.json({ error: "Failed to create meeting" }, { status: 500 })
+    console.error("Error creating Google Meet:", error);
+    return handleApiError(error, "Failed to create meeting");
   }
 }

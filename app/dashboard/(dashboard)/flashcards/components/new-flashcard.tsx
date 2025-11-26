@@ -26,11 +26,14 @@ import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { useParams } from "next/navigation";
 import { cardColors } from "./flashcardpage-container";
+import { useUsageTracking } from "@/hooks/use-usage-tracking";
+import { UsageIndicator } from "@/components/usage-tracking/usage-indicator";
 
 const NewFlashcard = () => {
   const [selectedDeck, setSelectedDeck] = useState<string>("");
   const createDeckMutation = useMutation(api.flashcards.createDeck);
   const [isCreateDeckOpen, setIsCreateDeckOpen] = useState(false);
+  const { trackUsage } = useUsageTracking();
 
   const params = useParams();
 
@@ -48,6 +51,12 @@ const NewFlashcard = () => {
 
   const createDeck = async () => {
     try {
+      // Track usage before creating deck
+      const usageTracked = await trackUsage("DECKS_CREATED");
+      if (!usageTracked) {
+        return; // Usage limit reached or error occurred
+      }
+
       const deckId = await createDeckMutation({
         userId: userId!,
         color: newDeck.color,
@@ -178,9 +187,16 @@ const NewFlashcard = () => {
               ))}
             </div>
           </div>
-          <Button onClick={createDeck} className="w-full">
-            Create Deck
-          </Button>
+          <div className="space-y-3">
+            <UsageIndicator
+              feature="DECKS_CREATED"
+              showDetails={true}
+              className="mb-2"
+            />
+            <Button onClick={createDeck} className="w-full">
+              Create Deck
+            </Button>
+          </div>
         </div>
       </SheetContent>
     </Sheet>

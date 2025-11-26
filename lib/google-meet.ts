@@ -21,6 +21,50 @@ export interface CreateMeetingRequest {
   attendees?: string[];
 }
 
+// Google Calendar API Types
+interface ConferenceEntryPoint {
+  entryPointType: string;
+  uri?: string;
+  meetingCode?: string;
+  label?: string;
+}
+
+interface ConferenceData {
+  entryPoints?: ConferenceEntryPoint[];
+  conferenceSolution?: {
+    key: {
+      type: string;
+    };
+    name: string;
+    iconUri: string;
+  };
+  conferenceId?: string;
+}
+
+interface CalendarEvent {
+  id: string;
+  summary: string;
+  description?: string;
+  start?: {
+    dateTime?: string;
+    date?: string;
+  };
+  end?: {
+    dateTime?: string;
+    date?: string;
+  };
+  conferenceData?: ConferenceData;
+  created: string;
+  updated: string;
+}
+
+interface CalendarEventList {
+  items?: CalendarEvent[];
+  error?: {
+    message: string;
+  };
+}
+
 export class GoogleMeetService {
   private config: GoogleMeetConfig;
   private accessToken: string | null = null;
@@ -31,12 +75,25 @@ export class GoogleMeetService {
 
   // Initialize OAuth flow
   getAuthUrl(): string {
+    // Validate configuration
+    if (!this.config.clientId) {
+      throw new Error("Google Client ID is not configured");
+    }
+    if (!this.config.redirectUri) {
+      throw new Error("Google Redirect URI is not configured");
+    }
+
+    // Build the auth URL with properly encoded scopes
+    const scopes = [
+      "https://www.googleapis.com/auth/calendar",
+      "https://www.googleapis.com/auth/calendar.events",
+    ];
+
     const params = new URLSearchParams({
       client_id: this.config.clientId,
       redirect_uri: this.config.redirectUri,
       response_type: "code",
-      scope:
-        "https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/meetings.space.created",
+      scope: scopes.join(" "),
       access_type: "offline",
       prompt: "consent",
     });
@@ -83,11 +140,11 @@ export class GoogleMeetService {
       description: request.description,
       start: {
         dateTime: request.startTime,
-        timeZone: "UTC",
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       },
       end: {
         dateTime: request.endTime,
-        timeZone: "UTC",
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       },
       attendees: request.attendees?.map((email) => ({ email })),
       conferenceData: {
@@ -100,8 +157,9 @@ export class GoogleMeetService {
       },
     };
 
+    // IMPORTANT: conferenceDataVersion=1 is REQUIRED to create Google Meet links
     const response = await fetch(
-      "https://www.googleapis.com/calendar/v3/calendars/primary/events",
+      "https://www.googleapis.com/calendar/v3/calendars/primary/events?conferenceDataVersion=1",
       {
         method: "POST",
         headers: {
@@ -115,12 +173,22 @@ export class GoogleMeetService {
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(`Failed to create meeting: ${data.error?.message}`);
+      console.error("Google Calendar API Error:", data);
+      throw new Error(
+        `Failed to create meeting: ${data.error?.message || "Unknown error"}`
+      );
     }
 
     const meetingData = data.conferenceData?.entryPoints?.find(
-      (entry: any) => entry.entryPointType === "video"
+      (entry: ConferenceEntryPoint) => entry.entryPointType === "video"
     );
+
+    if (!meetingData) {
+      console.error("No conference data in response:", data);
+      throw new Error(
+        "Failed to create Google Meet link. Please check your Google Calendar API permissions."
+      );
+    }
 
     return {
       name: data.summary,
@@ -132,7 +200,7 @@ export class GoogleMeetService {
   }
 
   // Get upcoming meetings from Calendar
-  async getUpcomingMeetings(): Promise<any[]> {
+  async getUpcomingMeetings(): Promise<CalendarEvent[]> {
     if (!this.accessToken) {
       throw new Error("Not authenticated");
     }
@@ -147,16 +215,16 @@ export class GoogleMeetService {
       }
     );
 
-    const data = await response.json();
+    const data: CalendarEventList = await response.json();
 
     if (!response.ok) {
       throw new Error(`Failed to fetch meetings: ${data.error?.message}`);
     }
 
     return (
-      data.items?.filter((event: any) =>
+      data.items?.filter((event: CalendarEvent) =>
         event.conferenceData?.entryPoints?.some(
-          (entry: any) => entry.entryPointType === "video"
+          (entry: ConferenceEntryPoint) => entry.entryPointType === "video"
         )
       ) || []
     );
@@ -172,7 +240,9 @@ export function createGoogleMeetService(): GoogleMeetService {
   const config: GoogleMeetConfig = {
     clientId: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "",
     clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
-    redirectUri: process.env.NEXT_PUBLIC_GOOGLE_REDIRECT_URI ?? "",
+    redirectUri:
+      process.env.NEXT_PUBLIC_GOOGLE_REDIRECT_URI ||
+      `${process.env.NEXT_PUBLIC_APP_URL}/api/google-meet/callback`,
   };
 
   return new GoogleMeetService(config);

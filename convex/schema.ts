@@ -240,11 +240,14 @@ const schema = defineSchema({
     rating: v.number(),
     ratingCount: v.number(),
     isActive: v.boolean(),
+    isPublic: v.boolean(), // Public groups anyone can join, private groups need invite
+    aiModeration: v.optional(v.boolean()), // Enable AI moderation for group chat
     createdAt: v.number(),
     updatedAt: v.number(),
   })
     .index("by_course", ["courseId"])
-    .index("by_organizer", ["organizerId"]),
+    .index("by_organizer", ["organizerId"])
+    .index("by_public", ["isPublic"]),
 
   // Study Group Memberships
   studyGroupMembers: defineTable({
@@ -292,6 +295,67 @@ const schema = defineSchema({
     description: v.optional(v.string()),
     createdAt: v.number(),
   }).index("by_group", ["studyGroupId"]),
+
+  // Study Group Invites (for private groups)
+  studyGroupInvites: defineTable({
+    studyGroupId: v.id("studyGroups"),
+    inviteCode: v.string(),
+    expiresAt: v.number(),
+    createdAt: v.number(),
+    usedCount: v.number(),
+    maxUses: v.number(),
+  })
+    .index("by_group", ["studyGroupId"])
+    .index("by_code", ["inviteCode"]),
+
+  // Study Together Sessions (synchronized timer sessions)
+  studyTogetherSessions: defineTable({
+    studyGroupId: v.id("studyGroups"),
+    createdBy: v.id("users"),
+    title: v.string(),
+    duration: v.number(), // in minutes
+    startTime: v.number(),
+    endTime: v.number(),
+    isActive: v.boolean(),
+    participants: v.array(v.id("users")),
+    createdAt: v.number(),
+  })
+    .index("by_group", ["studyGroupId"])
+    .index("by_active", ["isActive"]),
+
+  // Shared Content (notes, summaries shared within groups)
+  sharedContent: defineTable({
+    studyGroupId: v.id("studyGroups"),
+    sharedBy: v.id("users"),
+    title: v.string(),
+    content: v.string(),
+    type: v.union(
+      v.literal("note"),
+      v.literal("summary"),
+      v.literal("study_guide")
+    ),
+    sourceId: v.optional(v.string()), // Reference to original generatedContent if applicable
+    isAIGenerated: v.boolean(),
+    likes: v.number(),
+    createdAt: v.number(),
+  })
+    .index("by_group", ["studyGroupId"])
+    .index("by_user", ["sharedBy"]),
+
+  // Friend Invites (for inviting friends to private groups)
+  friendInvites: defineTable({
+    fromUserId: v.id("users"),
+    toUserId: v.id("users"),
+    studyGroupId: v.id("studyGroups"),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("accepted"),
+      v.literal("declined")
+    ),
+    createdAt: v.number(),
+  })
+    .index("by_to_user", ["toUserId"])
+    .index("by_group", ["studyGroupId"]),
   // --- Flashcards and Flashcard Decks Collection ---
 
   flashcardDecks: defineTable({
@@ -374,16 +438,6 @@ const schema = defineSchema({
   })
     .index("by_userId", ["userId"])
     .index("by_userId_start", ["userId", "start"]),
-  studyGroupInvites: defineTable({
-    studyGroupId: v.id("studyGroups"),
-    inviteCode: v.string(),
-    expiresAt: v.number(),
-    createdAt: v.number(),
-    usedCount: v.number(),
-    maxUses: v.number(),
-  })
-    .index("by_group", ["studyGroupId"])
-    .index("by_code", ["inviteCode"]),
 
   studySessions: defineTable({
     userId: v.id("users"),
@@ -578,7 +632,8 @@ const schema = defineSchema({
       v.literal("CARDS_CREATED"),
       v.literal("AI_GENERATIONS"),
       v.literal("DATA_EXPORTS"),
-      v.literal("ANALYTICS_VIEWS")
+      v.literal("ANALYTICS_VIEWS"),
+      v.literal("GOOGLE_MEET_CREATED")
     ),
     count: v.number(),
     lastReset: v.number(), // timestamp of last monthly reset

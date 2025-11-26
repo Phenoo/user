@@ -10,6 +10,7 @@ import { Eye, EyeOff, Mail, Lock, User, ArrowLeft, Shield } from "lucide-react";
 import { FcGoogle } from "react-icons/fc";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuthActions } from "@convex-dev/auth/react";
+import { safeSessionStorage } from "@/lib/storage-helpers";
 
 import { REGEXP_ONLY_DIGITS_AND_CHARS } from "input-otp";
 
@@ -111,9 +112,9 @@ export default function AuthenticationCard() {
         await signIn("password", formDataObj);
         router.push("/dashboard");
       } else if (currentStep === "signup") {
-        sessionStorage.setItem("pendingEmail", formData.email);
-        sessionStorage.setItem("pendingName", formData.name);
-        sessionStorage.setItem("pendingPassword", formData.password);
+        safeSessionStorage.setItem("pendingEmail", formData.email);
+        safeSessionStorage.setItem("pendingName", formData.name);
+        safeSessionStorage.setItem("pendingPassword", formData.password);
 
         const formDataObj = new FormData();
         formDataObj.append("email", formData.email);
@@ -125,7 +126,7 @@ export default function AuthenticationCard() {
         setStep("otp");
         router.push("/auth?step=otp");
       } else if (currentStep === "forgot-password") {
-        sessionStorage.setItem("resetEmail", formData.email);
+        safeSessionStorage.setItem("resetEmail", formData.email);
 
         const formDataObj = new FormData();
         formDataObj.append("email", formData.email);
@@ -145,11 +146,11 @@ export default function AuthenticationCard() {
         router.push("/dashboard");
       } else if (currentStep === "otp") {
         const storedEmail =
-          sessionStorage.getItem("pendingEmail") ||
-          sessionStorage.getItem("resetEmail") ||
+          safeSessionStorage.getItem("pendingEmail") ||
+          safeSessionStorage.getItem("resetEmail") ||
           formData.email;
-        const isSignup = sessionStorage.getItem("pendingEmail") !== null;
-        const isReset = sessionStorage.getItem("resetEmail") !== null;
+        const isSignup = safeSessionStorage.getItem("pendingEmail") !== null;
+        const isReset = safeSessionStorage.getItem("resetEmail") !== null;
 
         const formDataObj = new FormData();
         formDataObj.append("email", storedEmail);
@@ -160,11 +161,11 @@ export default function AuthenticationCard() {
           formDataObj.append("flow", "signUp");
           formDataObj.append(
             "name",
-            sessionStorage.getItem("pendingName") || ""
+            safeSessionStorage.getItem("pendingName") || ""
           );
           formDataObj.append(
             "password",
-            sessionStorage.getItem("pendingPassword") || ""
+            safeSessionStorage.getItem("pendingPassword") || ""
           );
         } else if (isReset) {
           // For password reset verification
@@ -176,10 +177,10 @@ export default function AuthenticationCard() {
 
         await signIn("password", formDataObj);
 
-        sessionStorage.removeItem("pendingEmail");
-        sessionStorage.removeItem("pendingName");
-        sessionStorage.removeItem("pendingPassword");
-        sessionStorage.removeItem("resetEmail");
+        safeSessionStorage.removeItem("pendingEmail");
+        safeSessionStorage.removeItem("pendingName");
+        safeSessionStorage.removeItem("pendingPassword");
+        safeSessionStorage.removeItem("resetEmail");
 
         setStep("success");
       }
@@ -193,9 +194,9 @@ export default function AuthenticationCard() {
           "[v0] InvalidAccountId error - account may not exist or email mismatch"
         );
         // Reset to appropriate step based on stored data
-        if (sessionStorage.getItem("pendingEmail")) {
+        if (safeSessionStorage.getItem("pendingEmail")) {
           router.push("/auth?step=signup");
-        } else if (sessionStorage.getItem("resetEmail")) {
+        } else if (safeSessionStorage.getItem("resetEmail")) {
           setStep("forgot-password");
           router.push("/auth?step=forgot-password");
         } else {
@@ -254,8 +255,8 @@ export default function AuthenticationCard() {
     passwordRequirements.every((req) => req.test(formData.password));
 
   useEffect(() => {
-    const pendingEmail = sessionStorage.getItem("pendingEmail");
-    const resetEmail = sessionStorage.getItem("resetEmail");
+    const pendingEmail = safeSessionStorage.getItem("pendingEmail");
+    const resetEmail = safeSessionStorage.getItem("resetEmail");
 
     if (pendingEmail && step === "otp") {
       setFormData((prev) => ({ ...prev, email: pendingEmail }));

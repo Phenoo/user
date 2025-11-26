@@ -68,11 +68,11 @@ class YouTubeAPIService {
 
   constructor() {
     // Get API key from environment variables
-    this.apiKey = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY || "";
+    this.apiKey = process.env.YOUTUBE_API_KEY || "";
 
     if (!this.apiKey) {
       console.warn(
-        "YouTube API key not found. Please set NEXT_PUBLIC_YOUTUBE_API_KEY in your environment variables."
+        "YouTube API key not found. Please set YOUTUBE_API_KEY in your environment variables."
       );
     }
   }

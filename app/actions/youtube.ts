@@ -19,7 +19,7 @@ class YouTubeAPI {
   private baseUrl = "https://www.googleapis.com/youtube/v3";
 
   constructor() {
-    this.apiKey = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY || "";
+    this.apiKey = process.env.YOUTUBE_API_KEY || "";
   }
 
   async searchVideos(query: string, maxResults = 12): Promise<YouTubeVideo[]> {

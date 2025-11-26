@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import { Users, ArrowLeft, Search, Filter } from "lucide-react";
+import { Users, ArrowLeft, Search, Filter, Globe, Lock } from "lucide-react";
 
 import Link from "next/link";
 import { useQuery } from "convex/react";
@@ -22,6 +22,8 @@ import LoadingComponent from "@/components/loader";
 import NewStudyGroup from "./new-study-group";
 import { Course } from "../../courses/_components/courses-container";
 import StudyGroupCard from "./study-group-card";
+import { StudyGroupWithCourse } from "@/types/study-groups";
+import { PendingInvites } from "./group-invites";
 
 export interface StudyGroup {
   _id: string;
@@ -45,6 +47,7 @@ export interface StudyGroup {
 export default function StudyGroupsPageContainer() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("all");
+  const [activeTab, setActiveTab] = useState("my-groups");
 
   const user = useQuery(api.users.currentUser);
   const userId = user?._id;
@@ -52,6 +55,8 @@ export default function StudyGroupsPageContainer() {
   const getStudyGroups = useQuery(api.studyGroups.getUserStudyGroups, {
     userId: userId as Id<"users">,
   });
+
+  const publicGroups = useQuery(api.studyGroups.getPublicStudyGroups, {});
 
   const filteredGroups =
     (getStudyGroups &&
@@ -73,11 +78,35 @@ export default function StudyGroupsPageContainer() {
       })) ||
     [];
 
+  const filteredPublicGroups =
+    (publicGroups &&
+      publicGroups.length > 0 &&
+      publicGroups.filter((group) => {
+        const matchesSearch =
+          (group.name?.toLowerCase() ?? "").includes(
+            searchTerm?.toLowerCase() ?? ""
+          ) ||
+          (group.course?.name?.toLowerCase() ?? "").includes(
+            searchTerm?.toLowerCase() ?? ""
+          );
+
+        const matchesFilter =
+          filterType === "all" ||
+          filterType === group.meetingType?.toLowerCase();
+
+        // Don't show groups user is already in
+        const isAlreadyMember = getStudyGroups?.some(
+          (myGroup) => myGroup._id === group._id
+        );
+
+        return matchesSearch && matchesFilter && !isAlreadyMember;
+      })) ||
+    [];
+
   if (!user || getStudyGroups === undefined) {
     return <LoadingComponent />;
   }
 
-  console.log(getStudyGroups, "ssjsjsj");
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -99,9 +128,12 @@ export default function StudyGroupsPageContainer() {
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto p-6">
+      <div className="max-w-7xl mx-auto p-6 space-y-6">
+        {/* Pending Invites */}
+        {userId && <PendingInvites userId={userId} />}
+
         {/* Search and Filters */}
-        <div className="flex flex-col sm:flex-row gap-4 mb-6">
+        <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
@@ -128,25 +160,69 @@ export default function StudyGroupsPageContainer() {
           <NewStudyGroup />
         </div>
 
-        {/* Study Groups Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredGroups.map((group) => (
-            <StudyGroupCard group={group} key={group._id} />
-          ))}
-        </div>
+        {/* Tabs for My Groups vs Discover Groups */}
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsTrigger value="my-groups" className="flex items-center gap-2">
+              <Lock className="h-4 w-4" />
+              My Groups
+            </TabsTrigger>
+            <TabsTrigger value="discover" className="flex items-center gap-2">
+              <Globe className="h-4 w-4" />
+              Discover
+            </TabsTrigger>
+          </TabsList>
 
-        {filteredGroups.length === 0 && (
-          <div className="text-center py-12">
-            <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">
-              No study groups found
-            </h3>
-            <p className="text-muted-foreground mb-4">
-              Try adjusting your search or create a new study group
-            </p>
-            <NewStudyGroup />
-          </div>
-        )}
+          <TabsContent value="my-groups" className="mt-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredGroups
+                .filter((group) => group._id) // Filter out groups without _id
+                .map((group) => (
+                  <StudyGroupCard group={group as StudyGroupWithCourse} key={group._id} />
+                ))}
+            </div>
+
+            {filteredGroups.length === 0 && (
+              <div className="text-center py-12">
+                <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2">
+                  No study groups found
+                </h3>
+                <p className="text-muted-foreground mb-4">
+                  Try adjusting your search or create a new study group
+                </p>
+                <NewStudyGroup />
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="discover" className="mt-6">
+            <div className="mb-4">
+              <h3 className="text-lg font-semibold mb-1">Public Study Groups</h3>
+              <p className="text-sm text-muted-foreground">
+                Discover and join public study groups from across your courses
+              </p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredPublicGroups.map((group) => (
+                <StudyGroupCard group={group} key={group._id} isDiscovery />
+              ))}
+            </div>
+
+            {filteredPublicGroups.length === 0 && (
+              <div className="text-center py-12">
+                <Globe className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2">
+                  No public groups available
+                </h3>
+                <p className="text-muted-foreground mb-4">
+                  Be the first to create a public study group!
+                </p>
+                <NewStudyGroup />
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

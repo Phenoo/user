@@ -30,7 +30,7 @@ This document explains how to set up the YouTube Data API v3 integration for the
 Add the following environment variable to your `.env.local` file:
 
 ```bash
-NEXT_PUBLIC_YOUTUBE_API_KEY=your_youtube_api_key_here
+YOUTUBE_API_KEY=your_youtube_api_key_here
 ```
 
 Replace `your_youtube_api_key_here` with your actual API key.
@@ -98,7 +98,7 @@ If you get a "quota exceeded" error:
 ### Common Issues
 
 1. **"YouTube API key not configured" error**:
-   - Make sure you've added `NEXT_PUBLIC_YOUTUBE_API_KEY` to your `.env.local` file
+   - Make sure you've added `YOUTUBE_API_KEY` to your `.env.local` file
    - Restart your development server after adding the environment variable
 
 2. **"YouTube API error: 403"** (Most Common):
@@ -144,7 +144,7 @@ If you get a "quota exceeded" error:
 
    ```bash
    # In your .env.local file
-   NEXT_PUBLIC_YOUTUBE_API_KEY=your_actual_api_key_here
+   YOUTUBE_API_KEY=your_actual_api_key_here
    ```
 
 2. **Verify API Key Format:**

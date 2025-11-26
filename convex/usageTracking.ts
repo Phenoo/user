@@ -49,7 +49,8 @@ export const incrementUsage = mutation({
       v.literal("CARDS_CREATED"),
       v.literal("AI_GENERATIONS"),
       v.literal("DATA_EXPORTS"),
-      v.literal("ANALYTICS_VIEWS")
+      v.literal("ANALYTICS_VIEWS"),
+      v.literal("GOOGLE_MEET_CREATED")
     ),
   },
   handler: async (ctx, args) => {
