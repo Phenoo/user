@@ -7,6 +7,7 @@ import { ConvexAuthNextjsServerProvider } from "@convex-dev/auth/nextjs/server";
 import { Toaster } from "@/components/ui/sonner";
 import ModalProvider from "@/components/modal-provider";
 import { NextIntlClientProvider } from "next-intl";
+import { Analytics } from "@vercel/analytics/next";
 
 import GoogleAnalytics from "@/components/GoogleAnalytics";
 import { generateMetadata } from "@/utils";
@@ -46,6 +47,7 @@ export default async function RootLayout({
               </ThemeProvider>
             </NextIntlClientProvider>
           </ConvexClientProvider>
+          <Analytics />
         </body>
       </html>
     </ConvexAuthNextjsServerProvider>
