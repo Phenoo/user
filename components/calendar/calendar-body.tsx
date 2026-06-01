@@ -26,8 +26,6 @@ export function CalendarBody() {
     return !isSameDay(startDate, endDate);
   });
 
-  console.log(events, "sjsjsj");
-
   return (
     <div className="w-full h-full overflow-scroll relative">
       <motion.div

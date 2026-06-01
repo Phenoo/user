@@ -109,8 +109,6 @@ export function CalendarProvider({
     events || []
   );
 
-  console.log("provider", events, "skskks");
-
   const user = useQuery(api.users.currentUser);
   const addEventMutation = useMutation(api.events.add);
   const updateEventMutation = useMutation(api.events.update);

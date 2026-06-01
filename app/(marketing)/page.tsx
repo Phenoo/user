@@ -13,8 +13,6 @@ import { api } from "@/lib/polar";
 const HomePage = async () => {
   const products = await api.products.list({ isArchived: false });
 
-  console.log(products);
-
   return (
     <Wrapper className="py-20 relative">
       <Hero />

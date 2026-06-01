@@ -233,10 +233,6 @@ export default function TranscriptPage() {
       const jsPDF = (await import("jspdf")).default;
       const html2canvas = (await import("html2canvas")).default;
 
-      console.log(
-        "transcriptRef.current (before html2canvas):",
-        transcriptRef.current
-      );
       if (!transcriptRef.current) {
         console.error(
           "Transcript ref is null after waiting, cannot generate PDF."
@@ -245,17 +241,7 @@ export default function TranscriptPage() {
         return;
       }
 
-      // Crucial step: Verify the element itself is NOT scaled via CSS transform
-      const computedStyle = window.getComputedStyle(transcriptRef.current);
-      console.log(
-        "Computed transform on transcriptRef.current:",
-        computedStyle.transform
-      ); // Should ideally be "none" or an empty string
-
-      // Attempt to temporarily add the canvas to the DOM for visual inspection
-      let tempCanvas = null; // Declare outside the try block for finally
       try {
-        console.log("Attempting to capture canvas...");
         const canvas = await html2canvas(transcriptRef.current, {
           scale: 2,
           useCORS: true,
@@ -292,22 +278,8 @@ export default function TranscriptPage() {
             clonedDoc.head.appendChild(style);
           },
         });
-        console.log("Canvas captured:", canvas);
-        tempCanvas = canvas; // Assign for removal in finally
-
-        // For visual debugging:
-        document.body.appendChild(canvas);
-        canvas.style.position = "fixed";
-        canvas.style.top = "0";
-        canvas.style.left = "0";
-        canvas.style.zIndex = "99999";
-        canvas.style.border = "2px solid red";
-        console.warn(
-          "DEBUG: Canvas appended to body. Inspect it visually! Remove this for production."
-        );
 
         const imgData = canvas.toDataURL("image/jpeg", 1.0);
-        console.log("Image Data generated, length:", imgData.length);
 
         const pdf = new jsPDF("p", "mm", "a4");
         const imgProps = pdf.getImageProperties(imgData);
@@ -337,7 +309,6 @@ export default function TranscriptPage() {
 
         const fileName = `${studentInfo.name.replace(/\s+/g, "_")}_Transcript_${new Date().toISOString().split("T")[0]}.pdf`;
         pdf.save(fileName);
-        console.log("PDF save initiated.");
       } catch (innerError) {
         // Catch errors specific to html2canvas or image processing
         console.error(
@@ -357,12 +328,6 @@ export default function TranscriptPage() {
     } finally {
       if (!wasPreviewing) {
         setShowPreview(false);
-      }
-      // Remove the debug canvas if it was added
-      //@ts-ignore
-      if (tempCanvas && document.body.contains(tempCanvas)) {
-        //@ts-ignore
-        document.body.removeChild(tempCanvas);
       }
     }
   };

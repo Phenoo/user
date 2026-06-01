@@ -278,6 +278,7 @@ export const leaveStudyGroup = mutation({
 export const updateStudyGroup = mutation({
   args: {
     groupId: v.id("studyGroups"),
+    userId: v.id("users"),
     name: v.optional(v.string()),
     description: v.optional(v.string()),
     maxMembers: v.optional(v.number()),
@@ -291,7 +292,15 @@ export const updateStudyGroup = mutation({
     tags: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
-    const { groupId, ...updates } = args;
+    const { groupId, userId, ...updates } = args;
+
+    // Verify user is the organizer
+    const group = await ctx.db.get(groupId);
+    if (!group) throw new Error("Study group not found");
+    if (group.organizerId !== userId) {
+      throw new Error("Only the organizer can update this group");
+    }
+
     const filteredUpdates = Object.fromEntries(
       Object.entries(updates).filter(([_, value]) => value !== undefined)
     );
@@ -307,8 +316,18 @@ export const updateStudyGroup = mutation({
 
 // Delete study group
 export const deleteStudyGroup = mutation({
-  args: { groupId: v.id("studyGroups") },
+  args: {
+    groupId: v.id("studyGroups"),
+    userId: v.id("users"),
+  },
   handler: async (ctx, args) => {
+    // Verify user is the organizer
+    const group = await ctx.db.get(args.groupId);
+    if (!group) throw new Error("Study group not found");
+    if (group.organizerId !== args.userId) {
+      throw new Error("Only the organizer can delete this group");
+    }
+
     // Mark group as inactive
     await ctx.db.patch(args.groupId, { isActive: false });
 
@@ -327,8 +346,26 @@ export const deleteStudyGroup = mutation({
 });
 
 export const generateInviteLink = mutation({
-  args: { groupId: v.id("studyGroups") },
+  args: {
+    groupId: v.id("studyGroups"),
+    userId: v.id("users"),
+  },
   handler: async (ctx, args) => {
+    // Verify user is the organizer or a member
+    const group = await ctx.db.get(args.groupId);
+    if (!group) throw new Error("Study group not found");
+
+    const membership = await ctx.db
+      .query("studyGroupMembers")
+      .withIndex("by_group_user", (q) =>
+        q.eq("studyGroupId", args.groupId).eq("userId", args.userId)
+      )
+      .first();
+
+    if (!membership) {
+      throw new Error("Only group members can generate invite links");
+    }
+
     // Generate unique invite code
     const inviteCode =
       Math.random().toString(36).substring(2, 15) +
@@ -609,8 +646,16 @@ export const acceptFriendInvite = mutation({
 export const declineFriendInvite = mutation({
   args: {
     inviteId: v.id("friendInvites"),
+    userId: v.id("users"),
   },
   handler: async (ctx, args) => {
+    // Verify user is the recipient
+    const invite = await ctx.db.get(args.inviteId);
+    if (!invite) throw new Error("Invite not found");
+    if (invite.toUserId !== args.userId) {
+      throw new Error("This invite is not for you");
+    }
+
     await ctx.db.patch(args.inviteId, {
       status: "declined",
     });
@@ -691,8 +736,18 @@ export const getActiveStudySessions = query({
 
 // End study session
 export const endStudySession = mutation({
-  args: { sessionId: v.id("studyTogetherSessions") },
+  args: {
+    sessionId: v.id("studyTogetherSessions"),
+    userId: v.id("users"),
+  },
   handler: async (ctx, args) => {
+    // Verify user is the creator
+    const session = await ctx.db.get(args.sessionId);
+    if (!session) throw new Error("Study session not found");
+    if (session.createdBy !== args.userId) {
+      throw new Error("Only the session creator can end this session");
+    }
+
     await ctx.db.patch(args.sessionId, {
       isActive: false,
     });

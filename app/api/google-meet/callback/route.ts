@@ -22,10 +22,21 @@ export async function GET(request: NextRequest) {
     const googleMeetService = createGoogleMeetService()
     const accessToken = await googleMeetService.exchangeCodeForToken(code)
 
-    // Redirect back to dashboard with the access token
-    return NextResponse.redirect(
-      `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?google_token=${encodeURIComponent(accessToken)}`
+    // Create response with redirect
+    const response = NextResponse.redirect(
+      `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?google_connected=true`
     )
+
+    // Store access token in httpOnly cookie (secure, not accessible via JavaScript)
+    response.cookies.set("google_meet_token", accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 60, // 1 hour (Google access tokens expire in 1 hour)
+      path: "/",
+    })
+
+    return response
   } catch (error) {
     console.error("Error in Google Meet callback:", error)
     return NextResponse.redirect(

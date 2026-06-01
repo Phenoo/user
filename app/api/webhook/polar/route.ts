@@ -12,7 +12,6 @@ export const POST = Webhooks({
 
   onSubscriptionActive: async (payload) => {},
   onSubscriptionRevoked: async (payload) => {
-    console.log(payload);
     try {
       await convex.mutation(api.users.updateUserSubscription, {
         userId: payload.data.metadata.userId as Id<"users">,
@@ -29,7 +28,6 @@ export const POST = Webhooks({
     } catch {}
   },
   onSubscriptionCreated: async (payload) => {
-    console.log(payload.data.prices, payload.data);
     try {
       await convex.mutation(api.users.updateUserSubscription, {
         userId: payload.data.metadata.userId as Id<"users">,
@@ -63,7 +61,6 @@ export const POST = Webhooks({
           : undefined,
       });
     } catch {}
-    console.log("onSubscriptionCreated");
   },
   onSubscriptionUpdated: async (payload) => {
     try {
@@ -99,7 +96,6 @@ export const POST = Webhooks({
           : undefined,
       });
     } catch {}
-    console.log("onSubscriptionCreated");
   },
   onOrderCreated: async (payload) => {
     const isProration = payload.data.billingReason === "subscription_update";

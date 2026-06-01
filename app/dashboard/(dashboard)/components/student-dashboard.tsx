@@ -58,7 +58,6 @@ import { useAuthToken } from "@convex-dev/auth/react";
 import { SearchDashboard } from "./search-dashboard";
 import { StudyAnalytics } from "../pomodoro/_components/study-analytics";
 import { useEffect } from "react";
-import { safeSessionStorage } from "@/lib/storage-helpers";
 
 export const data = [
   {
@@ -125,26 +124,22 @@ export function StudentDashboard() {
     }
   };
 
-  // Handle OAuth callback
+  // Handle OAuth callback and token retrieval
   useEffect(() => {
     // Ensure we're running on the client side
     if (typeof window === "undefined") return;
 
     const urlParams = new URLSearchParams(window.location.search);
-    const googleToken = urlParams.get("google_token");
+    const googleConnected = urlParams.get("google_connected");
     const error = urlParams.get("error");
 
-    if (googleToken) {
-      setGoogleMeetToken(googleToken);
-      // Store token in sessionStorage for persistence
-      safeSessionStorage.setItem("google_meet_token", googleToken);
-      // Clean up URL
+    // Clean up URL parameters
+    if (googleConnected || error) {
       const newUrl = window.location.pathname;
       window.history.replaceState({}, document.title, newUrl);
     }
 
     if (error) {
-      console.error("Google OAuth error:", error);
       let errorMessage = "Failed to connect Google account";
       if (error === "no_code") {
         errorMessage = "Authorization code not received from Google";
@@ -152,13 +147,23 @@ export function StudentDashboard() {
         errorMessage = "Error processing Google authorization";
       }
       alert(errorMessage);
+      return;
     }
 
-    // Check if we have a stored token
-    const storedToken = safeSessionStorage.getItem("google_meet_token");
-    if (storedToken && !googleToken) {
-      setGoogleMeetToken(storedToken);
-    }
+    // Fetch token from secure httpOnly cookie via API
+    const fetchToken = async () => {
+      try {
+        const response = await fetch("/api/google-meet/token");
+        const data = await response.json();
+        if (data.connected && data.token) {
+          setGoogleMeetToken(data.token);
+        }
+      } catch (err) {
+        console.error("Error fetching Google token:", err);
+      }
+    };
+
+    fetchToken();
   }, []);
 
   const handleGoogleAuth = async () => {
@@ -185,9 +190,13 @@ export function StudentDashboard() {
     }
   };
 
-  const handleGoogleDisconnect = () => {
-    setGoogleMeetToken(null);
-    safeSessionStorage.removeItem("google_meet_token");
+  const handleGoogleDisconnect = async () => {
+    try {
+      await fetch("/api/google-meet/token", { method: "DELETE" });
+      setGoogleMeetToken(null);
+    } catch (err) {
+      console.error("Error disconnecting Google:", err);
+    }
   };
 
   const userId = user?._id;

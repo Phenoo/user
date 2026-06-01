@@ -164,10 +164,8 @@ const AddCoursesSheet = () => {
       setIsAddSheetOpen(false);
       // Close the sheet, show a success message, clear form
     } catch (error) {
-      console.error("Failed to add course:", error);
-      toast.error("Failed to add course:");
-
-      // Show error message
+      const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+      toast.error(`Failed to add course: ${errorMessage}`);
     }
   };
 

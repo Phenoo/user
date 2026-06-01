@@ -381,7 +381,6 @@ export function OnboardingFlow() {
                 <Button
                   onClick={() => {
                     // Handle completion - redirect to main app
-                    console.log("Onboarding completed:", formData);
                   }}
                   className="px-6 bg-primary hover:bg-primary/90"
                 >

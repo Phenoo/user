@@ -214,9 +214,6 @@ export const getUserProfile = action({
       }
     );
 
-    console.log("eejejejej");
-    console.log(response, "dj23u3u3i3iu");
-
     if (!response.ok) {
       const errorBody = await response.text();
       throw new Error(
