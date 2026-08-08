@@ -107,6 +107,62 @@ const schema = defineSchema({
     .index("by_polar_invoice", ["polarInvoiceId"])
     .index("by_user", ["userId"])
     .index("by_subscription", ["subscriptionId"]),
+  connectedAccounts: defineTable({
+    userId: v.id("users"),
+    provider: v.union(
+      v.literal("google-calendar"),
+      v.literal("google-drive"),
+      v.literal("google-classroom"),
+      v.literal("canvas"),
+      v.literal("microsoft-education"),
+      v.literal("onedrive")
+    ),
+    externalAccountId: v.optional(v.string()),
+    email: v.optional(v.string()),
+    scopes: v.array(v.string()),
+    status: v.union(
+      v.literal("connected"),
+      v.literal("needs_reauth"),
+      v.literal("disconnected")
+    ),
+    refreshToken: v.optional(v.string()),
+    accessToken: v.optional(v.string()),
+    expiresAt: v.optional(v.number()),
+    connectedAt: v.number(),
+    lastSyncAt: v.optional(v.number()),
+    metadata: v.optional(v.any()),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_provider", ["userId", "provider"]),
+
+  integrationSyncs: defineTable({
+    userId: v.id("users"),
+    provider: v.union(
+      v.literal("google-calendar"),
+      v.literal("google-drive"),
+      v.literal("google-classroom"),
+      v.literal("canvas"),
+      v.literal("microsoft-education"),
+      v.literal("onedrive")
+    ),
+    type: v.string(),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("running"),
+      v.literal("success"),
+      v.literal("failed")
+    ),
+    startedAt: v.number(),
+    completedAt: v.optional(v.number()),
+    importedCount: v.optional(v.number()),
+    updatedCount: v.optional(v.number()),
+    failedCount: v.optional(v.number()),
+    error: v.optional(v.string()),
+    metadata: v.optional(v.any()),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_provider", ["userId", "provider"])
+    .index("by_user_started", ["userId", "startedAt"]),
   courses: defineTable({
     userId: v.id("users"), // Link to the user who owns this course
     name: v.string(), // e.g., "Introduction to Programming"
@@ -560,6 +616,9 @@ const schema = defineSchema({
     duration: v.number(),
     completedAt: v.number(),
     userId: v.id("users"),
+    topicId: v.optional(v.id("courseTopics")),
+    studyPlanItemId: v.optional(v.id("studyPlanItems")),
+    assignmentId: v.optional(v.string()),
   })
     .index("by_user", ["userId"])
     .index("by_course", ["courseId"])
@@ -695,6 +754,186 @@ const schema = defineSchema({
     extractedFrom: v.string(), // Original text that was parsed
     createdAt: v.number(),
   }).index("by_user", ["userId"]),
+
+  courseDocuments: defineTable({
+    userId: v.id("users"),
+    courseId: v.id("courses"),
+    title: v.string(),
+    fileName: v.optional(v.string()),
+    mimeType: v.optional(v.string()),
+    fileSize: v.optional(v.number()),
+    storageId: v.optional(v.id("_storage")),
+    source: v.union(
+      v.literal("upload"),
+      v.literal("manual-note"),
+      v.literal("google-drive"),
+      v.literal("onedrive"),
+      v.literal("google-classroom"),
+      v.literal("canvas"),
+      v.literal("microsoft-education")
+    ),
+    processingStatus: v.union(
+      v.literal("pending"),
+      v.literal("processing"),
+      v.literal("ready"),
+      v.literal("failed")
+    ),
+    processingError: v.optional(v.string()),
+    pageCount: v.optional(v.number()),
+    textContent: v.optional(v.string()),
+    chunkCount: v.optional(v.number()),
+    fileUrl: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_course", ["courseId"])
+    .index("by_user_course", ["userId", "courseId"])
+    .index("by_course_status", ["courseId", "processingStatus"])
+    .index("by_source", ["source"]),
+
+  documentChunks: defineTable({
+    userId: v.id("users"),
+    courseId: v.id("courses"),
+    documentId: v.id("courseDocuments"),
+    content: v.string(),
+    chunkIndex: v.number(),
+    pageNumber: v.optional(v.number()),
+    section: v.optional(v.string()),
+    heading: v.optional(v.string()),
+    tokenCount: v.optional(v.number()),
+    keywords: v.optional(v.array(v.string())),
+    embedding: v.optional(v.array(v.number())),
+    createdAt: v.number(),
+  })
+    .index("by_document", ["documentId"])
+    .index("by_course", ["courseId"])
+    .index("by_user_course", ["userId", "courseId"]),
+
+  courseTopics: defineTable({
+    userId: v.id("users"),
+    courseId: v.id("courses"),
+    name: v.string(),
+    source: v.optional(v.string()),
+    parentTopicId: v.optional(v.id("courseTopics")),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_course", ["courseId"])
+    .index("by_user_course", ["userId", "courseId"])
+    .index("by_user_course_name", ["userId", "courseId", "name"]),
+
+  studentTopicMastery: defineTable({
+    userId: v.id("users"),
+    courseId: v.id("courses"),
+    topicId: v.id("courseTopics"),
+    masteryScore: v.number(),
+    confidenceScore: v.number(),
+    correctAnswers: v.number(),
+    incorrectAnswers: v.number(),
+    lastStudiedAt: v.optional(v.number()),
+    nextRecommendedReviewAt: v.optional(v.number()),
+    updatedAt: v.number(),
+  })
+    .index("by_user_course", ["userId", "courseId"])
+    .index("by_user_topic", ["userId", "topicId"])
+    .index("by_course_topic", ["courseId", "topicId"]),
+
+  studyPlans: defineTable({
+    userId: v.id("users"),
+    courseId: v.optional(v.id("courses")),
+    title: v.string(),
+    status: v.union(
+      v.literal("draft"),
+      v.literal("active"),
+      v.literal("completed"),
+      v.literal("archived")
+    ),
+    generatedFrom: v.optional(v.any()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_status", ["userId", "status"])
+    .index("by_course", ["courseId"]),
+
+  studyPlanItems: defineTable({
+    userId: v.id("users"),
+    studyPlanId: v.id("studyPlans"),
+    courseId: v.optional(v.id("courses")),
+    topicId: v.optional(v.id("courseTopics")),
+    assignmentId: v.optional(v.string()),
+    title: v.string(),
+    description: v.optional(v.string()),
+    reason: v.optional(v.string()),
+    scheduledStart: v.number(),
+    scheduledEnd: v.number(),
+    durationMinutes: v.number(),
+    status: v.union(
+      v.literal("planned"),
+      v.literal("scheduled"),
+      v.literal("completed"),
+      v.literal("skipped")
+    ),
+    calendarEventId: v.optional(v.id("events")),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_plan", ["studyPlanId"])
+    .index("by_user", ["userId"])
+    .index("by_user_start", ["userId", "scheduledStart"])
+    .index("by_course", ["courseId"]),
+
+  aiRequests: defineTable({
+    userId: v.string(),
+    requestId: v.string(),
+    provider: v.union(v.literal("deepseek"), v.literal("openai")),
+    model: v.string(),
+    feature: v.string(),
+    mode: v.optional(
+      v.union(v.literal("standard"), v.literal("deep-reasoning"))
+    ),
+    courseId: v.optional(v.string()),
+    courseName: v.optional(v.string()),
+    promptVersion: v.optional(v.string()),
+    inputTokens: v.number(),
+    cachedInputTokens: v.optional(v.number()),
+    outputTokens: v.number(),
+    reasoningTokens: v.optional(v.number()),
+    totalTokens: v.number(),
+    estimatedCostUSD: v.number(),
+    creditsUsed: v.optional(v.number()),
+    latencyMs: v.optional(v.number()),
+    status: v.union(v.literal("success"), v.literal("error")),
+    errorCode: v.optional(v.string()),
+    retrievalChunkCount: v.optional(v.number()),
+    retrievalLatencyMs: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_created", ["userId", "createdAt"])
+    .index("by_user_request", ["userId", "requestId"])
+    .index("by_user_feature", ["userId", "feature"])
+    .index("by_feature", ["feature"])
+    .index("by_model", ["model"])
+    .index("by_status", ["status"]),
+
+  aiTokenUsage: defineTable({
+    userId: v.string(),
+    model: v.string(),
+    feature: v.string(),
+    courseId: v.optional(v.string()),
+    courseName: v.optional(v.string()),
+    promptTokens: v.number(),
+    completionTokens: v.number(),
+    totalTokens: v.number(),
+    estimatedCostUSD: v.number(),
+    createdAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_created", ["userId", "createdAt"])
+    .index("by_feature", ["feature"])
+    .index("by_created", ["createdAt"]),
 });
 
 export default schema;

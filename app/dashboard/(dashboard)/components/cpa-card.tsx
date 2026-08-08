@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
 
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -102,15 +103,37 @@ const calculateCourseGrade = (
 
 const CpaCard = () => {
   const user = useQuery(api.users.currentUser);
+  const userId = user?._id;
 
   const courses =
-    useQuery(api.courses.getAllCourses, {
-      userId: user?._id as Id<"users">,
-    }) || [];
+    useQuery(
+      api.courses.getAllCourses,
+      userId ? { userId: userId as Id<"users"> } : "skip"
+    ) || [];
   const assessments =
-    useQuery(api.assessments.getUserAssessments, {
-      userId: user?._id as Id<"users">,
-    }) || [];
+    useQuery(
+      api.assessments.getUserAssessments,
+      userId ? { userId: userId as Id<"users"> } : "skip"
+    ) || [];
+  const settings = useQuery(
+    api.settings.getUserSettings,
+    userId ? { userId: userId as Id<"users"> } : "skip"
+  );
+
+  if (user === undefined) {
+    return (
+      <Card>
+        <CardHeader className="pb-2">
+          <Skeleton className="h-4 w-24" />
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <Skeleton className="h-8 w-20" />
+          <Skeleton className="h-2 w-full rounded-full" />
+          <Skeleton className="h-3 w-16" />
+        </CardContent>
+      </Card>
+    );
+  }
 
   const coursesWithGrades: CourseWithGrade[] = courses.map((course) => {
     const courseAssessments = assessments.filter(
@@ -125,8 +148,8 @@ const CpaCard = () => {
       credits: course.credits,
       grade: letterGrade,
       semester: course.session,
-      year: course.academicYear.split("-")[0], // Extract first year from "2024-2025"
-      category: "Major Requirements", // You could add this to your schema
+      year: course.academicYear.split("-")[0],
+      category: "Major Requirements",
       finalScore: percentage,
     };
   });
@@ -134,7 +157,7 @@ const CpaCard = () => {
   const calculateGPA = (coursesToCalculate: CourseWithGrade[]) => {
     if (coursesToCalculate.length === 0) return 0;
     const totalPoints = coursesToCalculate.reduce((sum, course) => {
-      return sum + gradePoints[course.grade] * course.credits;
+      return sum + (gradePoints[course.grade] ?? 0) * course.credits;
     }, 0);
     const totalCredits = coursesToCalculate.reduce(
       (sum, course) => sum + course.credits,
@@ -144,10 +167,7 @@ const CpaCard = () => {
   };
 
   const overallGPA = calculateGPA(coursesWithGrades);
-  const totalCredits = coursesWithGrades.reduce(
-    (sum, course) => sum + course.credits,
-    0
-  );
+  const targetGpa = settings?.gpaTarget ?? 3.9;
 
   return (
     <Card className="">
@@ -165,13 +185,15 @@ const CpaCard = () => {
       <CardContent>
         <div className="flex items-baseline gap-2">
           <span className="text-3xl font-bold ">{overallGPA.toFixed(2)}</span>
-          <span className="text-sm text-foreground/80 font-medium">+0.12</span>
+          <span className="text-xs text-muted-foreground">/ 4.0</span>
         </div>
         <Progress
           value={(Number(overallGPA.toFixed(2)) / 4) * 100}
           className="mt-3 h-2"
         />
-        <p className="text-xs text-muted-foreground mt-2">Target: 3.9</p>
+        <p className="text-xs text-muted-foreground mt-2">
+          Target: {targetGpa.toFixed(1)}
+        </p>
       </CardContent>
       <CardFooter className="space-x-4">
         <Link href={"/dashboard/transcript"}>

@@ -27,8 +27,10 @@ import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import CoursesSelect from "@/components/courses-select";
 import { FlashcardContainer } from "./flashcard-container";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import GenerateButton from "@/components/generate-button";
+import { AIFlashcardGeneratorSheet } from "./ai-flashcard-generator-sheet";
 
 interface Flashcard {
   id: string;
@@ -82,12 +84,20 @@ export const cardColors = [
   { bg: "bg-sky-500", border: "border-t-sky-500" },
 ];
 
+import { Skeleton } from "@/components/ui/skeleton";
+import { Card } from "@/components/ui/card";
+
 export default function FlashcardsPageContainer() {
+  const searchParams = useSearchParams();
+  const defaultCourseId = searchParams.get("course") || "";
+
   const user = useQuery(api.users.currentUser);
   const userId = user?._id;
 
-  const decks =
-    useQuery(api.flashcards.getUserDecks, { userId: userId! }) || [];
+  const decksQuery = useQuery(
+    api.flashcards.getUserDecks,
+    userId ? { userId } : "skip"
+  );
   const createDeckMutation = useMutation(api.flashcards.createDeck);
 
   const [isCreateDeckOpen, setIsCreateDeckOpen] = useState(false);
@@ -105,6 +115,36 @@ export default function FlashcardsPageContainer() {
     isPublic: false,
     tags: [] as string[],
   });
+
+  if (user === undefined || (userId && decksQuery === undefined)) {
+    return (
+      <div className="min-h-screen bg-background">
+        <header className="border-b bg-card">
+          <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+            <Skeleton className="h-8 w-48" />
+            <div className="flex gap-2">
+              <Skeleton className="h-10 w-32" />
+              <Skeleton className="h-10 w-28" />
+            </div>
+          </div>
+        </header>
+        <div className="max-w-7xl mx-auto p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <Card key={i} className="p-6 space-y-4">
+              <div className="flex justify-between items-center">
+                <Skeleton className="h-6 w-32" />
+                <Skeleton className="h-4 w-12" />
+              </div>
+              <Skeleton className="h-4 w-48" />
+              <Skeleton className="h-2 w-full rounded-full" />
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  const decks = decksQuery || [];
 
   const createDeck = async () => {
     try {
@@ -170,41 +210,15 @@ export default function FlashcardsPageContainer() {
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-3">
-              <Brain className="h-8 w-8 text-primary" />
               <h1 className="text-2xl font-bold text-foreground">
                 Flashcards Study
               </h1>
             </div>
             <div className="flex gap-2 ml-auto">
-              <Sheet open={isAIGenerateOpen} onOpenChange={setIsAIGenerateOpen}>
-                <SheetTrigger asChild>
-                  <GenerateButton title="Cards" />
-                </SheetTrigger>
-                <SheetContent className="md:max-w-2xl w-full">
-                  <SheetHeader>
-                    <SheetTitle>AI-Assisted Flashcard Generation</SheetTitle>
-                  </SheetHeader>
-                  <div className="space-y-4 p-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="ai-notes">Paste Your Notes or Text</Label>
-                      <Textarea
-                        id="ai-notes"
-                        value={aiNotes}
-                        onChange={(e) => setAiNotes(e.target.value)}
-                        placeholder="Paste your study notes, lecture transcripts, or any text you want to convert into flashcards..."
-                        className="min-h-[300px]"
-                      />
-                    </div>
-                    <Button
-                      onClick={generateFlashcardsFromNotes}
-                      className="w-full"
-                      disabled={isGenerating || !aiNotes.trim()}
-                    >
-                      {isGenerating ? "Generating..." : "Generate Flashcards"}
-                    </Button>
-                  </div>
-                </SheetContent>
-              </Sheet>
+              <AIFlashcardGeneratorSheet
+                defaultCourseId={defaultCourseId}
+                trigger={<GenerateButton title="Cards" />}
+              />
 
               <Sheet open={isCreateDeckOpen} onOpenChange={setIsCreateDeckOpen}>
                 <SheetTrigger asChild>
@@ -327,13 +341,14 @@ export default function FlashcardsPageContainer() {
                 <Plus className="h-4 w-4 mr-2" />
                 Create Deck
               </Button>
-              <Button
-                variant="outline"
-                onClick={() => setIsAIGenerateOpen(true)}
-              >
-                <Sparkles className="h-4 w-4 mr-2" />
-                AI Generate
-              </Button>
+              <AIFlashcardGeneratorSheet
+                trigger={
+                  <Button variant="outline">
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    AI Generate
+                  </Button>
+                }
+              />
             </div>
           </div>
         )}

@@ -10,21 +10,21 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 
 export function CalendarWidget() {
+  const [mounted, setMounted] = useState(false);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [today, setToday] = useState(new Date());
 
-  const getEvents = useQuery(api.events.list);
+  const user = useQuery(api.users.currentUser);
+  const getEvents = useQuery(api.events.list, {});
+
   useEffect(() => {
+    setMounted(true);
     const updateTime = () => {
       setToday(new Date());
     };
 
-    // Update immediately
     updateTime();
-
-    // Update every minute
     const interval = setInterval(updateTime, 60000);
-
     return () => clearInterval(interval);
   }, []); // Empty dependency array to run only once
 
@@ -296,7 +296,7 @@ export function CalendarWidget() {
               todayEvents.map((event, i) => (
                 <div key={event._id} className="flex gap-3 ">
                   <div>
-                    <div className="text-xs  w-12 p-1 bg-[#ddd] text-neutral-900  rounded-xl text-center">
+                    <div className="text-xs min-w-12 px-2 py-1 bg-secondary text-secondary-foreground font-medium rounded-xl text-center border border-border">
                       {formatToTime(event.startDate)}
                     </div>
 

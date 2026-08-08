@@ -35,6 +35,7 @@ import {
   Share2,
   Copy,
   CheckCircle,
+  Video,
 } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -87,7 +88,10 @@ export default function StudyGroupDetailPage() {
   };
 
   const handleGenerateInviteLink = async () => {
-    await generateInviteLink({ groupId: groupId as Id<"studyGroups"> });
+    await generateInviteLink({
+      groupId: groupId as Id<"studyGroups">,
+      userId: currentUser?._id as Id<"users">,
+    });
   };
 
   const copyInviteLink = async () => {
@@ -298,23 +302,51 @@ export default function StudyGroupDetailPage() {
                       </div>
                     </div>
 
-                    {group.googleCalendarLink && (
-                      <div className="pt-4 border-t">
-                        <Button
-                          variant="outline"
-                          asChild
-                          className="w-full bg-transparent"
-                        >
-                          <a
-                            href={group.googleCalendarLink}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                    {(group.googleCalendarLink || group.zoomLink) && (
+                      <div className="pt-4 border-t space-y-2">
+                        {group.googleCalendarLink && (
+                          <Button
+                            variant="default"
+                            asChild
+                            className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                           >
-                            <Calendar className="h-4 w-4 mr-2" />
-                            Add to Google Calendar
-                            <ExternalLink className="h-3 w-3 ml-2" />
-                          </a>
-                        </Button>
+                            <a
+                              href={group.googleCalendarLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              {group.googleCalendarLink.includes("meet.google.com") ? (
+                                <>
+                                  <Video className="h-4 w-4 mr-2" />
+                                  Join Google Meet
+                                </>
+                              ) : (
+                                <>
+                                  <Calendar className="h-4 w-4 mr-2" />
+                                  Add to Google Calendar
+                                </>
+                              )}
+                              <ExternalLink className="h-3 w-3 ml-2" />
+                            </a>
+                          </Button>
+                        )}
+                        {group.zoomLink && (
+                          <Button
+                            variant="outline"
+                            asChild
+                            className="w-full"
+                          >
+                            <a
+                              href={group.zoomLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              <Video className="h-4 w-4 mr-2 text-indigo-600" />
+                              Join Zoom Meeting
+                              <ExternalLink className="h-3 w-3 ml-2" />
+                            </a>
+                          </Button>
+                        )}
                       </div>
                     )}
                   </CardContent>

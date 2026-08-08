@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
 import CoursesSelect from "@/components/courses-select";
-import { Plus, Lock, Globe } from "lucide-react";
+import { Plus, Lock, Globe, Video, Calendar, ExternalLink, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
 import { cn } from "@/lib/utils";
@@ -51,6 +51,20 @@ const NewStudyGroup = ({ title = true }: { title?: boolean }) => {
     isPublic: true, // Default to public
     aiModeration: false,
   });
+
+  const generateMeetLink = () => {
+    const realMeetUrl = "https://meet.google.com/new";
+    setNewGroup((prev) => ({ ...prev, googleCalendarLink: realMeetUrl }));
+    window.open(realMeetUrl, "_blank");
+    toast.success("Opening Google Meet to create a real meeting room!");
+  };
+
+  const generateZoomLink = () => {
+    const zoomUrl = "https://zoom.us/start/videomeeting";
+    setNewGroup((prev) => ({ ...prev, zoomLink: zoomUrl }));
+    window.open(zoomUrl, "_blank");
+    toast.success("Opening Zoom to create a meeting room!");
+  };
 
   const createGroup = () => {
     if (!newGroup.name) {
@@ -107,7 +121,7 @@ const NewStudyGroup = ({ title = true }: { title?: boolean }) => {
   return (
     <Sheet open={isCreateSheetOpen} onOpenChange={setIsCreateSheetOpen}>
       <SheetTrigger asChild>
-        <Button>
+        <Button className="h-12">
           <Plus className={cn("h-4 w-4", title && "mr-2")} />
           {title && "Create Group"}
         </Button>
@@ -254,34 +268,66 @@ const NewStudyGroup = ({ title = true }: { title?: boolean }) => {
           <div className="space-y-4 border-t pt-4">
             <h4 className="font-medium text-sm">Meeting Integrations</h4>
             <div className="space-y-2">
-              <Label htmlFor="google-calendar">
-                Google Calendar Event Link
-              </Label>
-              <Input
-                id="google-calendar"
-                value={newGroup.googleCalendarLink}
-                onChange={(e) =>
-                  setNewGroup((prev) => ({
-                    ...prev,
-                    googleCalendarLink: e.target.value,
-                  }))
-                }
-                placeholder="https://calendar.google.com/calendar/event?eid=..."
-              />
+              <div className="flex items-center justify-between">
+                <Label htmlFor="google-calendar" className="text-sm font-medium">
+                  Google Meet Link
+                </Label>
+               
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  id="google-calendar"
+                  value={newGroup.googleCalendarLink}
+                  onChange={(e) =>
+                    setNewGroup((prev) => ({
+                      ...prev,
+                      googleCalendarLink: e.target.value,
+                    }))
+                  }
+                  placeholder="https://meet.google.com/abc-defg-hij"
+                />
+                <Button
+                  type="button"
+                  variant="default"
+                  // size="sm"
+                  onClick={generateMeetLink}
+                  className="shrink-0 h-12 gap-1.5 text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  Generate Link
+                </Button>
+             
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Click <strong>Generate Link</strong> to create a real Google Meet room (via <code>meet.google.com/new</code>) or paste your meeting URL.
+              </p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="zoom-link">Zoom Meeting Link</Label>
-              <Input
-                id="zoom-link"
-                value={newGroup.zoomLink}
-                onChange={(e) =>
-                  setNewGroup((prev) => ({
-                    ...prev,
-                    zoomLink: e.target.value,
-                  }))
-                }
-                placeholder="https://zoom.us/j/123456789"
-              />
+              <div className="flex items-center justify-between">
+                <Label htmlFor="zoom-link" className="text-sm font-medium">
+                  Zoom Meeting Link
+                </Label>
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  id="zoom-link"
+                  value={newGroup.zoomLink}
+                  onChange={(e) =>
+                    setNewGroup((prev) => ({
+                      ...prev,
+                      zoomLink: e.target.value,
+                    }))
+                  }
+                  placeholder="https://zoom.us/j/123456789"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={generateZoomLink}
+                  className="shrink-0 h-12 gap-1.5 text-sm font-medium"
+                >
+                  Generate Link
+                </Button>
+              </div>
             </div>
           </div>
           <Button onClick={createGroup} className="w-full">

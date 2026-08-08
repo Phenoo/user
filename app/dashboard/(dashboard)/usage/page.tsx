@@ -21,7 +21,7 @@ export default function UsagePage() {
       <div className="mb-6">
         <h1 className="text-3xl font-bold">Usage & Limits</h1>
         <p className="text-muted-foreground">
-          Track your usage across all features and see your current limits
+          Track your feature limits, monthly AI credits, token activity, and current plan allowances
         </p>
       </div>
 

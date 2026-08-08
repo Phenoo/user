@@ -1,6 +1,10 @@
-import { generateText } from "ai"
 import { z } from "zod"
-import { CommonErrors, successResponse, handleApiError } from "@/lib/api-helpers"
+import { CommonErrors, successResponse, errorResponse } from "@/lib/api-helpers"
+import { fetchMutation } from "convex/nextjs"
+import { api } from "@/convex/_generated/api"
+import { getUserFacingAIError } from "@/lib/ai/errors"
+import { generateTextWithGateway } from "@/lib/ai/gateway"
+import { buildStudyGuidePrompt, STUDY_GUIDE_PROMPT } from "@/lib/ai/prompts"
 
 export const maxDuration = 60
 
@@ -28,43 +32,32 @@ export async function POST(req: Request) {
     const { subject, topics, examDate, userId } = validationResult.data
 
     const topicsList = topics.join(", ")
+    const prompt = buildStudyGuidePrompt({
+      subject,
+      topics,
+      examDate,
+    })
 
-    const prompt = `Create a comprehensive study guide for ${subject} covering the following topics: ${topicsList}
-
-${examDate ? `Exam date: ${examDate}` : ""}
-
-Please include:
-1. Key concepts and definitions for each topic
-2. Important formulas, theories, or principles
-3. Practice questions with answers
-4. Study tips and memory aids
-5. Common mistakes to avoid
-
-Format the study guide in a clear, organized manner that's easy to review.`
-
-    const { text } = await generateText({
-      model: "openai/gpt-4o",
-      prompt,
-      maxOutputTokens: 4000,
-      temperature: 0.6,
+    const { text } = await generateTextWithGateway({
+      feature: "study-guide",
+      userId,
+      promptVersion: `${STUDY_GUIDE_PROMPT.id}:${STUDY_GUIDE_PROMPT.version}`,
+      retrievalQuery: `${subject} ${topicsList}`,
+      request: {
+        prompt,
+        maxOutputTokens: 4000,
+        temperature: 0.6,
+      },
     })
 
     // Save to Convex
     try {
-      const response = await fetch(`${process.env.CONVEX_URL}/api/generatedContent/save`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId,
-          type: "study_guide",
-          prompt: `${subject} - ${topicsList}`,
-          content: text,
-        }),
+      await fetchMutation(api.generatedContent.save, {
+        userId,
+        type: "study_guide",
+        prompt: `${subject} - ${topicsList}`,
+        content: text,
       })
-
-      if (!response.ok) {
-        console.error("Failed to save study guide to Convex")
-      }
     } catch (error) {
       console.error("Error saving study guide to Convex:", error)
     }
@@ -72,6 +65,12 @@ Format the study guide in a clear, organized manner that's easy to review.`
     return successResponse({ text }, "Study guide generated successfully")
   } catch (error) {
     console.error("Error generating study guide:", error)
-    return handleApiError(error, "Failed to generate study guide")
+    const userFacingError = getUserFacingAIError(error)
+    return errorResponse(
+      userFacingError.message,
+      userFacingError.status,
+      undefined,
+      userFacingError.code
+    )
   }
 }

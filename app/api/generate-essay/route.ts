@@ -1,8 +1,16 @@
-import { generateText } from "ai"
-import { z } from "zod"
-import { CommonErrors, successResponse, handleApiError } from "@/lib/api-helpers"
+import { z } from "zod";
+import {
+  CommonErrors,
+  successResponse,
+  errorResponse,
+} from "@/lib/api-helpers";
+import { fetchMutation } from "convex/nextjs";
+import { api } from "@/convex/_generated/api";
+import { getUserFacingAIError } from "@/lib/ai/errors";
+import { generateTextWithGateway } from "@/lib/ai/gateway";
+import { buildEssayPrompt, ESSAY_PROMPT } from "@/lib/ai/prompts";
 
-export const maxDuration = 60
+export const maxDuration = 60;
 
 // Input validation schema
 const essayRequestSchema = z.object({
@@ -10,64 +18,67 @@ const essayRequestSchema = z.object({
   length: z.number().min(100, "Minimum essay length is 100 words").max(5000, "Maximum essay length is 5000 words"),
   academicLevel: z.enum(["high-school", "undergraduate", "graduate", "phd"]),
   userId: z.string().min(1, "User ID is required"),
-})
+  courseId: z.string().optional(),
+  courseName: z.string().optional(),
+});
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json()
+    const body = await req.json();
 
     // Validate input
-    const validationResult = essayRequestSchema.safeParse(body)
+    const validationResult = essayRequestSchema.safeParse(body);
     if (!validationResult.success) {
       return CommonErrors.badRequest(
         "Invalid input parameters",
         validationResult.error.issues
-      )
+      );
     }
 
-    const { topic, length, academicLevel, userId } = validationResult.data
+    const { topic, length, academicLevel, userId, courseId, courseName } = validationResult.data;
 
-    const prompt = `Write a well-structured academic essay on the following topic: "${topic}"
+    const prompt = buildEssayPrompt({
+      topic,
+      length,
+      academicLevel,
+      courseName,
+    });
 
-Requirements:
-- Length: ${length} words
-- Academic level: ${academicLevel}
-- Include an introduction, body paragraphs with clear arguments, and a conclusion
-- Use formal academic language
-- Provide specific examples and evidence where appropriate
-
-Please write the complete essay now.`
-
-    const { text } = await generateText({
-      model: "openai/gpt-4o",
-      prompt,
-      maxOutputTokens: 4000,
-      temperature: 0.7,
-    })
+    const { text } = await generateTextWithGateway({
+      feature: "essay",
+      userId,
+      courseId,
+      courseName,
+      promptVersion: `${ESSAY_PROMPT.id}:${ESSAY_PROMPT.version}`,
+      retrievalQuery: topic,
+      request: {
+        prompt,
+        maxOutputTokens: 4000,
+        temperature: 0.7,
+      },
+    });
 
     // Save to Convex
     try {
-      const response = await fetch(`${process.env.CONVEX_URL}/api/generatedContent/save`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId,
-          type: "essay",
-          prompt: topic,
-          content: text,
-        }),
-      })
-
-      if (!response.ok) {
-        console.error("Failed to save essay to Convex")
-      }
+      await fetchMutation(api.generatedContent.save, {
+        userId,
+        type: "essay",
+        prompt: topic,
+        content: text,
+      });
     } catch (error) {
-      console.error("Error saving essay to Convex:", error)
+      console.error("Error saving essay to Convex:", error);
     }
 
-    return successResponse({ text }, "Essay generated successfully")
+    return successResponse({ text }, "Essay generated successfully");
   } catch (error) {
-    console.error("Error generating essay:", error)
-    return handleApiError(error, "Failed to generate essay")
+    console.error("Error generating essay:", error);
+    const userFacingError = getUserFacingAIError(error);
+    return errorResponse(
+      userFacingError.message,
+      userFacingError.status,
+      undefined,
+      userFacingError.code
+    );
   }
 }

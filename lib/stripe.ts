@@ -15,15 +15,15 @@ export const SUBSCRIPTION_PLANS = {
     price: 0,
     priceId: null,
     features: [
-      "Up to 5 flashcard decks",
+      "Up to 2 flashcard decks",
       "Basic study groups",
       "Limited analytics",
       "Community support",
     ],
     limits: {
-      flashcardDecks: 5,
-      studyGroups: 2,
-      cardsPerDeck: 50,
+      flashcardDecks: 2,
+      studyGroups: 1,
+      cardsPerDeck: 15,
     },
   },
   STUDENT: {

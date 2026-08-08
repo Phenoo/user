@@ -151,22 +151,22 @@ export const initializeDefaultLimits = mutation({
     const now = Date.now();
     const defaultLimits = [
       // FREE plan limits
-      { plan: "FREE" as const, feature: "COURSES_CREATED", limit: 3 },
-      { plan: "FREE" as const, feature: "DECKS_CREATED", limit: 5 },
-      { plan: "FREE" as const, feature: "CARDS_CREATED", limit: 50 },
-      { plan: "FREE" as const, feature: "AI_GENERATIONS", limit: 10 },
-      { plan: "FREE" as const, feature: "DATA_EXPORTS", limit: 1 },
-      { plan: "FREE" as const, feature: "ANALYTICS_VIEWS", limit: 5 },
-      { plan: "FREE" as const, feature: "GOOGLE_MEET_CREATED", limit: 2 },
+      { plan: "FREE" as const, feature: "COURSES_CREATED", limit: 1 },
+      { plan: "FREE" as const, feature: "DECKS_CREATED", limit: 2 },
+      { plan: "FREE" as const, feature: "CARDS_CREATED", limit: 20 },
+      { plan: "FREE" as const, feature: "AI_GENERATIONS", limit: 3 },
+      { plan: "FREE" as const, feature: "DATA_EXPORTS", limit: 0 },
+      { plan: "FREE" as const, feature: "ANALYTICS_VIEWS", limit: 2 },
+      { plan: "FREE" as const, feature: "GOOGLE_MEET_CREATED", limit: 0 },
 
       // STUDENT plan limits
-      { plan: "STUDENT" as const, feature: "COURSES_CREATED", limit: 10 },
-      { plan: "STUDENT" as const, feature: "DECKS_CREATED", limit: 20 },
-      { plan: "STUDENT" as const, feature: "CARDS_CREATED", limit: 200 },
-      { plan: "STUDENT" as const, feature: "AI_GENERATIONS", limit: 50 },
-      { plan: "STUDENT" as const, feature: "DATA_EXPORTS", limit: 5 },
-      { plan: "STUDENT" as const, feature: "ANALYTICS_VIEWS", limit: -1 },
-      { plan: "STUDENT" as const, feature: "GOOGLE_MEET_CREATED", limit: 10 },
+      { plan: "STUDENT" as const, feature: "COURSES_CREATED", limit: 5 },
+      { plan: "STUDENT" as const, feature: "DECKS_CREATED", limit: 10 },
+      { plan: "STUDENT" as const, feature: "CARDS_CREATED", limit: 100 },
+      { plan: "STUDENT" as const, feature: "AI_GENERATIONS", limit: 25 },
+      { plan: "STUDENT" as const, feature: "DATA_EXPORTS", limit: 3 },
+      { plan: "STUDENT" as const, feature: "ANALYTICS_VIEWS", limit: 25 },
+      { plan: "STUDENT" as const, feature: "GOOGLE_MEET_CREATED", limit: 5 },
 
       // STUDENTPRO plan limits (unlimited)
       { plan: "STUDENTPRO" as const, feature: "COURSES_CREATED", limit: -1 },

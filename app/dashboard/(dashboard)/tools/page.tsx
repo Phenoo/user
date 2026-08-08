@@ -22,10 +22,28 @@ import {
   Copy,
   Check,
 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+
+const SkeletonLoader = () => (
+  <div className="space-y-4 w-full h-full pt-4">
+    <Skeleton className="h-4 w-full" />
+    <Skeleton className="h-4 w-11/12" />
+    <Skeleton className="h-4 w-4/5" />
+    <Skeleton className="h-4 w-full" />
+    <Skeleton className="h-4 w-3/4" />
+    <Skeleton className="h-4 w-full" />
+    <Skeleton className="h-4 w-5/6" />
+  </div>
+);
 
 export default function ToolsPage() {
-  const userId = "demo-user";
+  const user = useQuery(api.users.currentUser);
+  const userId = user?._id || "";
 
   // Essay Generator State
   const [essayTopic, setEssayTopic] = useState("");
@@ -71,7 +89,7 @@ export default function ToolsPage() {
       });
 
       const data = await response.json();
-      setEssayResult(data.text);
+      setEssayResult(data.data?.text || data.text);
     } catch (error) {
       console.error("[v0] Error generating essay:", error);
       setEssayResult("Failed to generate essay. Please try again.");
@@ -98,7 +116,7 @@ export default function ToolsPage() {
       });
 
       const data = await response.json();
-      setSummaryResult(data.text);
+      setSummaryResult(data.data?.text || data.text);
     } catch (error) {
       console.error("[v0] Error generating summary:", error);
       setSummaryResult("Failed to generate summary. Please try again.");
@@ -128,7 +146,7 @@ export default function ToolsPage() {
       });
 
       const data = await response.json();
-      setStudyGuideResult(data.text);
+      setStudyGuideResult(data.data?.text || data.text);
     } catch (error) {
       console.error("[v0] Error generating study guide:", error);
       setStudyGuideResult("Failed to generate study guide. Please try again.");
@@ -280,11 +298,13 @@ export default function ToolsPage() {
                 </div>
 
                 <div className="min-h-[400px] max-h-[600px] overflow-y-auto">
-                  {essayResult ? (
-                    <div className="prose prose-invert max-w-none">
-                      <p className="whitespace-pre-wrap leading-relaxed">
+                  {essayLoading ? (
+                    <SkeletonLoader />
+                  ) : essayResult ? (
+                    <div className="prose prose-invert max-w-none whitespace-pre-wrap leading-relaxed [&>p]:mb-4 [&>h1]:text-2xl [&>h1]:font-bold [&>h1]:mb-4 [&>h2]:text-xl [&>h2]:font-bold [&>h2]:mb-3 [&>h3]:text-lg [&>h3]:font-bold [&>h3]:mb-2 [&>ul]:list-disc [&>ul]:pl-5 [&>ul]:mb-4 [&>ol]:list-decimal [&>ol]:pl-5 [&>ol]:mb-4">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
                         {essayResult}
-                      </p>
+                      </ReactMarkdown>
                     </div>
                   ) : (
                     <div className="flex items-center justify-center h-[400px] text-muted-foreground">
@@ -313,6 +333,7 @@ export default function ToolsPage() {
                       value={summaryContent}
                       onChange={(e) => setSummaryContent(e.target.value)}
                       rows={10}
+                      className="h-96 overflow-y-auto"
                     />
                   </div>
 
@@ -368,11 +389,13 @@ export default function ToolsPage() {
                 </div>
 
                 <div className="min-h-[400px] max-h-[600px] overflow-y-auto">
-                  {summaryResult ? (
-                    <div className="prose prose-invert max-w-none">
-                      <p className="whitespace-pre-wrap leading-relaxed">
+                  {summaryLoading ? (
+                    <SkeletonLoader />
+                  ) : summaryResult ? (
+                    <div className="prose prose-invert max-w-none whitespace-pre-wrap leading-relaxed [&>p]:mb-4 [&>h1]:text-2xl [&>h1]:font-bold [&>h1]:mb-4 [&>h2]:text-xl [&>h2]:font-bold [&>h2]:mb-3 [&>h3]:text-lg [&>h3]:font-bold [&>h3]:mb-2 [&>ul]:list-disc [&>ul]:pl-5 [&>ul]:mb-4 [&>ol]:list-decimal [&>ol]:pl-5 [&>ol]:mb-4">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
                         {summaryResult}
-                      </p>
+                      </ReactMarkdown>
                     </div>
                   ) : (
                     <div className="flex items-center justify-center h-[400px] text-muted-foreground">
@@ -468,11 +491,13 @@ export default function ToolsPage() {
                 </div>
 
                 <div className="min-h-[400px] max-h-[600px] overflow-y-auto">
-                  {studyGuideResult ? (
-                    <div className="prose prose-invert max-w-none">
-                      <p className="whitespace-pre-wrap leading-relaxed">
+                  {studyGuideLoading ? (
+                    <SkeletonLoader />
+                  ) : studyGuideResult ? (
+                    <div className="prose prose-invert max-w-none whitespace-pre-wrap leading-relaxed [&>p]:mb-4 [&>h1]:text-2xl [&>h1]:font-bold [&>h1]:mb-4 [&>h2]:text-xl [&>h2]:font-bold [&>h2]:mb-3 [&>h3]:text-lg [&>h3]:font-bold [&>h3]:mb-2 [&>ul]:list-disc [&>ul]:pl-5 [&>ul]:mb-4 [&>ol]:list-decimal [&>ol]:pl-5 [&>ol]:mb-4">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
                         {studyGuideResult}
-                      </p>
+                      </ReactMarkdown>
                     </div>
                   ) : (
                     <div className="flex items-center justify-center h-[400px] text-muted-foreground">

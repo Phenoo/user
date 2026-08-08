@@ -1,20 +1,32 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 
-// Get user settings
+export const getSettingsByUserId = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("userSettings")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .first();
+  },
+});
+
 export const getUserSettings = query({
-  args: {},
-  handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
+  args: { userId: v.optional(v.id("users")) },
+  handler: async (ctx, args) => {
+    let targetUserId = args.userId;
+
+    if (!targetUserId) {
+      const identity = await ctx.auth.getUserIdentity();
+      if (!identity) return null;
+      targetUserId = identity.subject as any;
     }
 
-    const userId = identity.subject as any;
+    if (!targetUserId) return null;
 
     let settings = await ctx.db
       .query("userSettings")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .withIndex("by_user", (q) => q.eq("userId", targetUserId!))
       .first();
 
     return settings;

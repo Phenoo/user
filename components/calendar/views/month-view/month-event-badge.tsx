@@ -31,12 +31,12 @@ const eventBadgeVariants = cva(
           "border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-800 dark:bg-orange-950 dark:text-orange-300",
 
         // Dot variants
-        "blue-dot": "bg-bg-secondary text-t-primary [&_svg]:fill-blue-600",
-        "green-dot": "bg-bg-secondary text-t-primary [&_svg]:fill-green-600",
-        "red-dot": "bg-bg-secondary text-t-primary [&_svg]:fill-red-600",
-        "orange-dot": "bg-bg-secondary text-t-primary [&_svg]:fill-orange-600",
-        "purple-dot": "bg-bg-secondary text-t-primary [&_svg]:fill-purple-600",
-        "yellow-dot": "bg-bg-secondary text-t-primary [&_svg]:fill-yellow-600",
+        "blue-dot": "bg-card text-card-foreground border-border [&_svg]:fill-blue-600 dark:[&_svg]:fill-blue-400",
+        "green-dot": "bg-card text-card-foreground border-border [&_svg]:fill-green-600 dark:[&_svg]:fill-green-400",
+        "red-dot": "bg-card text-card-foreground border-border [&_svg]:fill-red-600 dark:[&_svg]:fill-red-400",
+        "orange-dot": "bg-card text-card-foreground border-border [&_svg]:fill-orange-600 dark:[&_svg]:fill-orange-400",
+        "purple-dot": "bg-card text-card-foreground border-border [&_svg]:fill-purple-600 dark:[&_svg]:fill-purple-400",
+        "yellow-dot": "bg-card text-card-foreground border-border [&_svg]:fill-yellow-600 dark:[&_svg]:fill-yellow-400",
       },
       multiDayPosition: {
         first: "relative z-10 mr-0 rounded-r-none border-r-0 [&>span]:mr-2.5",
@@ -113,10 +113,9 @@ export function MonthEventBadge({
         <div
           role="button"
           tabIndex={0}
-          className={eventBadgeClasses}
+          className={cn("hover:bg-accent transition-colors", eventBadgeClasses)}
           style={{
-            backgroundColor: "white",
-            borderTop: `1px solid ${event.color}`,
+            borderTop: `2px solid ${event.color || "#3b82f6"}`,
           }}
         >
           <div className="flex items-center gap-1.5 truncate">

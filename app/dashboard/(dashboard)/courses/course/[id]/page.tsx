@@ -20,9 +20,7 @@ import {
   BookOpen,
   Play,
   FileText,
-  Download,
   Plus,
-  Search,
   GraduationCap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -30,13 +28,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import Link from "next/link";
 import {
   useParams,
@@ -49,6 +40,7 @@ import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { YouTubeSection } from "../../_components/youtube-section";
 import LoadingComponent from "@/components/loader";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import EditCoursesSheet from "../../_components/edit-courses";
 import { toast } from "sonner";
@@ -58,9 +50,10 @@ import { Course } from "../../_components/courses-container";
 import NewFlashcard from "../../../flashcards/components/new-flashcard";
 import { AddAssessmentSheet } from "../../_components/add-assessment-sheet";
 import { Label } from "@/components/ui/label";
-import { IoDocumentTextOutline } from "react-icons/io5";
 
+import { calculateCourseGrade } from "@/lib/gpa-utils";
 import NewStudyGroup from "../../../study-groups/_components/new-study-group";
+import { CourseMaterialsPanel } from "../../_components/course-materials-panel";
 
 interface Schedule {
   id: string;
@@ -100,116 +93,6 @@ interface YouTubeVideo {
   relevance: string;
 }
 
-interface Document {
-  id: string;
-  name: string;
-  type: string;
-  size: string;
-  uploadDate: string;
-  category: string;
-}
-
-// Mock data
-
-const mockSchedules: Record<string, Schedule[]> = {
-  "1": [
-    {
-      id: "1",
-      day: "Monday",
-      time: "10:00 AM - 11:30 AM",
-      location: "Room 301",
-      type: "Lecture",
-      topic: "Binary Trees",
-    },
-    {
-      id: "2",
-      day: "Wednesday",
-      time: "2:00 PM - 3:30 PM",
-      location: "Lab 205",
-      type: "Lab",
-      topic: "Tree Traversal Implementation",
-    },
-    {
-      id: "3",
-      day: "Friday",
-      time: "10:00 AM - 11:30 AM",
-      location: "Room 301",
-      type: "Lecture",
-      topic: "Graph Algorithms",
-    },
-  ],
-};
-
-const mockStatistics: Record<string, Statistics> = {
-  "1": {
-    attendance: 92,
-    assignments: { completed: 8, total: 10 },
-    grade: "A-",
-    upcomingDeadlines: [
-      {
-        title: "Assignment 3: Graph Implementation",
-        date: "Dec 15, 2024",
-        type: "Assignment",
-      },
-      { title: "Midterm Exam", date: "Dec 20, 2024", type: "Exam" },
-      { title: "Project Proposal", date: "Jan 5, 2025", type: "Project" },
-    ],
-  },
-};
-
-const mockDocuments: Record<string, Document[]> = {
-  "1": [
-    {
-      id: "1",
-      name: "Course Syllabus",
-      type: "PDF",
-      size: "2.3 MB",
-      uploadDate: "Aug 15, 2024",
-      category: "Course Info",
-    },
-    {
-      id: "2",
-      name: "Lecture 1 - Introduction to Data Structures",
-      type: "PDF",
-      size: "5.1 MB",
-      uploadDate: "Aug 20, 2024",
-      category: "Lectures",
-    },
-    {
-      id: "3",
-      name: "Assignment 1 - Array Operations",
-      type: "PDF",
-      size: "1.8 MB",
-      uploadDate: "Aug 25, 2024",
-      category: "Assignments",
-    },
-    {
-      id: "4",
-      name: "Binary Tree Implementation",
-      type: "Code",
-      size: "15 KB",
-      uploadDate: "Sep 10, 2024",
-      category: "Code Examples",
-    },
-    {
-      id: "5",
-      name: "Midterm Study Guide",
-      type: "PDF",
-      size: "3.2 MB",
-      uploadDate: "Oct 1, 2024",
-      category: "Study Materials",
-    },
-    {
-      id: "6",
-      name: "Graph Algorithms Cheat Sheet",
-      type: "PDF",
-      size: "1.5 MB",
-      uploadDate: "Oct 15, 2024",
-      category: "Study Materials",
-    },
-  ],
-};
-
 export default function CoursePage() {
   const params = useParams();
   const courseId = params.id as string;
@@ -231,16 +114,26 @@ export default function CoursePage() {
   const deleteCourse = useMutation(api.courses.deleteCourse);
 
   const [activeSection, setActiveSection] = useState("overview");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [documentFilter, setDocumentFilter] = useState("all");
   const [isAddAssessmentOpen, setIsAddAssessmentOpen] = useState(false);
   const [deletingText, setDeletingText] = useState("");
 
-  const schedules = mockSchedules[courseId] || [];
-  const statistics = mockStatistics[courseId];
+  const dbSchedules =
+    useQuery(api.courses.getCourseSchedules, {
+      courseId: courseId as Id<"courses">,
+    }) || [];
+
+  const schedules: Schedule[] = dbSchedules.map((s) => ({
+    id: s._id,
+    day: s.dayOfWeek,
+    time: `${s.startTime} - ${s.endTime}`,
+    location: s.location || "TBD",
+    type: s.type.charAt(0).toUpperCase() + s.type.slice(1),
+    topic: s.notes || s.type,
+  }));
+
   const flashcards =
     useQuery(api.flashcards.getUserDecksByCourseId, {
-      courseId: params.id as Id<"courses">,
+      courseId: courseId as Id<"courses">,
       userId: user?._id as Id<"users">,
     }) || [];
 
@@ -250,22 +143,38 @@ export default function CoursePage() {
     (item) => item.courseId === courseId
   );
 
-  const documents = mockDocuments[courseId] || [];
-
   const assessments =
     useQuery(api.assessments.getAssessmentsByCourseId, {
       courseId: courseId as Id<"courses">,
       userId: user?._id as Id<"users">,
     }) || [];
+  const courseMaterialSummary = useQuery(
+    (api as any).courseDocuments.getCourseMaterialSummary,
+    user ? { userId: user._id, courseId: courseId as Id<"courses"> } : "skip"
+  );
 
-  const filteredDocuments = documents.filter((doc) => {
-    const matchesSearch = doc.name
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase());
-    const matchesFilter =
-      documentFilter === "all" || doc.category === documentFilter;
-    return matchesSearch && matchesFilter;
-  });
+  const { letterGrade: courseGrade } = calculateCourseGrade(assessments);
+  const completedAssessmentsCount = assessments.filter(
+    (a) => a.status === "graded"
+  ).length;
+
+  const upcomingDeadlines = assessments
+    .filter((a) => a.status === "upcoming" || a.status === "pending")
+    .map((a) => ({
+      title: a.name,
+      date: a.date,
+      type: a.type,
+    }));
+
+  const statistics: Statistics = {
+    attendance: 100,
+    assignments: {
+      completed: completedAssessmentsCount,
+      total: assessments.length,
+    },
+    grade: courseGrade,
+    upcomingDeadlines,
+  };
 
   const sections = [
     { id: "overview", label: "Overview", icon: BookOpen },
@@ -332,7 +241,41 @@ export default function CoursePage() {
   };
 
   if (!user || course === undefined) {
-    return <LoadingComponent />;
+    return (
+      <div className="min-h-screen bg-background p-6">
+        <div className="max-w-7xl mx-auto space-y-8">
+          <Skeleton className="h-8 w-36" />
+          <Card className="p-6">
+            <div className="flex justify-between items-start">
+              <div className="space-y-3">
+                <Skeleton className="h-10 w-64" />
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-4 w-80" />
+              </div>
+              <div className="flex gap-2">
+                <Skeleton className="h-9 w-20" />
+                <Skeleton className="h-9 w-20" />
+              </div>
+            </div>
+          </Card>
+          <div className="flex gap-2 border-b pb-2 overflow-x-auto">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <Skeleton key={i} className="h-9 w-28 shrink-0 rounded-lg" />
+            ))}
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Card className="p-6 space-y-4">
+              <Skeleton className="h-6 w-32" />
+              <Skeleton className="h-20 w-full" />
+            </Card>
+            <Card className="p-6 space-y-4 md:col-span-2">
+              <Skeleton className="h-6 w-48" />
+              <Skeleton className="h-32 w-full" />
+            </Card>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (!course) {
@@ -570,7 +513,7 @@ export default function CoursePage() {
                     Access course materials and resources
                   </p>
                   <Badge variant="secondary">
-                    {documents.length} documents
+                    {courseMaterialSummary?.total ?? 0} materials
                   </Badge>
                 </CardContent>
               </Card>
@@ -817,91 +760,10 @@ export default function CoursePage() {
           )}
 
           {sectionParams === "documents" && (
-            <div className="space-y-6">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <h2 className="text-2xl font-bold text-foreground">
-                  Course Documents
-                </h2>
-                <div className="flex gap-2">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                    <Input
-                      placeholder="Search documents..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10 w-64"
-                    />
-                  </div>
-                  <Select
-                    value={documentFilter}
-                    onValueChange={setDocumentFilter}
-                  >
-                    <SelectTrigger className="w-40">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Categories</SelectItem>
-                      <SelectItem value="Course Info">Course Info</SelectItem>
-                      <SelectItem value="Lectures">Lectures</SelectItem>
-                      <SelectItem value="Assignments">Assignments</SelectItem>
-                      <SelectItem value="Code Examples">
-                        Code Examples
-                      </SelectItem>
-                      <SelectItem value="Study Materials">
-                        Study Materials
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Button>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Upload
-                  </Button>
-                </div>
-              </div>
-
-              <div className="grid gap-4">
-                {filteredDocuments.length > 0 ? (
-                  filteredDocuments.map((doc) => (
-                    <Card
-                      key={doc.id}
-                      className="hover:shadow-lg transition-shadow"
-                    >
-                      <CardContent className="p-4">
-                        <div className="flex justify-between items-center">
-                          <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                              <FileText className="h-5 w-5 text-foreground" />
-                            </div>
-                            <div>
-                              <h3 className="font-semibold">{doc.name}</h3>
-                              <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                <span>{doc.type}</span>
-                                <span>•</span>
-                                <span>{doc.size}</span>
-                                <span>•</span>
-                                <span>{doc.uploadDate}</span>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline">{doc.category}</Badge>
-                            <Button variant="outline" size="sm">
-                              <Download className="h-4 w-4 mr-2" />
-                              Download
-                            </Button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))
-                ) : (
-                  <div className="text-center mt-20 flex flex-col justify-center gap-4 items-center">
-                    <IoDocumentTextOutline className="h-10 w-10" />
-                    <h4>No document found.</h4>
-                  </div>
-                )}
-              </div>
-            </div>
+            <CourseMaterialsPanel
+              courseId={courseId as Id<"courses">}
+              userId={user?._id as Id<"users"> | undefined}
+            />
           )}
 
           {sectionParams === "assessments" && (

@@ -26,6 +26,7 @@ import {
 import { useAuthToken } from "@convex-dev/auth/react";
 import { Id } from "@/convex/_generated/dataModel";
 import Link from "next/link";
+import { AITokenUsageCard } from "./ai-token-usage-card";
 
 interface UsageDashboardProps {
   userId: Id<"users">;
@@ -133,7 +134,6 @@ export function UsageDashboard({ userId }: UsageDashboardProps) {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="flex items-center gap-2">
-                <Zap className="w-5 h-5" />
                 Usage Dashboard
               </CardTitle>
               <CardDescription>
@@ -149,11 +149,6 @@ export function UsageDashboard({ userId }: UsageDashboardProps) {
                       ? "secondary"
                       : "outline"
                 }
-                className={
-                  isProTier
-                    ? "bg-gradient-to-r from-purple-500 to-pink-500"
-                    : ""
-                }
               >
                 {plan} Plan
               </Badge>
@@ -168,6 +163,9 @@ export function UsageDashboard({ userId }: UsageDashboardProps) {
           </div>
         </CardHeader>
       </Card>
+
+      {/* AI Token Usage Tracker */}
+      <AITokenUsageCard userId={userId.toString()} />
 
       {/* Usage Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -212,16 +210,16 @@ export function UsageDashboard({ userId }: UsageDashboardProps) {
                 </div>
 
                 {usageInfo.isAtLimit && (
-                  <div className="p-2 bg-red-50 border border-red-200 rounded-md">
-                    <p className="text-xs text-red-600 font-medium">
+                  <div className="p-2 bg-red-500/10 border border-red-500/20 rounded-md">
+                    <p className="text-xs text-red-600 dark:text-red-400 font-medium">
                       Limit reached! Upgrade to continue.
                     </p>
                   </div>
                 )}
 
                 {usageInfo.isNearLimit && !usageInfo.isAtLimit && (
-                  <div className="p-2 bg-yellow-50 border border-yellow-200 rounded-md">
-                    <p className="text-xs text-yellow-600 font-medium">
+                  <div className="p-2 bg-yellow-500/10 border border-yellow-500/20 rounded-md">
+                    <p className="text-xs text-yellow-600 dark:text-yellow-400 font-medium">
                       Approaching limit ({usageInfo.remaining} remaining)
                     </p>
                   </div>
@@ -232,93 +230,18 @@ export function UsageDashboard({ userId }: UsageDashboardProps) {
         })}
       </div>
 
-      {/* Plan Comparison */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Plan Comparison</CardTitle>
-          <CardDescription>
-            Compare features across different plans
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left p-2">Feature</th>
-                  <th className="text-center p-2">FREE</th>
-                  <th className="text-center p-2">STUDENT</th>
-                  <th className="text-center p-2">STUDENTPRO</th>
-                </tr>
-              </thead>
-              <tbody>
-                {features.map((feature) => {
-                  const freeLimit =
-                    limits.find(
-                      (l) => l.plan === "FREE" && l.feature === feature.key
-                    )?.limit || 0;
-                  const studentLimit =
-                    limits.find(
-                      (l) => l.plan === "STUDENT" && l.feature === feature.key
-                    )?.limit || 0;
-                  const proLimit =
-                    limits.find(
-                      (l) =>
-                        l.plan === "STUDENTPRO" && l.feature === feature.key
-                    )?.limit || 0;
-
-                  return (
-                    <tr key={feature.key} className="border-b">
-                      <td className="p-2 font-medium">{feature.name}</td>
-                      <td className="text-center p-2">
-                        <Badge
-                          variant={plan === "FREE" ? "default" : "outline"}
-                        >
-                          {freeLimit === -1 ? "∞" : freeLimit}
-                        </Badge>
-                      </td>
-                      <td className="text-center p-2">
-                        <Badge
-                          variant={plan === "STUDENT" ? "default" : "outline"}
-                        >
-                          {studentLimit === -1 ? "∞" : studentLimit}
-                        </Badge>
-                      </td>
-                      <td className="text-center p-2">
-                        <Badge
-                          variant={
-                            plan === "STUDENTPRO" ? "default" : "outline"
-                          }
-                        >
-                          {proLimit === -1 ? "∞" : proLimit}
-                        </Badge>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Upgrade CTA for Free Users */}
       {isFreeTier && (
-        <Card className="bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200">
+        <Card className="bg-card border-border">
           <CardHeader>
-            <CardTitle className="text-blue-900">
-              Ready to unlock more?
-            </CardTitle>
-            <CardDescription className="text-blue-700">
-              Upgrade to STUDENT or STUDENTPRO for unlimited access to all
-              features
+            <CardTitle>Ready to unlock more?</CardTitle>
+            <CardDescription>
+              Upgrade to STUDENT or STUDENTPRO for higher feature limits and unlimited access
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Link href="/dashboard/pricing">
-              <Button className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600">
-                View Pricing Plans
-              </Button>
+              <Button>View Pricing Plans</Button>
             </Link>
           </CardContent>
         </Card>

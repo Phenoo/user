@@ -8,27 +8,60 @@ import { ArrowRight, Home } from "lucide-react";
 import Link from "next/link";
 import { CiCircleCheck } from "react-icons/ci";
 
+import { useMutation, useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+
 export default function CheckoutSuccessPage() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("session_id");
+  const userIdParam = searchParams.get("user_id");
   const [isLoading, setIsLoading] = useState(true);
   const [sessionData, setSessionData] = useState<any>(null);
 
+  const currentUser = useQuery(api.users.currentUser);
+  const updateUserSub = useMutation(api.users.updateUserSubscription);
+
   useEffect(() => {
-    if (sessionId) {
-      // For now, we'll just simulate success
-      setTimeout(() => {
-        setSessionData({
-          customer_email: "user@example.com",
-          amount_total: 999,
-          currency: "usd",
-        });
-        setIsLoading(false);
-      }, 1000);
-    } else {
-      setIsLoading(false);
+    let isMounted = true;
+
+    async function syncPaymentStatus() {
+      if (currentUser || userIdParam) {
+        const targetUserId = currentUser?._id || userIdParam;
+        if (targetUserId) {
+          try {
+            await updateUserSub({
+              userId: targetUserId as string,
+              status: "active",
+              tier: "Starter",
+              plan: "STUDENT",
+            });
+          } catch (e) {
+            console.error("Failed to update user subscription status on success page:", e);
+          }
+        }
+        if (isMounted) {
+          setSessionData({
+            customer_email: currentUser?.email || "your account",
+            amount_total: 500,
+            currency: "usd",
+          });
+          setIsLoading(false);
+        }
+      } else {
+        // Wait briefly for auth query
+        const timer = setTimeout(() => {
+          if (isMounted) setIsLoading(false);
+        }, 2000);
+        return () => clearTimeout(timer);
+      }
     }
-  }, [sessionId]);
+
+    syncPaymentStatus();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [currentUser, userIdParam, sessionId]);
 
   if (isLoading) {
     return (

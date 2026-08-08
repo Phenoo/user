@@ -25,8 +25,9 @@ export const PLANS: PLAN[] = [
     features: [
       "Task manager & to-do lists",
       "Basic study planner",
-      "2 subjects/courses",
-      "Daily reminders",
+      "1 subject/course limit",
+      "2 flashcard decks",
+      "3 AI generations",
       "Mobile & web sync",
       "Light mode/dark mode",
       "Community support",

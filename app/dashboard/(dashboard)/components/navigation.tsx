@@ -49,6 +49,8 @@ export function Navigation() {
           <Link
             key={item.name}
             href={item.link}
+            aria-label={item.name}
+            aria-current={isActive ? "page" : undefined}
             className={cn(
               "relative flex items-center gap-1 px-4 py-2 rounded-3xl text-sm font-medium transition-colors duration-200 ease-in-out",
               isActive

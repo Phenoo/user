@@ -29,7 +29,7 @@ export default async function RootLayout({
   return (
     <ConvexAuthNextjsServerProvider>
       <html lang="en" suppressHydrationWarning>
-        <body className={`antialiased ${urbanist.className} `}>
+        <body className={`antialiased ${urbanist.className} `} suppressHydrationWarning>
           <ConvexClientProvider>
             <NextIntlClientProvider>
               <ThemeProvider

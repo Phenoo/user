@@ -16,7 +16,8 @@ async function getCalendarData() {
 }
 
 export function Calendar() {
-  const events = useQuery(api.events.list) || [];
+  const events = useQuery(api.events.list, {}) || [];
+
 
   return (
     <CalendarProvider events={events} users={[]} view="month">

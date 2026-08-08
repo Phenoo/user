@@ -11,6 +11,9 @@ export const create = mutation({
     ),
     duration: v.number(),
     userId: v.id("users"),
+    topicId: v.optional(v.id("courseTopics")),
+    studyPlanItemId: v.optional(v.id("studyPlanItems")),
+    assignmentId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const sessionId = await ctx.db.insert("pomodoroSessions", {
@@ -19,6 +22,9 @@ export const create = mutation({
       duration: args.duration,
       completedAt: Date.now(),
       userId: args.userId,
+      topicId: args.topicId,
+      studyPlanItemId: args.studyPlanItemId,
+      assignmentId: args.assignmentId,
     });
     return sessionId;
   },

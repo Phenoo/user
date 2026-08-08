@@ -121,6 +121,12 @@ const HeaderComponent = () => {
                     Billing
                     <DropdownMenuShortcut>⌘B</DropdownMenuShortcut>
                   </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => router.push("/dashboard/usage")}
+                  >
+                    Usage & AI Tokens
+                    <DropdownMenuShortcut>⌘U</DropdownMenuShortcut>
+                  </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
 

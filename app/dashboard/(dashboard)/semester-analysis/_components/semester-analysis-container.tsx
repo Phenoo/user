@@ -48,6 +48,7 @@ import { Id } from "@/convex/_generated/dataModel";
 import { cn } from "@/lib/utils";
 import { BsArrowUpRight } from "react-icons/bs";
 import { Loader } from "@/components/ai-elements/loader";
+import { Skeleton } from "@/components/ui/skeleton";
 import { calculateCourseGrade } from "@/lib/gpa-utils";
 import { Course } from "../../courses/_components/courses-container";
 import {
@@ -280,7 +281,35 @@ const SemesterAnalysisPageContainer = () => {
 
   // Loading state
   if (!user || courses === undefined || assessments === undefined) {
-    return <Loader />;
+    return (
+      <div className="min-h-screen">
+        <div className="container mx-auto px-4 py-8 space-y-6">
+          <Skeleton className="h-8 w-32" />
+          <div className="flex justify-between items-center">
+            <div className="space-y-2">
+              <Skeleton className="h-9 w-64" />
+              <Skeleton className="h-4 w-80" />
+            </div>
+            <div className="flex gap-2">
+              <Skeleton className="h-10 w-28" />
+              <Skeleton className="h-10 w-28" />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[1, 2, 3, 4].map((i) => (
+              <Card key={i} className="p-4 space-y-2">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-8 w-20" />
+                <Skeleton className="h-3 w-24" />
+              </Card>
+            ))}
+          </div>
+          <Card className="p-6">
+            <Skeleton className="h-64 w-full" />
+          </Card>
+        </div>
+      </div>
+    );
   }
 
   return (

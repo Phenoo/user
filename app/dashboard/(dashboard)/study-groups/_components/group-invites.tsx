@@ -49,7 +49,7 @@ export default function GroupInvites({
 
   const handleGenerateInvite = async () => {
     try {
-      await generateInvite({ groupId: studyGroupId });
+      await generateInvite({ groupId: studyGroupId, userId });
       toast.success("Invite link generated!");
     } catch (error) {
       toast.error("Failed to generate invite link");
@@ -208,7 +208,7 @@ export function PendingInvites({ userId }: PendingInvitesProps) {
 
   const handleDecline = async (inviteId: Id<"friendInvites">) => {
     try {
-      await declineInvite({ inviteId });
+      await declineInvite({ inviteId, userId });
       toast.success("Invite declined");
     } catch (error) {
       toast.error("Failed to decline invite");
