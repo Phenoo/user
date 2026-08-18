@@ -50,7 +50,9 @@ export async function GET(request: NextRequest) {
       client_id: clientId,
       redirect_uri: redirectUri,
       response_type: "code",
-      response_mode: "query",
+      // Keep the authorization code out of the browser URL and receive the
+      // complete OAuth response in the callback POST body.
+      response_mode: "form_post",
       scope: scopesToRequest.join(" "),
       access_type: "offline",
       include_granted_scopes: "true",

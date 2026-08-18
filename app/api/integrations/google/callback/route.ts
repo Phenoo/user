@@ -5,12 +5,14 @@ import { fetchMutation } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 
-export async function GET(request: NextRequest) {
+async function handleGoogleCallback(
+  request: NextRequest,
+  searchParams: URLSearchParams
+) {
   const requestOrigin = new URL(request.url).origin;
   const appUrl = requestOrigin;
 
   try {
-    const { searchParams } = new URL(request.url);
     const code = searchParams.get("code");
     const error = searchParams.get("error");
     const stateParam = searchParams.get("state");
@@ -27,6 +29,7 @@ export async function GET(request: NextRequest) {
         hasCode: Boolean(code),
         hasState: Boolean(stateParam),
         error,
+        responseKeys: Array.from(searchParams.keys()).sort(),
       });
       return NextResponse.redirect(
         `${appUrl}/dashboard?error=invalid_callback_request`
@@ -135,4 +138,21 @@ export async function GET(request: NextRequest) {
       `${appUrl}/dashboard?error=callback_processing_error`
     );
   }
+}
+
+export async function GET(request: NextRequest) {
+  return handleGoogleCallback(request, new URL(request.url).searchParams);
+}
+
+export async function POST(request: NextRequest) {
+  const formData = await request.formData();
+  const searchParams = new URLSearchParams();
+
+  for (const [key, value] of formData.entries()) {
+    if (typeof value === "string") {
+      searchParams.set(key, value);
+    }
+  }
+
+  return handleGoogleCallback(request, searchParams);
 }
