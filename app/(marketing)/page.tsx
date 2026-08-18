@@ -8,10 +8,8 @@ import Hero from "@/components/marketing/hero";
 import Integration from "@/components/marketing/integration";
 import LanguageSupport from "@/components/marketing/lang-support";
 import Pricing from "@/components/pricing";
-import { api } from "@/lib/polar";
 
-const HomePage = async () => {
-  const products = await api.products.list({ isArchived: false });
+const HomePage = () => {
 
   return (
     <Wrapper className="py-20 relative">

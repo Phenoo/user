@@ -1,6 +1,5 @@
 import Logo from "@/components/logo";
 import Pricing from "@/components/pricing";
-import { api } from "@/lib/polar";
 
 import type { Metadata } from "next";
 
