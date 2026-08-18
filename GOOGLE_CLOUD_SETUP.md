@@ -56,17 +56,37 @@ Navigate to **APIs & Services > Credentials**:
 
 ### Authorized JavaScript Origins
 - Development: `http://localhost:3000`
-- Production: `https://your-domain.com`
+- Production: `https://usoro.app`, `https://www.usoro.app`
+- Convex Site: `https://<YOUR-CONVEX-DEPLOYMENT>.convex.site`
 
 ### Authorized Redirect URIs
-- Development: `http://localhost:3000/api/integrations/google/callback`
-- Production: `https://your-domain.com/api/integrations/google/callback`
+Add both the **Convex Auth** callback URI (for login/signup) and the **Academic Integrations** callback URI:
+1. **Convex Auth Sign-In Callbacks (Required for Login with Google)**:
+   - Development: `https://<YOUR-DEV-CONVEX-DEPLOYMENT>.convex.site/api/auth/callback/google`
+   - Production: `https://<YOUR-PROD-CONVEX-DEPLOYMENT>.convex.site/api/auth/callback/google`
+2. **Academic Integration Callbacks (Classroom / Drive / Calendar sync in Settings)**:
+   - Development: `http://localhost:3000/api/integrations/google/callback`
+   - Production: `https://usoro.app/api/integrations/google/callback`
 
-Copy the generated **Client ID** and **Client Secret** into your `.env.local` file:
+Copy the generated **Client ID** and **Client Secret**:
+
+#### A. Set in your Frontend Hosting (.env.local / Vercel):
 ```env
+NEXT_PUBLIC_APP_URL="https://usoro.app"
+NEXT_PUBLIC_CONVEX_URL="https://<YOUR-PROD-DEPLOYMENT>.convex.cloud"
 NEXT_PUBLIC_GOOGLE_CLIENT_ID="xxx.apps.googleusercontent.com"
 GOOGLE_CLIENT_SECRET="GOCSPX-xxx"
-NEXT_PUBLIC_GOOGLE_REDIRECT_URI="http://localhost:3000/api/integrations/google/callback"
+NEXT_PUBLIC_GOOGLE_REDIRECT_URI="https://usoro.app/api/integrations/google/callback"
+```
+
+#### B. Set in Convex Production Dashboard (Settings > Environment Variables) or via CLI:
+```bash
+# Required for Convex Auth to redirect back to usoro.app after sign in
+npx convex env set --prod SITE_URL "https://usoro.app"
+
+# Required for Google provider in Convex Auth
+npx convex env set --prod NEXT_PUBLIC_GOOGLE_CLIENT_ID "xxx.apps.googleusercontent.com"
+npx convex env set --prod GOOGLE_CLIENT_SECRET "GOCSPX-xxx"
 ```
 
 ---
