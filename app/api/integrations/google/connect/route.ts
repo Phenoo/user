@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
       response_type: "code",
       // Keep the authorization code out of the browser URL and receive the
       // complete OAuth response in the callback POST body.
-      response_mode: "form_post",
+      response_mode: process.env.NODE_ENV === "production" ? "form_post" : "query",
       scope: scopesToRequest.join(" "),
       access_type: "offline",
       include_granted_scopes: "true",
@@ -67,7 +67,10 @@ export async function GET(request: NextRequest) {
     response.cookies.set("google_oauth_nonce", nonce, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
+      // Google submits the production callback cross-site via POST. Lax
+      // cookies are excluded from that request, so production needs None.
+      // Local development uses query mode and can safely keep Lax.
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       maxAge: 15 * 60, // 15 mins
       path: "/",
     });
