@@ -10,6 +10,7 @@
 
 import type * as ResendOTP from "../ResendOTP.js";
 import type * as ResendOTPPasswordReset from "../ResendOTPPasswordReset.js";
+import type * as aiRequests from "../aiRequests.js";
 import type * as aiSuggestions from "../aiSuggestions.js";
 import type * as aiTokenUsage from "../aiTokenUsage.js";
 import type * as analytics from "../analytics.js";
@@ -17,17 +18,20 @@ import type * as assessments from "../assessments.js";
 import type * as assignments from "../assignments.js";
 import type * as auth from "../auth.js";
 import type * as conversations from "../conversations.js";
+import type * as courseDocuments from "../courseDocuments.js";
 import type * as courses from "../courses.js";
 import type * as events from "../events.js";
 import type * as featureLimits from "../featureLimits.js";
 import type * as flashcards from "../flashcards.js";
 import type * as generatedContent from "../generatedContent.js";
 import type * as http from "../http.js";
+import type * as integrations from "../integrations.js";
 import type * as messages from "../messages.js";
 import type * as seedFeatureLimits from "../seedFeatureLimits.js";
 import type * as sessions from "../sessions.js";
 import type * as settings from "../settings.js";
 import type * as studyGroups from "../studyGroups.js";
+import type * as studyPlanner from "../studyPlanner.js";
 import type * as subscriptions from "../subscriptions.js";
 import type * as tasks from "../tasks.js";
 import type * as usageTracking from "../usageTracking.js";
@@ -50,6 +54,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   ResendOTP: typeof ResendOTP;
   ResendOTPPasswordReset: typeof ResendOTPPasswordReset;
+  aiRequests: typeof aiRequests;
   aiSuggestions: typeof aiSuggestions;
   aiTokenUsage: typeof aiTokenUsage;
   analytics: typeof analytics;
@@ -57,17 +62,20 @@ declare const fullApi: ApiFromModules<{
   assignments: typeof assignments;
   auth: typeof auth;
   conversations: typeof conversations;
+  courseDocuments: typeof courseDocuments;
   courses: typeof courses;
   events: typeof events;
   featureLimits: typeof featureLimits;
   flashcards: typeof flashcards;
   generatedContent: typeof generatedContent;
   http: typeof http;
+  integrations: typeof integrations;
   messages: typeof messages;
   seedFeatureLimits: typeof seedFeatureLimits;
   sessions: typeof sessions;
   settings: typeof settings;
   studyGroups: typeof studyGroups;
+  studyPlanner: typeof studyPlanner;
   subscriptions: typeof subscriptions;
   tasks: typeof tasks;
   usageTracking: typeof usageTracking;

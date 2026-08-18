@@ -500,15 +500,15 @@ export const syncPlanItemToGoogleCalendar = action({
   args: {
     studyPlanItemId: v.id("studyPlanItems"),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<any> => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity?.accessToken) {
       throw new Error("Google Calendar access is not available for this account.");
     }
 
-    const item = await ctx.runQuery((api as any).studyPlanner.getPlanItemForSync, {
+    const item = await ctx.runQuery(api.studyPlanner.getPlanItemForSync, {
       studyPlanItemId: args.studyPlanItemId,
-    } as any);
+    });
 
     if (!item) {
       throw new Error("Study plan item not found.");
@@ -535,13 +535,13 @@ export const syncPlanItemToGoogleCalendar = action({
       }
     );
 
-    const result = await response.json();
+    const result = (await response.json()) as any;
 
     if (!response.ok) {
       throw new Error(result?.error?.message || "Google Calendar sync failed.");
     }
 
-    await ctx.runMutation((api as any).integrations.upsertConnectedAccount as any, {
+    await ctx.runMutation(api.integrations.upsertConnectedAccount, {
       userId: item.userId,
       provider: "google-calendar",
       scopes: ["https://www.googleapis.com/auth/calendar"],
@@ -551,7 +551,7 @@ export const syncPlanItemToGoogleCalendar = action({
       },
     });
 
-    await ctx.runMutation((api as any).integrations.recordSync as any, {
+    await ctx.runMutation(api.integrations.recordSync, {
       userId: item.userId,
       provider: "google-calendar",
       type: "study-plan-item",
