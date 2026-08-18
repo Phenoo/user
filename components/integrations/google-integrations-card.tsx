@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, AlertCircle, RefreshCw, FolderOpen, Calendar, BookOpen, ExternalLink, ShieldCheck } from "lucide-react";
 import { GooglePicker } from "./google-picker";
 import { toast } from "sonner";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 
 interface GoogleIntegrationsCardProps {
   classroomStatus?: "connected" | "disconnected" | "needs_reauth";
@@ -20,9 +22,11 @@ export function GoogleIntegrationsCard({
   calendarStatus = "disconnected",
 }: GoogleIntegrationsCardProps) {
   const [isSyncingClassroom, setIsSyncingClassroom] = useState(false);
+  const user = useQuery(api.users.currentUser);
 
   const handleConnect = (integration: "classroom" | "drive" | "calendar") => {
-    window.location.href = `/api/integrations/google/connect?integration=${integration}`;
+    const userId = user?._id ? `&userId=${encodeURIComponent(user._id)}` : "";
+    window.location.href = `/api/integrations/google/connect?integration=${integration}${userId}`;
   };
 
   const handleSyncClassroom = async () => {

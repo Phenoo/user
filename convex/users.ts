@@ -249,3 +249,30 @@ export const getUserProfile = action({
     return profileData;
   },
 });
+
+export const cleanupOrphanedAuthAccounts = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const accounts = await ctx.db.query("authAccounts").collect();
+    let cleanedAccounts = 0;
+    for (const account of accounts) {
+      const user = await ctx.db.get(account.userId);
+      if (!user) {
+        await ctx.db.delete(account._id);
+        cleanedAccounts++;
+      }
+    }
+
+    const sessions = await ctx.db.query("authSessions").collect();
+    let cleanedSessions = 0;
+    for (const session of sessions) {
+      const user = await ctx.db.get(session.userId);
+      if (!user) {
+        await ctx.db.delete(session._id);
+        cleanedSessions++;
+      }
+    }
+
+    return { cleanedAccounts, cleanedSessions };
+  },
+});

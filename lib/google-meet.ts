@@ -364,14 +364,33 @@ export class GoogleMeetService {
 }
 
 // Utility function to create a Google Meet service instance
-export function createGoogleMeetService(): GoogleMeetService {
+export function createGoogleMeetService(
+  overrides: Partial<GoogleMeetConfig> = {}
+): GoogleMeetService {
   const config: GoogleMeetConfig = {
     clientId: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "",
     clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
     redirectUri:
       process.env.NEXT_PUBLIC_GOOGLE_REDIRECT_URI ||
-      `${process.env.NEXT_PUBLIC_APP_URL}/api/google-meet/callback`,
+      `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/google-meet/callback`,
+    ...overrides,
   };
 
   return new GoogleMeetService(config);
+}
+
+/** Resolve the redirect used by the Google academic-integration OAuth flow. */
+export function getGoogleIntegrationRedirectUri(origin?: string): string {
+  const explicit = process.env.NEXT_PUBLIC_GOOGLE_INTEGRATION_REDIRECT_URI;
+  if (explicit) return explicit;
+
+  // The request origin is authoritative for this OAuth round-trip. This also
+  // prevents a production NEXT_PUBLIC_APP_URL from hijacking localhost dev.
+  if (origin) return `${origin.replace(/\/$/, "")}/api/integrations/google/callback`;
+
+  const configured = process.env.NEXT_PUBLIC_GOOGLE_REDIRECT_URI;
+  if (configured?.includes("/api/integrations/google/callback")) return configured;
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || origin || "http://localhost:3000";
+  return `${appUrl.replace(/\/$/, "")}/api/integrations/google/callback`;
 }

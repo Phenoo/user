@@ -2,11 +2,13 @@ import { type NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { getRequiredGoogleScopes, GoogleIntegrationType } from "@/lib/integrations/google/scopes";
 import { signOAuthState } from "@/lib/integrations/google/state";
+import { getGoogleIntegrationRedirectUri } from "@/lib/google-meet";
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const integrationParam = searchParams.get("integration");
+    const userId = searchParams.get("userId") || undefined;
 
     if (!integrationParam || !["classroom", "drive", "calendar"].includes(integrationParam)) {
       return NextResponse.json(
@@ -19,9 +21,7 @@ export async function GET(request: NextRequest) {
     const requiredScopes = getRequiredGoogleScopes(integration);
 
     const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-    const redirectUri =
-      process.env.NEXT_PUBLIC_GOOGLE_REDIRECT_URI ||
-      `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/integrations/google/callback`;
+    const redirectUri = getGoogleIntegrationRedirectUri(new URL(request.url).origin);
 
     if (!clientId) {
       return NextResponse.json(
@@ -30,12 +30,13 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Cryptographic CSRF state
+    // Cryptographic CSRF state including userId
     const nonce = crypto.randomBytes(16).toString("hex");
     const state = signOAuthState({
       integration,
       nonce,
       timestamp: Date.now(),
+      userId,
     });
 
     const scopesToRequest = [
@@ -49,6 +50,7 @@ export async function GET(request: NextRequest) {
       client_id: clientId,
       redirect_uri: redirectUri,
       response_type: "code",
+      response_mode: "query",
       scope: scopesToRequest.join(" "),
       access_type: "offline",
       include_granted_scopes: "true",

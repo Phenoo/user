@@ -1,9 +1,13 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { verifyOAuthState } from "@/lib/integrations/google/state";
-import { createGoogleMeetService } from "@/lib/google-meet";
+import { createGoogleMeetService, getGoogleIntegrationRedirectUri } from "@/lib/google-meet";
+import { fetchMutation } from "convex/nextjs";
+import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
 
 export async function GET(request: NextRequest) {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const requestOrigin = new URL(request.url).origin;
+  const appUrl = requestOrigin;
 
   try {
     const { searchParams } = new URL(request.url);
@@ -14,13 +18,18 @@ export async function GET(request: NextRequest) {
     if (error) {
       console.warn("[GoogleCallback] User declined authorization or Google returned error:", error);
       return NextResponse.redirect(
-        `${appUrl}/dashboard/settings?error=${encodeURIComponent(error)}`
+        `${appUrl}/dashboard?error=${encodeURIComponent(error)}`
       );
     }
 
     if (!code || !stateParam) {
+      console.error("[GoogleCallback] Missing authorization code or state", {
+        hasCode: Boolean(code),
+        hasState: Boolean(stateParam),
+        error,
+      });
       return NextResponse.redirect(
-        `${appUrl}/dashboard/settings?error=invalid_callback_request`
+        `${appUrl}/dashboard?error=invalid_callback_request`
       );
     }
 
@@ -31,18 +40,22 @@ export async function GET(request: NextRequest) {
     if (!stateData || !storedNonce || stateData.nonce !== storedNonce) {
       console.error("[GoogleCallback] Invalid state or CSRF mismatch");
       return NextResponse.redirect(
-        `${appUrl}/dashboard/settings?error=csrf_validation_failed`
+        `${appUrl}/dashboard?error=csrf_validation_failed`
       );
     }
 
-    const { integration } = stateData;
+    const { integration, userId } = stateData;
 
     // 2. Exchange authorization code server-side
-    const service = createGoogleMeetService();
+    const service = createGoogleMeetService({
+      redirectUri: getGoogleIntegrationRedirectUri(new URL(request.url).origin),
+    });
     const tokenDetails = await service.exchangeCodeForTokenDetails(code);
 
     // 3. Inspect granted scopes from Google TokenInfo
     let grantedScopes: string[] = [];
+    let accountEmail: string | undefined;
+
     try {
       const tokenInfoRes = await fetch(
         `https://oauth2.googleapis.com/tokeninfo?access_token=${tokenDetails.accessToken}`
@@ -51,6 +64,9 @@ export async function GET(request: NextRequest) {
         const tokenInfo = await tokenInfoRes.json();
         if (tokenInfo.scope) {
           grantedScopes = tokenInfo.scope.split(" ");
+        }
+        if (tokenInfo.email) {
+          accountEmail = tokenInfo.email;
         }
       }
     } catch (infoErr) {
@@ -61,11 +77,36 @@ export async function GET(request: NextRequest) {
     const existingRefreshToken = request.cookies.get("google_meet_refresh_token")?.value;
     const finalRefreshToken = tokenDetails.refreshToken || existingRefreshToken;
 
-    // 5. Build response redirect back to settings
-    const redirectUrl = `${appUrl}/dashboard/settings?connected=${integration}&status=success`;
+    // 5. Save connected account to Convex database
+    if (userId) {
+      try {
+        const providerName: "google-calendar" | "google-drive" | "google-classroom" =
+          integration === "classroom"
+            ? "google-classroom"
+            : integration === "drive"
+            ? "google-drive"
+            : "google-calendar";
+
+        await fetchMutation(api.integrations.upsertConnectedAccount, {
+          userId: userId as Id<"users">,
+          provider: providerName,
+          email: accountEmail,
+          scopes: grantedScopes,
+          status: "connected",
+          accessToken: tokenDetails.accessToken,
+          refreshToken: finalRefreshToken,
+          expiresAt: tokenDetails.expiresAt,
+        });
+      } catch (convexErr) {
+        console.error("[GoogleCallback] Error saving connected account to Convex:", convexErr);
+      }
+    }
+
+    // 6. Build response redirect back to dashboard
+    const redirectUrl = `${appUrl}/dashboard?connected=${integration}&status=success`;
     const response = NextResponse.redirect(redirectUrl);
 
-    // 6. Store tokens securely in server httpOnly cookies
+    // 7. Store tokens securely in server httpOnly cookies
     response.cookies.set("google_meet_token", tokenDetails.accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -81,7 +122,7 @@ export async function GET(request: NextRequest) {
         sameSite: "lax",
         maxAge: 30 * 24 * 60 * 60, // 30 days
         path: "/",
-      })
+      });
     }
 
     // Clear state nonce cookie
@@ -91,7 +132,7 @@ export async function GET(request: NextRequest) {
   } catch (err: any) {
     console.error("[GoogleCallback] Unhandled error during OAuth callback:", err);
     return NextResponse.redirect(
-      `${appUrl}/dashboard/settings?error=callback_processing_error`
+      `${appUrl}/dashboard?error=callback_processing_error`
     );
   }
 }
