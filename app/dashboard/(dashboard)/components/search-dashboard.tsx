@@ -58,7 +58,7 @@ export function SearchDashboard({
 
     document.addEventListener("keydown", down);
     return () => document.removeEventListener("keydown", down);
-  }, []);
+  }, [setOpen]);
 
   const handleSelect = (callback: () => void) => {
     setOpen(false);

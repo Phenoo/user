@@ -25,7 +25,7 @@ import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { CountryDropdown } from "@/components/country-dropdown";
 import { Checkbox } from "@/components/ui/checkbox";
-import { universities_data } from "../../list-universities";
+import { universities_data } from "@/constants/list-universities";
 import LoadingComponent from "@/components/loader";
 
 import { countries } from "country-data-list";

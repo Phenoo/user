@@ -22,7 +22,7 @@ interface PomodoroContextType {
   totalTime: number
   isMinimized: boolean
   setSessionType: (type: SessionType) => void
-  setTimeLeft: (time: number) => void
+  setTimeLeft: React.Dispatch<React.SetStateAction<number>>
   setIsRunning: (running: boolean) => void
   setCompletedSessions: (sessions: number) => void
   setSelectedCourse: (course: string) => void

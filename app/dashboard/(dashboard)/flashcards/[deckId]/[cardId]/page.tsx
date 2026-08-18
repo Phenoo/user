@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useState } from "react";
+import Image from "next/image";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -357,10 +358,12 @@ export default function CardPage({
                       dangerouslySetInnerHTML={{ __html: card.front }}
                     />
                     {card.imageUrl && (
-                      <img
+                      <Image
                         src={card.imageUrl || "/placeholder.svg"}
                         alt="Card visual"
-                        className="max-w-full h-auto rounded-lg mx-auto"
+                        width={400}
+                        height={240}
+                        className="max-w-full h-auto rounded-lg mx-auto object-contain"
                       />
                     )}
                     <p className="text-sm text-muted-foreground">

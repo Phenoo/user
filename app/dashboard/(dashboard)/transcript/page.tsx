@@ -79,81 +79,17 @@ export default function TranscriptPage() {
 
   const transcriptRef = useRef<HTMLDivElement>(null);
 
-  // Screenshot protection
+  // Sync student info when user data loads from Convex
   useEffect(() => {
-    const preventScreenshot = (e: KeyboardEvent) => {
-      // Prevent common screenshot shortcuts
-      if (
-        (e.ctrlKey || e.metaKey) &&
-        (e.key === "PrintScreen" || e.key === "F12" || e.key === "F11")
-      ) {
-        e.preventDefault();
-        e.stopPropagation();
-        return false;
-      }
-
-      // Prevent Alt + PrintScreen
-      if (e.altKey && e.key === "PrintScreen") {
-        e.preventDefault();
-        e.stopPropagation();
-        return false;
-      }
-    };
-
-    const preventContextMenu = (e: MouseEvent) => {
-      e.preventDefault();
-      return false;
-    };
-
-    const preventDragStart = (e: DragEvent) => {
-      e.preventDefault();
-      return false;
-    };
-
-    const preventSelectStart = (e: Event) => {
-      e.preventDefault();
-      return false;
-    };
-
-    // Developer tools detection
-    const detectDevTools = () => {
-      const threshold = 160;
-      if (
-        window.outerHeight - window.innerHeight > threshold ||
-        window.outerWidth - window.innerWidth > threshold
-      ) {
-        // Developer tools detected - blur the content
-        if (transcriptRef.current) {
-          transcriptRef.current.style.filter = "blur(10px)";
-          transcriptRef.current.style.pointerEvents = "none";
-        }
-      } else {
-        // Developer tools closed - restore content
-        if (transcriptRef.current) {
-          transcriptRef.current.style.filter = "none";
-          transcriptRef.current.style.pointerEvents = "auto";
-        }
-      }
-    };
-
-    // Add event listeners
-    document.addEventListener("keydown", preventScreenshot, true);
-    document.addEventListener("contextmenu", preventContextMenu, true);
-    document.addEventListener("dragstart", preventDragStart, true);
-    document.addEventListener("selectstart", preventSelectStart, true);
-
-    // Monitor for developer tools
-    const interval = setInterval(detectDevTools, 500);
-
-    // Cleanup
-    return () => {
-      document.removeEventListener("keydown", preventScreenshot, true);
-      document.removeEventListener("contextmenu", preventContextMenu, true);
-      document.removeEventListener("dragstart", preventDragStart, true);
-      document.removeEventListener("selectstart", preventSelectStart, true);
-      clearInterval(interval);
-    };
-  }, []);
+    if (user) {
+      setStudentInfo((prev) => ({
+        ...prev,
+        name: user.name || prev.name,
+        major: user.major || prev.major,
+        university: user.school || prev.university,
+      }));
+    }
+  }, [user]);
 
   const coursesWithGrades: CourseWithGrade[] = courses.map((course) => {
     const courseAssessments = assessments.filter(

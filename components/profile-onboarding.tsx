@@ -31,7 +31,7 @@ import { api } from "@/convex/_generated/api";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
 import { CountryDropdown } from "./country-dropdown";
-import { universities_data } from "@/app/dashboard/(dashboard)/list-universities";
+import { universities_data } from "@/constants/list-universities";
 import { BirthdayDrawerOnboarding } from "@/app/dashboard/onboarding/_components/birthday-drawer";
 
 const TOTAL_STEPS = 5;

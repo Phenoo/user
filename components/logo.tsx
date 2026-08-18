@@ -23,21 +23,16 @@ const Logo = () => {
 
   const isDarkMode = resolvedTheme === "dark";
   return (
-    <Link href={!isAuthenticated ? "/" : "/dashboard"}>
-      <div className="backdrop-blur-md  bg-transparent h-16 flex justify-center items-center overflow-hidden w-fit rounded-3xl p-1">
-        {isDarkMode ? (
-          <img
-            src={"/mainlogo.svg"}
-            alt="logo"
-            className="object-cover h-16 w-28"
-          />
-        ) : (
-          <img
-            src={"/mainlogo-dark.svg"}
-            alt="logo"
-            className="object-cover h-16 w-28"
-          />
-        )}
+    <Link href={!isAuthenticated ? "/" : "/dashboard"} className="inline-flex items-center">
+      <div className="backdrop-blur-md bg-transparent h-16 flex justify-center items-center overflow-hidden w-fit rounded-3xl p-1">
+        <Image
+          src={isDarkMode ? "/mainlogo.svg" : "/mainlogo-dark.svg"}
+          alt="StudentApp Logo"
+          width={112}
+          height={64}
+          priority
+          className="object-contain h-16 w-28"
+        />
       </div>
     </Link>
   );

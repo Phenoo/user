@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -45,11 +45,14 @@ export function YouTubeSection({
   });
 
   // Handle video search and filtering with debouncing
-  const handleVideoSearch = async (query: string) => {
-    if (query.trim()) {
-      await searchYouTubeVideos(query);
-    }
-  };
+  const handleVideoSearch = useCallback(
+    async (query: string) => {
+      if (query.trim()) {
+        await searchYouTubeVideos(query);
+      }
+    },
+    [searchYouTubeVideos]
+  );
 
   // Debounced search effect
   useEffect(() => {
@@ -68,7 +71,7 @@ export function YouTubeSection({
         clearTimeout(searchTimeoutRef.current);
       }
     };
-  }, [searchTerm]);
+  }, [searchTerm, handleVideoSearch]);
 
   const filteredVideos = youtubeVideos.filter((video) => {
     const matchesSearch =
