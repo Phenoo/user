@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -28,15 +29,21 @@ export function YouTubeVideoCard({
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return "";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
+    return new Date(dateString).toLocaleDateString();
   };
 
-  const getRelevanceColor = (relevance: string) => {
+  const formatViewCount = (count?: number) => {
+    if (!count) return "";
+    if (count >= 1000000) {
+      return `${(count / 1000000).toFixed(1)}M`;
+    }
+    if (count >= 1000) {
+      return `${(count / 1000).toFixed(1)}K`;
+    }
+    return count.toString();
+  };
+
+  const getRelevanceColor = (relevance?: string) => {
     switch (relevance) {
       case "Highly Relevant":
         return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
@@ -53,12 +60,13 @@ export function YouTubeVideoCard({
     <Card className={`hover:shadow-lg transition-shadow ${className}`}>
       <CardContent className="p-0">
         {/* Video Thumbnail */}
-        <div className="aspect-video relative group">
-          <img
+        <div className="aspect-video relative group overflow-hidden rounded-t-lg">
+          <Image
             src={video.thumbnail || "/placeholder.jpg"}
             alt={video.title}
-            className="w-full h-full object-cover rounded-t-lg"
-            loading="lazy"
+            fill
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            className="w-full h-full object-cover"
           />
 
           {/* Play Button Overlay */}

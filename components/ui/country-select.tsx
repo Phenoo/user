@@ -44,7 +44,7 @@ function CountrySelect({
     setCountries(
       filterCountries(countryRegionData, priorityOptions, whitelist, blacklist)
     );
-  }, [countryRegionData, priorityOptions, whitelist, blacklist]);
+  }, [priorityOptions, whitelist, blacklist]);
 
   return (
     <Select

@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useState } from "react";
+import Image from "next/image";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -277,10 +278,12 @@ export default function DeckPage({
                     }}
                   />
                   {currentCard.imageUrl && (
-                    <img
+                    <Image
                       src={currentCard.imageUrl || "/placeholder.svg"}
                       alt="Card visual"
-                      className="max-w-full h-auto rounded-lg mx-auto"
+                      width={400}
+                      height={240}
+                      className="max-w-full h-auto rounded-lg mx-auto object-contain"
                     />
                   )}
                   {!isFlipped && (

@@ -54,14 +54,14 @@ export function Navigation() {
             className={cn(
               "relative flex items-center gap-1 px-4 py-2 rounded-3xl text-sm font-medium transition-colors duration-200 ease-in-out",
               isActive
-                ? "text-foreground bg-gray-200 dark:bg-gray-700"
+                ? "text-foreground font-semibold"
                 : "text-muted-foreground hover:text-foreground"
             )}
           >
             {isActive && (
               <motion.div
                 layoutId="active-pill"
-                className="absolute inset-0 w-full h-full rounded-3xl bg-gray-200 dark:bg-gray-700" // Example
+                className="absolute inset-0 w-full h-full rounded-3xl bg-background/90 dark:bg-card/90 border border-border/60 shadow-xs"
                 transition={{
                   type: "spring",
                   stiffness: 500,
@@ -72,7 +72,7 @@ export function Navigation() {
             <Icon
               className={cn(
                 "h-6 w-6 relative z-10 p-1 transition-transform duration-200",
-                isActive && "scale-110"
+                isActive && "scale-110 text-primary"
               )}
             />
             {isActive && <span className="relative z-10">{item.name}</span>}
@@ -86,8 +86,8 @@ export function Navigation() {
 export function MobileNavigation() {
   const pathname = usePathname();
   return (
-    <div className="fixed bottom-4 z-10  w-full">
-      <nav className="md:hidden  flex gap-1 w-[330px] mx-auto bg-glass p-1 justify-between rounded-3xl relative">
+    <div className="fixed bottom-4 z-10 w-full">
+      <nav className="md:hidden flex gap-1 w-[330px] mx-auto bg-glass p-1 justify-between rounded-3xl relative">
         {navLinks.map((item) => {
           const Icon = item.icon;
 
@@ -96,6 +96,8 @@ export function MobileNavigation() {
             <Link
               key={item.name}
               href={item.link}
+              aria-label={item.name}
+              aria-current={isActive ? "page" : undefined}
               className={cn(
                 "relative flex items-center gap-1 px-4 py-2 rounded-3xl text-sm font-medium transition-colors duration-200 ease-in-out",
                 isActive
@@ -105,8 +107,8 @@ export function MobileNavigation() {
             >
               {isActive && (
                 <motion.div
-                  layoutId="active-pill"
-                  className="absolute inset-0 w-full h-full rounded-3xl bg-gray-200 dark:bg-gray-700" // Example
+                  layoutId="active-pill-mobile"
+                  className="absolute inset-0 w-full h-full rounded-3xl bg-background/90 dark:bg-card/90 border border-border/60 shadow-xs"
                   transition={{
                     type: "spring",
                     stiffness: 500,
@@ -117,7 +119,7 @@ export function MobileNavigation() {
               <Icon
                 className={cn(
                   "h-6 w-6 relative z-10 p-1 transition-transform duration-200",
-                  isActive && "scale-110"
+                  isActive && "scale-110 text-primary"
                 )}
               />
               {isActive && (

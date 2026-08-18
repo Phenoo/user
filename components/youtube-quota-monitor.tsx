@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,7 @@ export function YouTubeQuotaMonitor() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const checkQuota = async () => {
+  const checkQuota = useCallback(async () => {
     setLoading(true);
     setError(null);
 
@@ -42,7 +42,7 @@ export function YouTubeQuotaMonitor() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   const getEstimatedUsage = (): QuotaInfo => {
     // Get usage from localStorage (basic tracking)
@@ -117,7 +117,7 @@ export function YouTubeQuotaMonitor() {
 
   useEffect(() => {
     checkQuota();
-  }, []);
+  }, [checkQuota]);
 
   return (
     <Card className="w-full max-w-md">

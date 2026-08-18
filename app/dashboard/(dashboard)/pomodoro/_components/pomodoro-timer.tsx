@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Play, Pause, RotateCcw, Settings } from "lucide-react";
 import Link from "next/link";
@@ -70,35 +70,12 @@ export function PomodoroTimer({
   }, []);
 
   useEffect(() => {
-    setSelectedCourse(searchParams as string);
-  }, [searchParams]);
-
-  useEffect(() => {
-    if (isRunning && timeLeft > 0) {
-      intervalRef.current = setInterval(() => {
-        //@ts-ignore
-        setTimeLeft((prev: number) => {
-          if (prev <= 1) {
-            handleSessionComplete();
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    } else {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
+    if (searchParams) {
+      setSelectedCourse(searchParams);
     }
+  }, [searchParams, setSelectedCourse]);
 
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-    };
-  }, [isRunning, timeLeft]);
-
-  const handleSessionComplete = async () => {
+  const handleSessionComplete = useCallback(async () => {
     setIsRunning(false);
 
     // Play notification sound
@@ -139,7 +116,46 @@ export function PomodoroTimer({
       setSessionType("focus");
       setTimeLeft(settings.focusDuration * 60);
     }
-  };
+  }, [
+    settings,
+    selectedCourse,
+    sessionType,
+    totalTime,
+    user?._id,
+    createSession,
+    onSessionComplete,
+    completedSessions,
+    setIsRunning,
+    setCompletedSessions,
+    setSessionType,
+    setTimeLeft,
+  ]);
+
+  useEffect(() => {
+    if (isRunning) {
+      intervalRef.current = setInterval(() => {
+        setTimeLeft((prev: number) => {
+          if (prev <= 1) {
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, [isRunning, setTimeLeft]);
+
+  // Trigger completion when timeLeft hits 0 while running
+  useEffect(() => {
+    if (isRunning && timeLeft === 0) {
+      handleSessionComplete();
+    }
+  }, [isRunning, timeLeft, handleSessionComplete]);
 
   const toggleTimer = () => {
     if (selectedCourse === "") {

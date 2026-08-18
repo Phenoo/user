@@ -61,7 +61,7 @@ export default function CheckoutSuccessPage() {
     return () => {
       isMounted = false;
     };
-  }, [currentUser, userIdParam, sessionId]);
+  }, [currentUser, userIdParam, sessionId, updateUserSub]);
 
   if (isLoading) {
     return (

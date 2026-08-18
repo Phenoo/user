@@ -192,6 +192,7 @@ export function DayCell({ cell, events, eventPositions }: IProps) {
       showDesktopMore,
       showMoreCount,
       renderEventAtPosition,
+      isMobile,
     ]
   );
 

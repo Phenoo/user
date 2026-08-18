@@ -21,6 +21,7 @@ import {
   Loader2,
   Copy,
   Check,
+  ArrowLeft,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
@@ -28,6 +29,7 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { toast } from "sonner";
 
 const SkeletonLoader = () => (
   <div className="space-y-4 w-full h-full pt-4">
@@ -71,7 +73,10 @@ export default function ToolsPage() {
   const [copiedStudyGuide, setCopiedStudyGuide] = useState(false);
 
   const handleGenerateEssay = async () => {
-    if (!essayTopic.trim()) return;
+    if (!essayTopic.trim()) {
+      toast.error("Please enter an essay topic");
+      return;
+    }
 
     setEssayLoading(true);
     setEssayResult("");
@@ -89,17 +94,26 @@ export default function ToolsPage() {
       });
 
       const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to generate essay");
+      }
       setEssayResult(data.data?.text || data.text);
+      toast.success("Essay generated successfully");
     } catch (error) {
-      console.error("[v0] Error generating essay:", error);
-      setEssayResult("Failed to generate essay. Please try again.");
+      console.error("Error generating essay:", error);
+      const message = error instanceof Error ? error.message : "Failed to generate essay";
+      setEssayResult(`Failed to generate essay. ${message}`);
+      toast.error(message);
     } finally {
       setEssayLoading(false);
     }
   };
 
   const handleGenerateSummary = async () => {
-    if (!summaryContent.trim()) return;
+    if (!summaryContent.trim()) {
+      toast.error("Please enter content to summarize");
+      return;
+    }
 
     setSummaryLoading(true);
     setSummaryResult("");
@@ -116,17 +130,26 @@ export default function ToolsPage() {
       });
 
       const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to generate summary");
+      }
       setSummaryResult(data.data?.text || data.text);
+      toast.success("Summary generated successfully");
     } catch (error) {
-      console.error("[v0] Error generating summary:", error);
-      setSummaryResult("Failed to generate summary. Please try again.");
+      console.error("Error generating summary:", error);
+      const message = error instanceof Error ? error.message : "Failed to generate summary";
+      setSummaryResult(`Failed to generate summary. ${message}`);
+      toast.error(message);
     } finally {
       setSummaryLoading(false);
     }
   };
 
   const handleGenerateStudyGuide = async () => {
-    if (!studySubject.trim() || !studyTopics.trim()) return;
+    if (!studySubject.trim() || !studyTopics.trim()) {
+      toast.error("Please enter both subject and topics");
+      return;
+    }
 
     setStudyGuideLoading(true);
     setStudyGuideResult("");
@@ -146,10 +169,16 @@ export default function ToolsPage() {
       });
 
       const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to generate study guide");
+      }
       setStudyGuideResult(data.data?.text || data.text);
+      toast.success("Study guide generated successfully");
     } catch (error) {
-      console.error("[v0] Error generating study guide:", error);
-      setStudyGuideResult("Failed to generate study guide. Please try again.");
+      console.error("Error generating study guide:", error);
+      const message = error instanceof Error ? error.message : "Failed to generate study guide";
+      setStudyGuideResult(`Failed to generate study guide. ${message}`);
+      toast.error(message);
     } finally {
       setStudyGuideLoading(false);
     }
@@ -160,6 +189,7 @@ export default function ToolsPage() {
     type: "essay" | "summary" | "study-guide"
   ) => {
     await navigator.clipboard.writeText(text);
+    toast.success("Copied to clipboard");
 
     if (type === "essay") {
       setCopiedEssay(true);
@@ -179,10 +209,10 @@ export default function ToolsPage() {
         {/* Header */}
         <div className="mb-8">
           <Link
-            href="/"
-            className="text-sm text-muted-foreground hover:text-foreground mb-4 inline-block"
+            href="/dashboard"
+            className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4 transition-colors"
           >
-            ← Back to Home
+            <ArrowLeft className="h-4 w-4" /> Back to Dashboard
           </Link>
           <h1 className="text-4xl font-bold mb-2">AI Text Generation Tools</h1>
           <p className="text-muted-foreground">

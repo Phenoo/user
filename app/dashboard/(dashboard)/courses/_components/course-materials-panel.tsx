@@ -63,11 +63,10 @@ export function CourseMaterialsPanel({
   courseId,
   userId,
 }: CourseMaterialsPanelProps) {
-  const materials =
-    useQuery(
-      (api as any).courseDocuments.listByCourse,
-      userId ? { userId, courseId } : "skip"
-    ) || [];
+  const materials = useQuery(
+    (api as any).courseDocuments.listByCourse,
+    userId ? { userId, courseId } : "skip"
+  );
   const summary = useQuery(
     (api as any).courseDocuments.getCourseMaterialSummary,
     userId ? { userId, courseId } : "skip"
@@ -92,7 +91,8 @@ export function CourseMaterialsPanel({
   const [source, setSource] = useState("manual-note");
 
   const filteredMaterials = useMemo(() => {
-    return materials.filter((material: any) => {
+    const list = materials || [];
+    return list.filter((material: any) => {
       const matchesSearch =
         material.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (material.textContent || "")
