@@ -6,11 +6,12 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Eye, EyeOff, Mail, Lock, User, ArrowLeft, Shield } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, User, ArrowLeft, Shield, Loader2 } from "lucide-react";
 import { FcGoogle } from "react-icons/fc";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { safeSessionStorage } from "@/lib/storage-helpers";
+import { toast } from "sonner";
 
 import { REGEXP_ONLY_DIGITS_AND_CHARS } from "input-otp";
 
@@ -54,6 +55,7 @@ export default function AuthenticationCard() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -96,6 +98,19 @@ export default function AuthenticationCard() {
     if (passedRequirements <= 4)
       return { strength: 75, label: "Good", color: "bg-blue-500" };
     return { strength: 100, label: "Strong", color: "bg-green-500" };
+  };
+
+  const handleGoogleSignIn = async () => {
+    try {
+      setIsGoogleLoading(true);
+      await signIn("google");
+    } catch (error: any) {
+      console.error("Google sign in error:", error);
+      toast.error(
+        error?.message || "Failed to sign in with Google. Please check your connection and configuration."
+      );
+      setIsGoogleLoading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -365,12 +380,23 @@ export default function AuthenticationCard() {
               </div> */}
 
               <Button
+                type="button"
                 variant="outline"
+                disabled={isLoading || isGoogleLoading}
                 className="w-full hover:bg-primary bg-transparent"
-                onClick={() => void signIn("google")}
+                onClick={handleGoogleSignIn}
               >
-                <FcGoogle className="h-4 w-4" />
-                Login with Google
+                {isGoogleLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Connecting to Google...
+                  </>
+                ) : (
+                  <>
+                    <FcGoogle className="h-4 w-4" />
+                    Login with Google
+                  </>
+                )}
               </Button>
 
               <div className="text-center">
@@ -546,12 +572,23 @@ export default function AuthenticationCard() {
               </div>
 
               <Button
+                type="button"
                 variant="outline"
+                disabled={isLoading || isGoogleLoading}
                 className="w-full hover:bg-primary bg-transparent"
-                onClick={() => void signIn("google")}
+                onClick={handleGoogleSignIn}
               >
-                <FcGoogle className="h-4 w-4" />
-                Signup with Google
+                {isGoogleLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Connecting to Google...
+                  </>
+                ) : (
+                  <>
+                    <FcGoogle className="h-4 w-4" />
+                    Signup with Google
+                  </>
+                )}
               </Button>
 
               <div className="text-center">
