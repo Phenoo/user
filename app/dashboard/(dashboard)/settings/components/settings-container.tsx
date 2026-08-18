@@ -33,7 +33,6 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import ProfileSettings from "./profile-settings";
 import { BillingTabs } from "../../billing/_components/BillingTabs";
 import Link from "next/link";
-import { api as polar } from "@/lib/polar";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { SubscriptionHistory } from "../../billing/_components/subscription-history";
@@ -41,7 +40,6 @@ import { InvoiceTable } from "../../billing/_components/invoice-table";
 import { BillingOverview } from "../../billing/_components/billing-overview";
 import { Id } from "@/convex/_generated/dataModel";
 import { toast } from "sonner";
-import { api as polarClient } from "@/lib/polar";
 
 type SettingsSection =
   | "profile"
@@ -633,23 +631,36 @@ function BillingSettings() {
   const nextBillingDate = subscription?.currentPeriodEnd;
 
   const handleOpen = async () => {
-    if (!subscription) {
-      toast.error("No subscription for user");
+    if (!subscription?.polarCustomerId) {
+      toast.error("No active subscription found for user");
       return;
     }
 
-    const polarSubscription = await polarClient.subscriptions.get({
-      id: subscription.polarSubscriptionId, // Assert non-null since we found a subscription
-    });
-    const portalSession = await polarClient.customerSessions.create({
-      customerId: subscription.polarCustomerId,
-    });
+    try {
+      const response = await fetch("/api/customer-portal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customerId: subscription.polarCustomerId,
+        }),
+      });
 
-    const a = document.createElement("a");
-    a.href = portalSession.customerPortalUrl;
-    a.target = "_blank"; // opens in new tab
-    a.rel = "noopener noreferrer"; // security best practice
-    a.click(); // simulate click
+      const result = await response.json();
+      const portalUrl =
+        result?.data?.customer_portal_url ||
+        result?.data?.url ||
+        result?.customer_portal_url ||
+        result?.url;
+
+      if (portalUrl) {
+        window.open(portalUrl, "_blank", "noopener,noreferrer");
+      } else {
+        toast.error("Could not retrieve customer portal URL");
+      }
+    } catch (error) {
+      console.error("Failed to open customer portal:", error);
+      toast.error("Failed to open customer portal");
+    }
   };
 
   const renderContent = () => {
