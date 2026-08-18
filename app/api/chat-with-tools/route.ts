@@ -141,6 +141,8 @@ export type ChatWithToolsMessage = UIMessage<never, UIDataTypes, InferUITools<ty
 export async function POST(req: Request) {
   const body = await req.json()
 
+  const { userId, userCourses } = body
+
   const messages = await validateUIMessages<ChatWithToolsMessage>({
     messages: body.messages,
     tools,
@@ -148,8 +150,9 @@ export async function POST(req: Request) {
 
   const { result } = await streamTextWithGateway({
     feature: "tool-chat",
+    userId,
     promptVersion: `${TOOLS_CHAT_PROMPT.id}:${TOOLS_CHAT_PROMPT.version}`,
-    baseSystem: buildToolsChatSystemPrompt(),
+    baseSystem: buildToolsChatSystemPrompt(userCourses),
     request: {
       messages: convertToModelMessages(messages),
       stopWhen: stepCountIs(5),

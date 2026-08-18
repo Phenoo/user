@@ -13,9 +13,8 @@ export const currentUser = query({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
 
-    // 2. Check if the user is authenticated.
     if (!identity) {
-      throw new Error("Unauthenticated. Please log in.");
+      return null;
     }
 
     const userId = await auth.getUserId(ctx);

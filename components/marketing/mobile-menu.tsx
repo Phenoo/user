@@ -15,6 +15,7 @@ import { Menu, X } from "lucide-react";
 import Link from "next/link";
 import { LuLoaderCircle } from "react-icons/lu";
 import Logo from "../logo";
+import { ModeToggle } from "../mode-toggle";
 
 const MobileMenu = () => {
   const { isAuthenticated, isLoading } = useConvexAuth();
@@ -30,13 +31,16 @@ const MobileMenu = () => {
         <SheetHeader className="mb-8">
           <div className="flex justify-between items-center gap-4">
             <SheetTitle className="text-left">
-              <Logo />
+              <Logo size="sm" />
             </SheetTitle>
-            <SheetClose>
-              <Button size={"icon"} variant={"outline"}>
-                <X className="w-4 h-4" />
-              </Button>
-            </SheetClose>
+            <div className="flex items-center gap-2">
+              <ModeToggle />
+              <SheetClose asChild>
+                <Button size={"icon"} variant={"outline"}>
+                  <X className="w-4 h-4" />
+                </Button>
+              </SheetClose>
+            </div>
           </div>
         </SheetHeader>
         <nav className="flex flex-col space-y-4 px-4">
@@ -49,23 +53,25 @@ const MobileMenu = () => {
               <SheetClose>{link.name}</SheetClose>
             </Link>
           ))}
-          <div className="pt-4 mt-4 border-t  border-border">
+          <div className="pt-4 mt-4 border-t border-border">
             {isLoading ? (
-              <>
-                <div>
-                  <LuLoaderCircle className="h-5 w-5 animate-spin" />
-                </div>
-              </>
+              <div>
+                <LuLoaderCircle className="h-5 w-5 animate-spin" />
+              </div>
             ) : isAuthenticated ? (
-              <Link href="/dashboard" className="">
-                <SheetClose>
-                  <Button variant="default">Go to Dashboard</Button>
+              <Link href="/dashboard" className="w-full block">
+                <SheetClose className="w-full">
+                  <Button variant="default" className="w-full">
+                    Go to Dashboard
+                  </Button>
                 </SheetClose>
               </Link>
             ) : (
-              <Link href="/auth" className="">
-                <SheetClose>
-                  <Button variant="default">Get Started</Button>
+              <Link href="/auth" className="w-full block">
+                <SheetClose className="w-full">
+                  <Button variant="default" className="w-full">
+                    Get Started
+                  </Button>
                 </SheetClose>
               </Link>
             )}

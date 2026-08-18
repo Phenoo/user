@@ -1,33 +1,52 @@
 "use client";
 
-import * as React from "react";
-import { MoonIcon, SunIcon } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
-
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
-export function ModeToggle() {
-  const { setTheme, theme } = useTheme();
+interface ModeToggleProps {
+  className?: string;
+  size?: "default" | "sm" | "icon";
+}
+
+export function ModeToggle({ className = "", size = "icon" }: ModeToggleProps) {
+  const { setTheme, resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return (
+      <Button
+        variant="ghost"
+        size={size}
+        className={`rounded-full text-muted-foreground w-10 h-10 ${className}`}
+        aria-label="Toggle theme"
+      >
+        <span className="w-5 h-5 block" />
+      </Button>
+    );
+  }
+
+  const isDarkMode = resolvedTheme === "dark";
 
   return (
     <Button
-      className="rounded-full  bg-transparent w-12 h-12"
-      onClick={() => {
-        if (theme === "dark") {
-          setTheme("light");
-        } else {
-          setTheme("dark");
-        }
-      }}
+      variant="ghost"
+      size={size}
+      className={`rounded-full hover:bg-muted/80 w-10 h-10 text-foreground transition-transform hover:scale-105 active:scale-95 ${className}`}
+      onClick={() => setTheme(isDarkMode ? "light" : "dark")}
+      title={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
+      aria-label="Toggle theme"
     >
-      <SunIcon className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-      <MoonIcon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+      {isDarkMode ? (
+        <Sun className="h-5 w-5 text-amber-400 transition-transform duration-300 rotate-0 scale-100" />
+      ) : (
+        <Moon className="h-5 w-5 text-slate-700 dark:text-slate-200 transition-transform duration-300 rotate-0 scale-100" />
+      )}
       <span className="sr-only">Toggle theme</span>
     </Button>
   );

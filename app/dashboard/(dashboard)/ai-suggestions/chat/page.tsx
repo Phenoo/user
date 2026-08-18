@@ -46,14 +46,18 @@ import {
 import { Loader } from "@/components/ai-elements/loader";
 import { Action, Actions } from "@/components/ai-elements/actions";
 
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
+
 const models = [
   {
-    name: "GPT 4o",
-    value: "openai/gpt-4o",
+    name: "DeepSeek Chat",
+    value: "deepseek-chat",
   },
   {
-    name: "Deepseek R1",
-    value: "deepseek/deepseek-r1",
+    name: "DeepSeek R1",
+    value: "deepseek-reasoner",
   },
 ];
 
@@ -63,6 +67,13 @@ const ChatBotDemo = () => {
   const [webSearch, setWebSearch] = useState(false);
   const { messages, sendMessage, status } = useChat();
 
+  const user = useQuery(api.users.currentUser);
+  const courses =
+    useQuery(
+      api.courses.getAllCourses,
+      user?._id ? { userId: user._id as Id<"users"> } : "skip"
+    ) || [];
+
   const handleSubmit = (message: PromptInputMessage) => {
     const hasText = Boolean(message.text);
     const hasAttachments = Boolean(message.files?.length);
@@ -70,6 +81,16 @@ const ChatBotDemo = () => {
     if (!(hasText || hasAttachments)) {
       return;
     }
+
+    const userCourses = courses.map((c) => ({
+      name: c.name,
+      code: c.code,
+      credits: c.credits,
+      academicYear: c.academicYear,
+      session: c.session,
+      instructor: c.instructor,
+      description: c.description,
+    }));
 
     sendMessage(
       {
@@ -80,6 +101,8 @@ const ChatBotDemo = () => {
         body: {
           model: model,
           webSearch: webSearch,
+          userId: user?._id?.toString() || "anonymous",
+          userCourses,
         },
       }
     );

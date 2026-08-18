@@ -24,8 +24,8 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
       reset: ResendOTPPasswordReset,
       profile(params) {
         return {
-          email: params.email as string,
-          name: params.name as string,
+          email: ((params.email as string) || "").trim().toLowerCase(),
+          name: ((params.name as string) || "").trim(),
         };
       },
     }),

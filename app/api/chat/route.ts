@@ -40,12 +40,22 @@ export async function POST(req: Request) {
       courseId,
       courseName,
       courseCode,
+      userCourses,
     }: {
       messages: UIMessage[];
       userId?: string;
       courseId?: string;
       courseName?: string;
       courseCode?: string;
+      userCourses?: Array<{
+        name: string;
+        code: string;
+        description?: string;
+        academicYear?: string;
+        session?: string;
+        credits?: number;
+        instructor?: string;
+      }>;
     } = body;
 
     // Validate input
@@ -56,17 +66,43 @@ export async function POST(req: Request) {
       );
     }
 
+    const latestQuery = getLatestUserMessageText(messages);
+    const normalizedQuery = latestQuery.toLowerCase().replace(/\s+/g, " ");
+
+    let resolvedCourseName = courseName;
+    let resolvedCourseCode = courseCode;
+
+    // Auto-detect course from user query if not explicitly passed
+    if (!resolvedCourseName && userCourses && userCourses.length > 0) {
+      for (const course of userCourses) {
+        const cleanCode = (course.code || "").toLowerCase().replace(/\s+/g, "");
+        const codeWithSpace = (course.code || "").toLowerCase();
+        const cleanName = (course.name || "").toLowerCase();
+
+        if (
+          (cleanCode && normalizedQuery.replace(/\s+/g, "").includes(cleanCode)) ||
+          (codeWithSpace && normalizedQuery.includes(codeWithSpace)) ||
+          (cleanName && normalizedQuery.includes(cleanName))
+        ) {
+          resolvedCourseName = course.name;
+          resolvedCourseCode = course.code;
+          break;
+        }
+      }
+    }
+
     const { result } = await streamTextWithGateway({
       feature: "chat",
       userId,
       courseId,
-      courseName,
-      courseCode,
+      courseName: resolvedCourseName,
+      courseCode: resolvedCourseCode,
       promptVersion: `${COURSE_CHAT_PROMPT.id}:${COURSE_CHAT_PROMPT.version}`,
-      retrievalQuery: getLatestUserMessageText(messages),
+      retrievalQuery: latestQuery,
       baseSystem: buildCourseChatSystemPrompt({
-        courseName,
-        courseCode,
+        courseName: resolvedCourseName,
+        courseCode: resolvedCourseCode,
+        userCourses,
       }),
       request: {
         messages: convertToModelMessages(messages),

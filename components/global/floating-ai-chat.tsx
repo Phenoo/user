@@ -81,17 +81,24 @@ export function FloatingAIChat() {
     if (e) e.preventDefault();
     if (!input.trim() || isLoading) return;
 
+    const userCourses = courses.map((c) => ({
+      name: c.name,
+      code: c.code,
+      credits: c.credits,
+      academicYear: c.academicYear,
+      session: c.session,
+      instructor: c.instructor,
+      description: c.description,
+    }));
+
     const selectedCourse = courses.find((c) => c._id === selectedCourseId);
-    const bodyPayload = selectedCourse
-      ? {
-          courseId: selectedCourse._id,
-          courseName: selectedCourse.name,
-          courseCode: selectedCourse.code,
-          userId: user?._id?.toString() || "anonymous",
-        }
-      : {
-          userId: user?._id?.toString() || "anonymous",
-        };
+    const bodyPayload = {
+      courseId: selectedCourse?._id,
+      courseName: selectedCourse?.name,
+      courseCode: selectedCourse?.code,
+      userId: user?._id?.toString() || "anonymous",
+      userCourses,
+    };
 
     sendMessage({ text: input.trim() }, { body: bodyPayload });
     setInput("");
@@ -109,17 +116,24 @@ export function FloatingAIChat() {
   };
 
   const handleSuggestionClick = (suggestion: string) => {
+    const userCourses = courses.map((c) => ({
+      name: c.name,
+      code: c.code,
+      credits: c.credits,
+      academicYear: c.academicYear,
+      session: c.session,
+      instructor: c.instructor,
+      description: c.description,
+    }));
+
     const selectedCourse = courses.find((c) => c._id === selectedCourseId);
-    const bodyPayload = selectedCourse
-      ? {
-          courseId: selectedCourse._id,
-          courseName: selectedCourse.name,
-          courseCode: selectedCourse.code,
-          userId: user?._id?.toString() || "anonymous",
-        }
-      : {
-          userId: user?._id?.toString() || "anonymous",
-        };
+    const bodyPayload = {
+      courseId: selectedCourse?._id,
+      courseName: selectedCourse?.name,
+      courseCode: selectedCourse?.code,
+      userId: user?._id?.toString() || "anonymous",
+      userCourses,
+    };
 
     sendMessage({ text: suggestion }, { body: bodyPayload });
   };

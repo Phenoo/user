@@ -191,8 +191,8 @@ export const getAnalyticsSummary = query({
         courseDeckIds.has(card.deckId)
       );
 
-      const courseStudySessions = studySessions.filter((s) =>
-        courseDeckIds.has(s.deckId)
+      const courseStudySessions = studySessions.filter(
+        (s) => !!s.deckId && courseDeckIds.has(s.deckId)
       );
 
       let courseCorrect = 0;

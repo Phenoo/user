@@ -32,18 +32,28 @@ import { Fragment, useState } from "react";
 import { toast } from "sonner";
 import { useChat } from "@ai-sdk/react";
 import { CopyIcon, RefreshCcwIcon } from "lucide-react";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
 
 const suggestions = [
-  "Help me study for my upcoming exam",
+  "Create flashcards for my registered courses",
   "Explain this concept in simple terms",
+  "Help me study for my upcoming exam",
   "Create a study schedule for me",
-  "Quiz me on this topic",
-  "Summarize my notes",
+  "Quiz me on key terms",
   "Help me understand this formula",
 ];
 
 const ChatContainer = () => {
   const [input, setInput] = useState("");
+
+  const user = useQuery(api.users.currentUser);
+  const courses =
+    useQuery(
+      api.courses.getAllCourses,
+      user?._id ? { userId: user._id as Id<"users"> } : "skip"
+    ) || [];
 
   const { messages, sendMessage, status } = useChat({
     onError: (error) => {
@@ -67,16 +77,52 @@ const ChatContainer = () => {
       });
     }
 
-    sendMessage({
-      text: message.text || "Sent with attachments",
-      files: message.files,
-    });
+    const userCourses = courses.map((c) => ({
+      name: c.name,
+      code: c.code,
+      credits: c.credits,
+      academicYear: c.academicYear,
+      session: c.session,
+      instructor: c.instructor,
+      description: c.description,
+    }));
+
+    sendMessage(
+      {
+        text: message.text || "Sent with attachments",
+        files: message.files,
+      },
+      {
+        body: {
+          userId: user?._id?.toString() || "anonymous",
+          userCourses,
+        },
+      }
+    );
 
     setInput("");
   };
 
   const handleSuggestionClick = (suggestion: string) => {
-    sendMessage({ text: suggestion });
+    const userCourses = courses.map((c) => ({
+      name: c.name,
+      code: c.code,
+      credits: c.credits,
+      academicYear: c.academicYear,
+      session: c.session,
+      instructor: c.instructor,
+      description: c.description,
+    }));
+
+    sendMessage(
+      { text: suggestion },
+      {
+        body: {
+          userId: user?._id?.toString() || "anonymous",
+          userCourses,
+        },
+      }
+    );
   };
 
   return (
@@ -118,13 +164,20 @@ const ChatContainer = () => {
               })}
             </div>
           ))}
-          {status === "submitted" && <Loader />}
+          {status === "submitted" && (
+            <Message from="assistant">
+              <MessageContent>
+                <Loader />
+              </MessageContent>
+            </Message>
+          )}
         </ConversationContent>
         <ConversationScrollButton />
       </Conversation>
-      <div className="grid shrink-0 gap-4 pt-4">
+
+      <div className="bg-background p-4 space-y-4">
         {messages.length === 0 && (
-          <Suggestions className="px-4">
+          <Suggestions>
             {suggestions.map((suggestion) => (
               <Suggestion
                 key={suggestion}
@@ -134,34 +187,25 @@ const ChatContainer = () => {
             ))}
           </Suggestions>
         )}
-        <div className="w-full px-4 pb-4">
-          <PromptInput globalDrop multiple onSubmit={handleSubmit}>
-            <PromptInputBody>
-              <PromptInputAttachments>
-                {(attachment) => <PromptInputAttachment data={attachment} />}
-              </PromptInputAttachments>
-              <PromptInputTextarea
-                onChange={(event) => setInput(event.target.value)}
-                value={input}
-                placeholder="Ask me anything about your studies..."
-              />
-            </PromptInputBody>
-            <PromptInputToolbar>
-              <PromptInputTools>
-                <PromptInputActionMenu>
-                  <PromptInputActionMenuTrigger />
-                  <PromptInputActionMenuContent>
-                    <PromptInputActionAddAttachments />
-                  </PromptInputActionMenuContent>
-                </PromptInputActionMenu>
-              </PromptInputTools>
-              <PromptInputSubmit
-                disabled={!input.trim() && status === "ready"}
-                status={status}
-              />
-            </PromptInputToolbar>
-          </PromptInput>
-        </div>
+
+        <PromptInput onSubmit={handleSubmit}>
+          <PromptInputAttachments>
+            {(attachment) => <PromptInputAttachment data={attachment} />}
+          </PromptInputAttachments>
+          <PromptInputBody>
+            <PromptInputTextarea
+              placeholder="Ask about your courses, create flashcards, solve problems..."
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+            />
+          </PromptInputBody>
+          <PromptInputToolbar>
+            <PromptInputTools>
+              <PromptInputActionAddAttachments />
+            </PromptInputTools>
+            <PromptInputSubmit />
+          </PromptInputToolbar>
+        </PromptInput>
       </div>
     </div>
   );

@@ -441,10 +441,36 @@ const schema = defineSchema({
     front: v.string(),
     back: v.string(),
     imageUrl: v.optional(v.string()), // Support for images in flashcards
+    cardType: v.optional(
+      v.union(v.literal("basic"), v.literal("cloze"), v.literal("basic_reversed"))
+    ),
+    tags: v.optional(v.array(v.string())),
+    explanation: v.optional(v.string()),
+    sourceType: v.optional(v.string()),
+    sourceId: v.optional(v.string()),
+    sourceLabel: v.optional(v.string()),
     confidence: v.optional(
       v.union(v.literal("hard"), v.literal("good"), v.literal("easy"))
     ), // 3-level confidence rating for spaced repetition
     nextReviewDate: v.optional(v.number()), // When card should be reviewed next
+    state: v.optional(
+      v.union(
+        v.literal("new"),
+        v.literal("learning"),
+        v.literal("review"),
+        v.literal("relearning")
+      )
+    ),
+    due: v.optional(v.number()),
+    lastReview: v.optional(v.number()),
+    stability: v.optional(v.number()),
+    memoryDifficulty: v.optional(v.number()),
+    reps: v.optional(v.number()),
+    lapses: v.optional(v.number()),
+    scheduledDays: v.optional(v.number()),
+    elapsedDays: v.optional(v.number()),
+    suspended: v.optional(v.boolean()),
+    buried: v.optional(v.boolean()),
     // Existing fields
     difficulty: v.union(
       v.literal("Easy"),
@@ -497,22 +523,57 @@ const schema = defineSchema({
 
   studySessions: defineTable({
     userId: v.id("users"),
-    deckId: v.id("flashcardDecks"),
+    deckId: v.optional(v.id("flashcardDecks")),
+    courseId: v.optional(v.id("courses")),
+    mode: v.optional(
+      v.union(v.literal("due"), v.literal("all"), v.literal("learning"), v.literal("cram"))
+    ),
+    cardIds: v.optional(v.array(v.id("flashcards"))),
+    completedAt: v.optional(v.number()),
     cardsStudied: v.number(),
     correctAnswers: v.number(),
     incorrectAnswers: v.number(),
     accuracy: v.number(),
     duration: v.number(), // in minutes
+    againCount: v.optional(v.number()),
+    hardCount: v.optional(v.number()),
+    goodCount: v.optional(v.number()),
+    easyCount: v.optional(v.number()),
     sessionType: v.union(
       v.literal("all"),
       v.literal("unmastered"),
-      v.literal("review")
+      v.literal("review"),
+      v.literal("due"),
+      v.literal("learning"),
+      v.literal("cram")
     ),
     createdAt: v.number(),
   })
     .index("by_user", ["userId"])
     .index("by_deck", ["deckId"])
     .index("by_user_date", ["userId", "createdAt"]),
+
+  flashcardReviews: defineTable({
+    userId: v.id("users"),
+    deckId: v.id("flashcardDecks"),
+    cardId: v.id("flashcards"),
+    rating: v.union(
+      v.literal("again"),
+      v.literal("hard"),
+      v.literal("good"),
+      v.literal("easy")
+    ),
+    reviewedAt: v.number(),
+    previousDue: v.optional(v.number()),
+    nextDue: v.number(),
+    previousState: v.optional(v.string()),
+    newState: v.string(),
+    responseTimeMs: v.optional(v.number()),
+    scheduledDays: v.number(),
+  })
+    .index("by_user_reviewedAt", ["userId", "reviewedAt"])
+    .index("by_card_reviewedAt", ["cardId", "reviewedAt"])
+    .index("by_deck_reviewedAt", ["deckId", "reviewedAt"]),
 
   aiSuggestions: defineTable({
     userId: v.id("users"),

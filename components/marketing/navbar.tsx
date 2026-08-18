@@ -7,11 +7,12 @@ import MobileMenu from "./mobile-menu";
 import Logo from "../logo";
 import { useConvexAuth } from "convex/react";
 import { LuLoaderCircle } from "react-icons/lu";
+import { ModeToggle } from "../mode-toggle";
 
 const Navbar = () => {
   const { isAuthenticated, isLoading } = useConvexAuth();
   return (
-    <header className="sticky top-0 w-full h-20 bg-background/80 backdrop-blur-sm z-50">
+    <header className="sticky top-0 w-full h-20 bg-background/80 backdrop-blur-sm z-50 border-b border-border/40">
       <Wrapper className="h-full">
         <div className="flex items-center justify-between h-full">
           <div className="flex items-center">
@@ -28,13 +29,13 @@ const Navbar = () => {
             </ul>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            <ModeToggle />
+
             {isLoading ? (
-              <>
-                <div>
-                  <LuLoaderCircle className="h-5 w-5 animate-spin" />
-                </div>
-              </>
+              <div>
+                <LuLoaderCircle className="h-5 w-5 animate-spin" />
+              </div>
             ) : isAuthenticated ? (
               <Link href="/dashboard" className="hidden lg:block">
                 <Button variant="default">Go to Dashboard</Button>

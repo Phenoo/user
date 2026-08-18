@@ -4,7 +4,9 @@ import { type RandomReader, generateRandomString } from "@oslojs/crypto/random";
 
 export const ResendOTP = Resend({
   id: "resend-otp",
-  apiKey: "re_JqpwpJxt_7v4xoAcja1WYBGjHip39KLaM",
+  apiKey:
+    process.env.RESEND_API_KEY ||
+    process.env.AUTH_RESEND_KEY,
   async generateVerificationToken() {
     const random: RandomReader = {
       read(bytes) {
@@ -17,32 +19,37 @@ export const ResendOTP = Resend({
     return generateRandomString(random, alphabet, length);
   },
   async sendVerificationRequest({ identifier: email, provider, token }) {
-    console.log("[v0] Attempting to send OTP to:", email);
+    console.log("[ResendOTP] Sending verification OTP to:", email);
 
-    if (!provider.apiKey) {
+    const apiKey =
+      provider.apiKey ||
+      process.env.RESEND_API_KEY ||
+      process.env.AUTH_RESEND_KEY;
+
+    if (!apiKey) {
       throw new Error("RESEND_API_KEY environment variable is not set");
     }
 
-    const resend = new ResendAPI(provider.apiKey);
+    const resend = new ResendAPI(apiKey);
 
     try {
       const { error } = await resend.emails.send({
-        from: "My App <onboarding@resend.dev>",
-        to: ["descometusah@gmail.com"],
-        subject: `Sign in to My App`,
-        text: "Your code is " + token,
+        from: process.env.EMAIL_FROM || "Usoro <onboarding@resend.dev>",
+        to: [email],
+        subject: `Your Usoro Verification Code: ${token}`,
+        text: `Your verification code is ${token}. Enter this code to verify your account.`,
       });
 
       if (error) {
-        console.error("[v0] Resend API error:", error);
+        console.error("[ResendOTP] Resend API error:", error);
         throw new Error(
-          `Failed to send email: ${error.message || JSON.stringify(error)}`
+          `Failed to send verification email: ${error.message || JSON.stringify(error)}`
         );
       }
 
-      console.log("[v0] OTP sent successfully to:", email);
+      console.log("[ResendOTP] Verification OTP sent successfully to:", email);
     } catch (err) {
-      console.error("[v0] Error sending OTP:", err);
+      console.error("[ResendOTP] Error sending OTP:", err);
       throw err;
     }
   },

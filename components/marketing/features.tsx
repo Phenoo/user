@@ -49,6 +49,40 @@ const Features = () => {
                   {feature.description}
                 </p>
 
+                {feature.image === "/event.png" && (
+                  <div className="mt-4 pt-3 border-t border-border/40 space-y-2">
+                    <p className="text-xs font-semibold text-foreground/90 flex items-center gap-1.5">
+                      Supported Integrations
+                    </p>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                      <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-background/80 border border-border/60 text-[11px] font-medium text-foreground">
+                        <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
+                        <span className="truncate">Google Calendar</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-background/80 border border-border/60 text-[11px] font-medium text-foreground">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                        <span className="truncate">Google Meet</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-background/80 border border-border/60 text-[11px] font-medium text-foreground">
+                        <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
+                        <span className="truncate">Google Classroom</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-background/80 border border-border/60 text-[11px] font-medium text-foreground">
+                        <span className="w-2 h-2 rounded-full bg-yellow-500 shrink-0" />
+                        <span className="truncate">Google Drive</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-background/80 border border-border/60 text-[11px] font-medium text-foreground">
+                        <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0" />
+                        <span className="truncate">Zoom</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-background/80 border border-border/60 text-[11px] font-medium text-foreground">
+                        <span className="w-2 h-2 rounded-full bg-red-500 shrink-0" />
+                        <span className="truncate">YouTube</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="mt-6 w-full bg-card/50 overflow-hidden">
                   <Image
                     src={feature.image}

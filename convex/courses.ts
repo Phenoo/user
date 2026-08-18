@@ -167,6 +167,69 @@ export const addCourse = mutation({
   },
 });
 
+// 1b. Batch Add / Import Courses from PDF / Syllabus
+export const batchAddCourses = mutation({
+  args: {
+    userId: v.id("users"),
+    courses: v.array(
+      v.object({
+        name: v.string(),
+        code: v.string(),
+        academicYear: v.string(),
+        session: v.string(),
+        instructor: v.string(),
+        credits: v.number(),
+        description: v.optional(v.string()),
+        lmsLink: v.optional(v.string()),
+        colorTag: v.optional(v.string()),
+        status: v.union(
+          v.literal("active"),
+          v.literal("completed"),
+          v.literal("dropped")
+        ),
+      })
+    ),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    const { userId, courses } = args;
+    const insertedIds: Id<"courses">[] = [];
+
+    for (const course of courses) {
+      const existing = await ctx.db
+        .query("courses")
+        .withIndex("by_userId_academicYear_session_code", (q) =>
+          q
+            .eq("userId", userId)
+            .eq("academicYear", course.academicYear)
+            .eq("session", course.session)
+            .eq("code", course.code)
+        )
+        .first();
+
+      if (existing) {
+        await ctx.db.patch(existing._id, {
+          ...course,
+          userId,
+        });
+        insertedIds.push(existing._id);
+      } else {
+        const id = await ctx.db.insert("courses", {
+          ...course,
+          userId,
+        });
+        insertedIds.push(id);
+      }
+    }
+
+    return insertedIds;
+  },
+});
+
 // 2. Edit Course
 export const editCourse = mutation({
   args: {
