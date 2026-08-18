@@ -1,5 +1,9 @@
-import { generateObject } from "ai";
 import { z } from "zod";
+import { generateObjectWithGateway } from "@/lib/ai/gateway";
+import {
+  buildRecipePrompt,
+  STRUCTURED_OUTPUT_PROMPT,
+} from "@/lib/ai/prompts";
 
 const recipeSchema = z.object({
   name: z.string().describe("Name of the recipe"),
@@ -12,10 +16,13 @@ const recipeSchema = z.object({
 export async function POST(req: Request) {
   const { prompt } = await req.json();
 
-  const { object } = await generateObject({
-    model: "openai/gpt-4o-mini",
-    schema: recipeSchema,
-    prompt: `Generate a recipe based on this description: ${prompt}`,
+  const { object } = await generateObjectWithGateway({
+    feature: "structured-output",
+    promptVersion: `${STRUCTURED_OUTPUT_PROMPT.id}:${STRUCTURED_OUTPUT_PROMPT.version}`,
+    request: {
+      schema: recipeSchema,
+      prompt: buildRecipePrompt(prompt),
+    },
   });
 
   return Response.json({ recipe: object });

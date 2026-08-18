@@ -84,7 +84,7 @@ export function EventBlock({ event, className }: IProps) {
             role="button"
             tabIndex={0}
             className={cn(
-              `flex select-none bg-muted border-x border-b   flex-col gap-0.5 truncate whitespace-nowrap rounded-md  px-2 py-1.5 text-xs focus-visible:outline-offset-2 text-black hover:bg-${color}-100`,
+              `flex select-none bg-card text-card-foreground border-x border-b border-border flex-col gap-0.5 truncate whitespace-nowrap rounded-md px-2 py-1.5 text-xs focus-visible:outline-offset-2 hover:bg-accent`,
               bordersd
             )}
             style={{

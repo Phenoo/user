@@ -7,6 +7,7 @@ import { api } from "@/convex/_generated/api";
 import LoadingComponent from "@/components/loader";
 import { PomodoroProvider } from "@/contexts/pomodoro-context";
 import { MinimizedTimerCard } from "./(dashboard)/pomodoro/_components/minimized-pomodoro-timer";
+import { FloatingAIChat } from "@/components/global/floating-ai-chat";
 
 export default function DashboardLayout({
   children,
@@ -35,6 +36,7 @@ export default function DashboardLayout({
         <main className="min-h-screen h-full g-gradient-to-br from-blue-50 to-red-50 dark:from-blue-900 dark:to-red-900">
           {children}
           <MinimizedTimerCard />
+          <FloatingAIChat />
         </main>
       </PomodoroProvider>
     </>

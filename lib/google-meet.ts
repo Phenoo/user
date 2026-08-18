@@ -83,10 +83,14 @@ export class GoogleMeetService {
       throw new Error("Google Redirect URI is not configured");
     }
 
-    // Build the auth URL with properly encoded scopes
+    // Build the auth URL with properly encoded scopes (Calendar, Drive, Classroom)
     const scopes = [
       "https://www.googleapis.com/auth/calendar",
       "https://www.googleapis.com/auth/calendar.events",
+      "https://www.googleapis.com/auth/drive.readonly",
+      "https://www.googleapis.com/auth/classroom.courses.readonly",
+      "https://www.googleapis.com/auth/classroom.coursework.me.readonly",
+      "https://www.googleapis.com/auth/classroom.announcements.readonly",
     ];
 
     const params = new URLSearchParams({
@@ -101,8 +105,13 @@ export class GoogleMeetService {
     return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
   }
 
-  // Exchange authorization code for access token
-  async exchangeCodeForToken(code: string): Promise<string> {
+  // Exchange authorization code for access token and refresh token details
+  async exchangeCodeForTokenDetails(code: string): Promise<{
+    accessToken: string;
+    refreshToken?: string;
+    expiresIn: number;
+    expiresAt: number;
+  }> {
     const response = await fetch("https://oauth2.googleapis.com/token", {
       method: "POST",
       headers: {
@@ -120,11 +129,61 @@ export class GoogleMeetService {
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(`Failed to exchange code: ${data.error_description}`);
+      throw new Error(`Failed to exchange code: ${data.error_description || data.error}`);
     }
 
     this.accessToken = data.access_token;
-    return data.access_token;
+    const expiresIn = data.expires_in || 3600;
+    const expiresAt = Date.now() + expiresIn * 1000;
+
+    return {
+      accessToken: data.access_token,
+      refreshToken: data.refresh_token,
+      expiresIn,
+      expiresAt,
+    };
+  }
+
+  // Exchange authorization code for access token (legacy compatibility)
+  async exchangeCodeForToken(code: string): Promise<string> {
+    const details = await this.exchangeCodeForTokenDetails(code);
+    return details.accessToken;
+  }
+
+  // Refresh access token using a stored offline refresh token
+  async refreshAccessToken(refreshToken: string): Promise<{
+    accessToken: string;
+    expiresIn: number;
+    expiresAt: number;
+  }> {
+    const response = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({
+        client_id: this.config.clientId,
+        client_secret: this.config.clientSecret,
+        refresh_token: refreshToken,
+        grant_type: "refresh_token",
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(`Failed to refresh token: ${data.error_description || data.error}`);
+    }
+
+    this.accessToken = data.access_token;
+    const expiresIn = data.expires_in || 3600;
+    const expiresAt = Date.now() + expiresIn * 1000;
+
+    return {
+      accessToken: data.access_token,
+      expiresIn,
+      expiresAt,
+    };
   }
 
   // Create a Google Meet meeting via Calendar API
@@ -228,6 +287,75 @@ export class GoogleMeetService {
         )
       ) || []
     );
+  }
+
+  // Get files from Google Drive
+  async getDriveFiles(pageSize = 20): Promise<Array<{ id: string; name: string; mimeType: string; webViewLink?: string }>> {
+    if (!this.accessToken) {
+      throw new Error("Not authenticated with Google");
+    }
+
+    const response = await fetch(
+      `https://www.googleapis.com/drive/v3/files?pageSize=${pageSize}&fields=files(id,name,mimeType,webViewLink,createdTime)&orderBy=modifiedTime%20desc`,
+      {
+        headers: {
+          Authorization: `Bearer ${this.accessToken}`,
+        },
+      }
+    );
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(`Failed to fetch Drive files: ${data.error?.message || "Unknown error"}`);
+    }
+
+    return data.files || [];
+  }
+
+  // Get courses from Google Classroom
+  async getClassroomCourses(): Promise<Array<{ id: string; name: string; section?: string; descriptionHeading?: string; alternateLink?: string }>> {
+    if (!this.accessToken) {
+      throw new Error("Not authenticated with Google");
+    }
+
+    const response = await fetch(
+      `https://classroom.googleapis.com/v1/courses?courseStates=ACTIVE`,
+      {
+        headers: {
+          Authorization: `Bearer ${this.accessToken}`,
+        },
+      }
+    );
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(`Failed to fetch Classroom courses: ${data.error?.message || "Unknown error"}`);
+    }
+
+    return data.courses || [];
+  }
+
+  // Get coursework/assignments for a Google Classroom course
+  async getClassroomCourseWork(courseId: string): Promise<Array<{ id: string; title: string; description?: string; dueDate?: any; alternateLink?: string }>> {
+    if (!this.accessToken) {
+      throw new Error("Not authenticated with Google");
+    }
+
+    const response = await fetch(
+      `https://classroom.googleapis.com/v1/courses/${courseId}/courseWork`,
+      {
+        headers: {
+          Authorization: `Bearer ${this.accessToken}`,
+        },
+      }
+    );
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(`Failed to fetch Classroom coursework: ${data.error?.message || "Unknown error"}`);
+    }
+
+    return data.courseWork || [];
   }
 
   setAccessToken(token: string) {

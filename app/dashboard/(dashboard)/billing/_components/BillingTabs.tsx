@@ -26,6 +26,11 @@ const tabs = [
     href: "/dashboard/settings?section=billing&tab=subscription-history",
     tab: "subscription-history",
   },
+  {
+    name: "Usage & AI Tokens",
+    href: "/dashboard/usage",
+    tab: "usage",
+  },
 ];
 
 export function BillingTabs() {

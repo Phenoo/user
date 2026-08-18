@@ -272,9 +272,44 @@ export const deleteCourse = mutation({
       associatedCourseProgress.map((cp) => ctx.db.delete(cp._id))
     );
 
+    // Delete associated course materials and chunks
+    const associatedCourseMaterials = await ctx.db
+      .query("courseDocuments")
+      .withIndex("by_course", (q) => q.eq("courseId", courseId))
+      .collect();
+
+    await Promise.all(
+      associatedCourseMaterials.map(async (material) => {
+        const associatedChunks = await ctx.db
+          .query("documentChunks")
+          .withIndex("by_document", (q) => q.eq("documentId", material._id))
+          .collect();
+
+        await Promise.all(
+          associatedChunks.map((chunk) => ctx.db.delete(chunk._id))
+        );
+
+        if (material.storageId) {
+          await ctx.storage.delete(material.storageId);
+        }
+
+        await ctx.db.delete(material._id);
+      })
+    );
+
     // Finally, delete the course itself
     await ctx.db.delete(courseId);
 
     return true; // Indicate success
+  },
+});
+
+export const getCourseSchedules = query({
+  args: { courseId: v.id("courses") },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("schedules")
+      .withIndex("by_courseId", (q) => q.eq("courseId", args.courseId))
+      .collect();
   },
 });

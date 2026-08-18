@@ -73,7 +73,7 @@ export default function StudyTogetherMode({
 
   const handleEndSession = async (sessionId: Id<"studyTogetherSessions">) => {
     try {
-      await endSession({ sessionId });
+      await endSession({ sessionId, userId });
       toast.success("Study session ended");
     } catch (error) {
       toast.error("Failed to end study session");

@@ -37,6 +37,7 @@ import { BsArrowUpRight } from "react-icons/bs";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Id } from "@/convex/_generated/dataModel";
 import { RequireIndicator } from "@/components/require-indicator";
 import ButtonUpload from "./button-upload";
@@ -77,10 +78,9 @@ export default function CoursescontainerPage() {
 
   const user = useQuery(api.users.currentUser);
 
-  const courses =
-    useQuery(api.courses.getAllCourses, {
-      userId: user?._id as Id<"users">,
-    }) || [];
+  const coursesQuery = useQuery(api.courses.getAllCourses, {
+    userId: user?._id as Id<"users">,
+  });
 
   const [newCourse, setNewCourse] = useState({
     name: "",
@@ -91,6 +91,37 @@ export default function CoursescontainerPage() {
     instructor: "",
     description: "",
   });
+
+  if (user === undefined || coursesQuery === undefined) {
+    return (
+      <div className="min-h-screen bg-background p-6">
+        <div className="max-w-7xl mx-auto space-y-8">
+          <div className="flex justify-between items-start sm:items-center">
+            <div className="space-y-2">
+              <Skeleton className="h-9 w-48" />
+              <Skeleton className="h-4 w-80" />
+            </div>
+            <Skeleton className="h-10 w-32" />
+          </div>
+          <Skeleton className="h-14 w-full rounded-xl" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <Card key={i} className="p-4 space-y-4">
+                <div className="flex justify-between items-center">
+                  <Skeleton className="h-6 w-36" />
+                  <Skeleton className="h-8 w-8 rounded-full" />
+                </div>
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-12 w-full" />
+              </Card>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const courses = coursesQuery || [];
 
   const years = Array.from(
     new Set(courses.map((course) => course.academicYear))

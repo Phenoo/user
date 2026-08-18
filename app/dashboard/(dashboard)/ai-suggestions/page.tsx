@@ -18,88 +18,99 @@ import {
   Target,
   TrendingUp,
   BookOpen,
-  Zap,
   Calendar,
   Award,
   ChevronRight,
 } from "lucide-react";
 import Link from "next/link";
-
-// Mock AI suggestions data
-const mockSuggestions = [
-  {
-    id: 1,
-    title: "Optimize Study Schedule",
-    description:
-      "Based on your performance, studying Math between 2-4 PM shows 35% better retention",
-    impact: "High",
-    category: "Schedule",
-    icon: Calendar,
-    actionText: "Apply Schedule",
-    details:
-      "Your peak focus hours align with afternoon sessions. Consider blocking this time for challenging subjects.",
-  },
-  {
-    id: 2,
-    title: "Review Weak Topics",
-    description:
-      "Focus on Calculus derivatives - you've struggled with 3 recent practice problems",
-    impact: "Critical",
-    category: "Content",
-    icon: Target,
-    actionText: "Start Review",
-    details:
-      "Spend 20 minutes daily on derivative rules. Use spaced repetition for better retention.",
-  },
-  {
-    id: 3,
-    title: "Increase Study Frequency",
-    description:
-      "Short 25-minute sessions work better for you than 2-hour blocks",
-    impact: "Medium",
-    category: "Method",
-    icon: Clock,
-    actionText: "Try Pomodoro",
-    details:
-      "Your attention span data suggests breaking study time into focused sprints with breaks.",
-  },
-  {
-    id: 4,
-    title: "Leverage Visual Learning",
-    description: "You retain 40% more when using diagrams and mind maps",
-    impact: "High",
-    category: "Style",
-    icon: Brain,
-    actionText: "Create Mind Map",
-    details:
-      "Visual learners benefit from concept mapping. Try tools like diagrams for complex topics.",
-  },
-];
-
-const mockProgress = {
-  studyStreak: 12,
-  hoursThisWeek: 18,
-  weeklyGoal: 25,
-  completedTopics: 8,
-  totalTopics: 15,
-  averageScore: 78,
-};
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function AISuggestionsPage() {
-  const [selectedSuggestion, setSelectedSuggestion] = useState<number | null>(
+  const [selectedSuggestion, setSelectedSuggestion] = useState<string | null>(
     null
   );
 
-  const getImpactColor = (impact: string) => {
-    switch (impact) {
+  const user = useQuery(api.users.currentUser);
+  const userId = user?._id as Id<"users">;
+
+  const suggestions = useQuery(
+    api.aiSuggestions.getUserSuggestions,
+    userId ? { userId } : "skip"
+  );
+
+  const analytics = useQuery(
+    api.analytics.getAnalyticsSummary,
+    userId ? { userId } : "skip"
+  );
+
+  if (user === undefined || suggestions === undefined || analytics === undefined) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto px-6 py-6 space-y-4">
+          <Skeleton className="h-8 w-40" />
+          <Skeleton className="h-10 w-64" />
+          <Skeleton className="h-4 w-96" />
+        </div>
+        <div className="container mx-auto px-6 py-4">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2 space-y-6">
+              <Card className="p-6">
+                <Skeleton className="h-32 w-full" />
+              </Card>
+              <Card className="p-6 space-y-4">
+                <Skeleton className="h-6 w-48" />
+                {[1, 2, 3].map((i) => (
+                  <Skeleton key={i} className="h-20 w-full rounded-lg" />
+                ))}
+              </Card>
+            </div>
+            <div className="space-y-6">
+              <Card className="p-6 space-y-3">
+                <Skeleton className="h-6 w-32" />
+                <Skeleton className="h-24 w-full" />
+              </Card>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const {
+    streakDays = 0,
+    studyTimeHours = 0,
+    cardsMastered = 0,
+    accuracyRate = 0,
+  } = analytics || {};
+
+  const weeklyGoal = 20; // Target study hours
+
+  const getImpactColor = (priority: string) => {
+    switch (priority) {
+      case "HIGH":
       case "Critical":
         return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
+      case "MEDIUM":
       case "High":
         return "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200";
-      case "Medium":
-        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
       default:
-        return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200";
+        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
+    }
+  };
+
+  const getIcon = (type: string) => {
+    switch (type) {
+      case "STUDY_SCHEDULE":
+        return Calendar;
+      case "WEAK_AREAS":
+        return Target;
+      case "STUDY_METHOD":
+        return Clock;
+      default:
+        return Brain;
     }
   };
 
@@ -107,10 +118,10 @@ export default function AISuggestionsPage() {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="container mx-auto px-6 py-4">
-        <Link href="/">
+        <Link href="/dashboard">
           <Button variant="ghost" size="sm">
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
+            Back to Dashboard
           </Button>
         </Link>
         <br />
@@ -121,7 +132,7 @@ export default function AISuggestionsPage() {
                 AI Study Suggestions
               </h1>
               <p className="text-sm text-muted-foreground">
-                Personalized recommendations to boost your learning
+                Personalized recommendations based on your real study activity
               </p>
             </div>
           </div>
@@ -139,11 +150,11 @@ export default function AISuggestionsPage() {
                   <div className="flex items-center gap-2">
                     <TrendingUp className="h-5 w-5 text-emerald-600" />
                     <CardTitle className="text-emerald-800 dark:text-emerald-200">
-                      Your Progress
+                      Your Real Progress
                     </CardTitle>
                   </div>
                   <Badge className="bg-emerald-600 text-white">
-                    +25% Potential Growth
+                    Live Data
                   </Badge>
                 </div>
               </CardHeader>
@@ -151,7 +162,7 @@ export default function AISuggestionsPage() {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="text-center">
                     <div className="text-2xl font-bold text-emerald-700 dark:text-emerald-300">
-                      {mockProgress.studyStreak}
+                      {streakDays}
                     </div>
                     <div className="text-sm text-emerald-600 dark:text-emerald-400">
                       Day Streak
@@ -159,7 +170,7 @@ export default function AISuggestionsPage() {
                   </div>
                   <div className="text-center">
                     <div className="text-2xl font-bold text-emerald-700 dark:text-emerald-300">
-                      {mockProgress.hoursThisWeek}
+                      {studyTimeHours}h
                     </div>
                     <div className="text-sm text-emerald-600 dark:text-emerald-400">
                       Hours This Week
@@ -167,18 +178,18 @@ export default function AISuggestionsPage() {
                   </div>
                   <div className="text-center">
                     <div className="text-2xl font-bold text-emerald-700 dark:text-emerald-300">
-                      {mockProgress.completedTopics}/{mockProgress.totalTopics}
+                      {cardsMastered}
                     </div>
                     <div className="text-sm text-emerald-600 dark:text-emerald-400">
-                      Topics Mastered
+                      Cards Mastered
                     </div>
                   </div>
                   <div className="text-center">
                     <div className="text-2xl font-bold text-emerald-700 dark:text-emerald-300">
-                      {mockProgress.averageScore}%
+                      {accuracyRate}%
                     </div>
                     <div className="text-sm text-emerald-600 dark:text-emerald-400">
-                      Average Score
+                      Accuracy Score
                     </div>
                   </div>
                 </div>
@@ -188,15 +199,11 @@ export default function AISuggestionsPage() {
                       Weekly Goal Progress
                     </span>
                     <span className="text-emerald-600 dark:text-emerald-400">
-                      {mockProgress.hoursThisWeek}/{mockProgress.weeklyGoal}{" "}
-                      hours
+                      {studyTimeHours}/{weeklyGoal} hours
                     </span>
                   </div>
                   <Progress
-                    value={
-                      (mockProgress.hoursThisWeek / mockProgress.weeklyGoal) *
-                      100
-                    }
+                    value={Math.min(100, (studyTimeHours / weeklyGoal) * 100)}
                     className="h-2"
                   />
                 </div>
@@ -210,71 +217,67 @@ export default function AISuggestionsPage() {
                   Personalized Recommendations
                 </CardTitle>
                 <CardDescription>
-                  AI-powered insights based on your study patterns and
-                  performance
+                  AI insights derived from your real study metrics
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {mockSuggestions.map((suggestion) => {
-                  const Icon = suggestion.icon;
-                  const isSelected = selectedSuggestion === suggestion.id;
+                {suggestions && suggestions.length > 0 ? (
+                  suggestions.map((suggestion) => {
+                    const Icon = getIcon(suggestion.type);
+                    const isSelected = selectedSuggestion === suggestion._id;
 
-                  return (
-                    <div
-                      key={suggestion.id}
-                      className={`p-4 rounded-lg border transition-all cursor-pointer ${
-                        isSelected
-                          ? "border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950"
-                          : "border-border hover:border-emerald-200 dark:hover:border-emerald-800"
-                      }`}
-                      onClick={() =>
-                        setSelectedSuggestion(isSelected ? null : suggestion.id)
-                      }
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-start gap-3 flex-1">
-                          <div className="bg-emerald-100 dark:bg-emerald-900 rounded-full p-2 mt-1">
-                            <Icon className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                          </div>
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <h3 className="font-semibold text-pretty">
-                                {suggestion.title}
-                              </h3>
-                              <Badge
-                                className={getImpactColor(suggestion.impact)}
-                                variant="secondary"
-                              >
-                                {suggestion.impact}
-                              </Badge>
+                    return (
+                      <div
+                        key={suggestion._id}
+                        className={`p-4 rounded-lg border transition-all cursor-pointer ${
+                          isSelected
+                            ? "border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950"
+                            : "border-border hover:border-emerald-200 dark:hover:border-emerald-800"
+                        }`}
+                        onClick={() =>
+                          setSelectedSuggestion(
+                            isSelected ? null : suggestion._id
+                          )
+                        }
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-start gap-3 flex-1">
+                            <div className="bg-emerald-100 dark:bg-emerald-900 rounded-full p-2 mt-1">
+                              <Icon className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                             </div>
-                            <p className="text-sm text-muted-foreground text-pretty mb-2">
-                              {suggestion.description}
-                            </p>
-                            {isSelected && (
-                              <div className="mt-3 p-3 bg-muted rounded-md">
-                                <p className="text-sm text-pretty">
-                                  {suggestion.details}
-                                </p>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <h3 className="font-semibold text-pretty">
+                                  {suggestion.title}
+                                </h3>
+                                <Badge
+                                  className={getImpactColor(suggestion.priority)}
+                                  variant="secondary"
+                                >
+                                  {suggestion.priority}
+                                </Badge>
                               </div>
-                            )}
+                              <p className="text-sm text-muted-foreground text-pretty mb-2">
+                                {suggestion.description}
+                              </p>
+                            </div>
                           </div>
-                        </div>
-                        <div className="flex items-center gap-2 ml-4">
-                          <Button
-                            size="sm"
-                            className="bg-emerald-600 hover:bg-emerald-700"
-                          >
-                            {suggestion.actionText}
-                          </Button>
-                          <ChevronRight
-                            className={`h-4 w-4 text-muted-foreground transition-transform ${isSelected ? "rotate-90" : ""}`}
-                          />
+                          <div className="flex items-center gap-2 ml-4">
+                            <ChevronRight
+                              className={`h-4 w-4 text-muted-foreground transition-transform ${
+                                isSelected ? "rotate-90" : ""
+                              }`}
+                            />
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })
+                ) : (
+                  <div className="text-center py-6 text-muted-foreground">
+                    No suggestions available at the moment. Keep studying to get personalized insights!
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -292,19 +295,21 @@ export default function AISuggestionsPage() {
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
                   <span className="text-sm">Study Efficiency</span>
-                  <Badge variant="secondary">Improving</Badge>
+                  <Badge variant="secondary">
+                    {accuracyRate >= 80 ? "High" : accuracyRate >= 50 ? "Moderate" : "Building"}
+                  </Badge>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm">Focus Score</span>
-                  <span className="text-sm font-semibold">8.2/10</span>
+                  <span className="text-sm">Mastery Count</span>
+                  <span className="text-sm font-semibold">{cardsMastered} cards</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm">Retention Rate</span>
-                  <span className="text-sm font-semibold">85%</span>
+                  <span className="text-sm">Accuracy Rate</span>
+                  <span className="text-sm font-semibold">{accuracyRate}%</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm">Best Study Time</span>
-                  <span className="text-sm font-semibold">2-4 PM</span>
+                  <span className="text-sm">Current Streak</span>
+                  <span className="text-sm font-semibold">{streakDays} days</span>
                 </div>
               </CardContent>
             </Card>
@@ -333,24 +338,6 @@ export default function AISuggestionsPage() {
                     Use active recall instead of passive reading
                   </p>
                 </div>
-              </CardContent>
-            </Card>
-
-            {/* Action Center */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Take Action</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Button className="w-full bg-emerald-600 hover:bg-emerald-700">
-                  Generate Study Plan
-                </Button>
-                <Button variant="outline" className="w-full bg-transparent">
-                  Schedule Focus Session
-                </Button>
-                <Button variant="outline" className="w-full bg-transparent">
-                  Review Progress
-                </Button>
               </CardContent>
             </Card>
           </div>

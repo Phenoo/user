@@ -97,7 +97,7 @@ export function DayCell({ cell, events, eventPositions }: IProps) {
               />
             )}
             <MonthEventBadge
-              className={cn("hidden lg:flex bg-white h-full")}
+              className={cn("hidden lg:flex bg-card text-card-foreground border-border h-full")}
               event={event}
               cellDate={startOfDay(date)}
             />

@@ -83,6 +83,69 @@ export const createDeck = mutation({
   },
 });
 
+export const createDeckWithGeneratedCards = mutation({
+  args: {
+    userId: v.id("users"),
+    name: v.string(),
+    description: v.string(),
+    courseId: v.id("courses"),
+    difficulty: v.union(
+      v.literal("Easy"),
+      v.literal("Medium"),
+      v.literal("Hard")
+    ),
+    color: v.string(),
+    cards: v.array(
+      v.object({
+        front: v.string(),
+        back: v.string(),
+        difficulty: v.union(
+          v.literal("Easy"),
+          v.literal("Medium"),
+          v.literal("Hard")
+        ),
+      })
+    ),
+  },
+  handler: async (ctx, args) => {
+    const course = await ctx.db.get(args.courseId);
+    const subject = course ? course.code || course.name : "General";
+
+    const deckId = await ctx.db.insert("flashcardDecks", {
+      name: args.name,
+      description: args.description,
+      courseId: args.courseId,
+      createdBy: args.userId,
+      subject,
+      difficulty: args.difficulty,
+      totalCards: args.cards.length,
+      masteredCards: 0,
+      color: args.color,
+      isPublic: false,
+      tags: ["ai-generated"],
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+
+    for (const card of args.cards) {
+      await ctx.db.insert("flashcards", {
+        userId: args.userId,
+        deckId,
+        front: card.front,
+        back: card.back,
+        difficulty: card.difficulty,
+        timesCorrect: 0,
+        timesIncorrect: 0,
+        isMastered: false,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+    }
+
+    return deckId;
+  },
+});
+
 // Create flashcard
 export const createFlashcard = mutation({
   args: {

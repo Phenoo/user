@@ -1,5 +1,11 @@
-import { generateObject } from "ai"
 import { z } from "zod"
+import { NextResponse } from "next/server"
+import { getUserFacingAIError } from "@/lib/ai/errors"
+import { generateObjectWithGateway } from "@/lib/ai/gateway"
+import {
+  buildScheduleParserPrompt,
+  SCHEDULE_PARSER_PROMPT,
+} from "@/lib/ai/prompts"
 
 export const maxDuration = 60
 
@@ -19,33 +25,27 @@ const scheduleSchema = z.object({
 })
 
 export async function POST(req: Request) {
-  const { text, userId } = await req.json()
-
-  const { object } = await generateObject({
-    model: "openai/gpt-4o",
-    schema: scheduleSchema,
-    prompt: `Extract schedule information from the following text. Parse all events, times, and details:\n\n${text}`,
-  })
-
-  // Save to Convex
   try {
-    const response = await fetch(`${process.env.CONVEX_URL}/api/schedules/save`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        userId,
-        title: object.title,
-        events: object.events,
-        extractedFrom: text,
-      }),
+    const { text, userId } = await req.json()
+
+    const { object } = await generateObjectWithGateway({
+      feature: "schedule-parser",
+      userId,
+      promptVersion: `${SCHEDULE_PARSER_PROMPT.id}:${SCHEDULE_PARSER_PROMPT.version}`,
+      retrievalQuery: text,
+      request: {
+        schema: scheduleSchema,
+        prompt: buildScheduleParserPrompt(text),
+      },
     })
 
-    if (!response.ok) {
-      console.error("[v0] Failed to save schedule to Convex")
-    }
+    return Response.json({ schedule: object })
   } catch (error) {
-    console.error("[v0] Error saving schedule to Convex:", error)
+    console.error("[v0] Error parsing schedule:", error)
+    const userFacingError = getUserFacingAIError(error)
+    return NextResponse.json(
+      { error: userFacingError.message, code: userFacingError.code },
+      { status: userFacingError.status }
+    )
   }
-
-  return Response.json({ schedule: object })
 }

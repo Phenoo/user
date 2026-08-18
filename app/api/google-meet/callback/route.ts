@@ -20,21 +20,32 @@ export async function GET(request: NextRequest) {
     }
 
     const googleMeetService = createGoogleMeetService()
-    const accessToken = await googleMeetService.exchangeCodeForToken(code)
+    const tokenDetails = await googleMeetService.exchangeCodeForTokenDetails(code)
 
     // Create response with redirect
     const response = NextResponse.redirect(
       `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?google_connected=true`
     )
 
-    // Store access token in httpOnly cookie (secure, not accessible via JavaScript)
-    response.cookies.set("google_meet_token", accessToken, {
+    // Store access token in httpOnly cookie
+    response.cookies.set("google_meet_token", tokenDetails.accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      maxAge: 60 * 60, // 1 hour (Google access tokens expire in 1 hour)
+      maxAge: 60 * 60, // 1 hour
       path: "/",
     })
+
+    // Store refresh token in httpOnly cookie if present for offline access
+    if (tokenDetails.refreshToken) {
+      response.cookies.set("google_meet_refresh_token", tokenDetails.refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 30 * 24 * 60 * 60, // 30 days
+        path: "/",
+      })
+    }
 
     return response
   } catch (error) {

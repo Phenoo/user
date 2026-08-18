@@ -10,6 +10,9 @@
 
 import type * as ResendOTP from "../ResendOTP.js";
 import type * as ResendOTPPasswordReset from "../ResendOTPPasswordReset.js";
+import type * as aiSuggestions from "../aiSuggestions.js";
+import type * as aiTokenUsage from "../aiTokenUsage.js";
+import type * as analytics from "../analytics.js";
 import type * as assessments from "../assessments.js";
 import type * as assignments from "../assignments.js";
 import type * as auth from "../auth.js";
@@ -47,6 +50,9 @@ import type {
 declare const fullApi: ApiFromModules<{
   ResendOTP: typeof ResendOTP;
   ResendOTPPasswordReset: typeof ResendOTPPasswordReset;
+  aiSuggestions: typeof aiSuggestions;
+  aiTokenUsage: typeof aiTokenUsage;
+  analytics: typeof analytics;
   assessments: typeof assessments;
   assignments: typeof assignments;
   auth: typeof auth;

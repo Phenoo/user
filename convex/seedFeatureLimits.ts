@@ -8,20 +8,20 @@ export const seedFeatureLimits = mutation({
 
     const featureLimits = [
       // FREE Plan Limits
-      { plan: "FREE", feature: "COURSES_CREATED", limit: 3 },
-      { plan: "FREE", feature: "DECKS_CREATED", limit: 10 },
-      { plan: "FREE", feature: "CARDS_CREATED", limit: 100 },
-      { plan: "FREE", feature: "AI_GENERATIONS", limit: 5 },
-      { plan: "FREE", feature: "DATA_EXPORTS", limit: 1 },
-      { plan: "FREE", feature: "ANALYTICS_VIEWS", limit: 0 },
+      { plan: "FREE", feature: "COURSES_CREATED", limit: 1 },
+      { plan: "FREE", feature: "DECKS_CREATED", limit: 2 },
+      { plan: "FREE", feature: "CARDS_CREATED", limit: 20 },
+      { plan: "FREE", feature: "AI_GENERATIONS", limit: 3 },
+      { plan: "FREE", feature: "DATA_EXPORTS", limit: 0 },
+      { plan: "FREE", feature: "ANALYTICS_VIEWS", limit: 2 },
 
       // STUDENT Plan Limits
-      { plan: "STUDENT", feature: "COURSES_CREATED", limit: 10 },
-      { plan: "STUDENT", feature: "DECKS_CREATED", limit: 50 },
-      { plan: "STUDENT", feature: "CARDS_CREATED", limit: 1000 },
-      { plan: "STUDENT", feature: "AI_GENERATIONS", limit: 50 },
-      { plan: "STUDENT", feature: "DATA_EXPORTS", limit: 10 },
-      { plan: "STUDENT", feature: "ANALYTICS_VIEWS", limit: -1 },
+      { plan: "STUDENT", feature: "COURSES_CREATED", limit: 5 },
+      { plan: "STUDENT", feature: "DECKS_CREATED", limit: 10 },
+      { plan: "STUDENT", feature: "CARDS_CREATED", limit: 100 },
+      { plan: "STUDENT", feature: "AI_GENERATIONS", limit: 25 },
+      { plan: "STUDENT", feature: "DATA_EXPORTS", limit: 3 },
+      { plan: "STUDENT", feature: "ANALYTICS_VIEWS", limit: 25 },
 
       // STUDENTPRO Plan Limits (Unlimited)
       { plan: "STUDENTPRO", feature: "COURSES_CREATED", limit: -1 },

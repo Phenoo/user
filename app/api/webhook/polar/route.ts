@@ -7,95 +7,101 @@ import { NextResponse } from "next/server";
 
 const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
+const processSubscriptionEvent = async (payload: any, isCancel = false) => {
+  const userId = payload.data?.metadata?.userId as Id<"users">;
+  if (!userId) {
+    console.error("No userId found in metadata for Polar webhook event");
+    return;
+  }
+
+  const productName = payload.data?.product?.name || "";
+  const productNameLower = productName.toLowerCase();
+
+  let plan: "FREE" | "STUDENT" | "STUDENTPRO" = "FREE";
+  if (!isCancel && (payload.data?.status === "active" || payload.data?.status === "trialing")) {
+    if (productNameLower.includes("pro") || productNameLower.includes("scholar") || productNameLower.includes("studentpro")) {
+      plan = "STUDENTPRO";
+    } else {
+      plan = "STUDENT";
+    }
+  }
+
+  const status = isCancel ? "canceled" : payload.data?.status || "active";
+
+  try {
+    await convex.mutation(api.users.updateUserSubscription, {
+      userId,
+      status,
+      subscriptionId: payload.data?.id,
+      stripeCustomerId: payload.data?.customerId,
+      endsOn: payload.data?.currentPeriodEnd
+        ? new Date(payload.data.currentPeriodEnd).toISOString()
+        : undefined,
+      tier: productName || (plan === "STUDENTPRO" ? "Pro" : plan === "STUDENT" ? "Starter" : "Free"),
+      plan,
+    });
+  } catch (err) {
+    console.error("Error updating user subscription in Convex:", err);
+  }
+
+  if (!isCancel) {
+    try {
+      const priceId =
+        payload.data?.priceId ||
+        payload.data?.prices?.[0]?.id ||
+        payload.data?.productId ||
+        "default_price";
+
+      const currentPeriodEnd = payload.data?.currentPeriodEnd
+        ? new Date(payload.data.currentPeriodEnd).getTime()
+        : Date.now() + 30 * 24 * 60 * 60 * 1000;
+
+      await convex.mutation(api.subscriptions.upsertSubscription, {
+        userId,
+        polarSubscriptionId: payload.data.id,
+        polarCustomerId: payload.data.customerId || "",
+        productId: payload.data.productId || "",
+        productName: payload.data.product?.name || "",
+        priceId,
+        status: payload.data.status || "active",
+        currentPeriodStart: payload.data?.currentPeriodStart
+          ? new Date(payload.data.currentPeriodStart).getTime()
+          : Date.now(),
+        currentPeriodEnd,
+        cancelAtPeriodEnd: payload.data?.cancelAtPeriodEnd ?? false,
+        canceledAt: payload.data?.canceledAt
+          ? new Date(payload.data.canceledAt).getTime()
+          : undefined,
+        trialStart: payload.data?.trialStart
+          ? new Date(payload.data.trialStart).getTime()
+          : undefined,
+        trialEnd: payload.data?.trialEnd
+          ? new Date(payload.data.trialEnd).getTime()
+          : undefined,
+      });
+    } catch (err) {
+      console.error("Error upserting subscription record in Convex:", err);
+    }
+  }
+};
+
 export const POST = Webhooks({
   webhookSecret: process.env.POLAR_WEBHOOK_SECRET!,
 
-  onSubscriptionActive: async (payload) => {},
+  onSubscriptionActive: async (payload) => {
+    await processSubscriptionEvent(payload);
+  },
   onSubscriptionRevoked: async (payload) => {
-    try {
-      await convex.mutation(api.users.updateUserSubscription, {
-        userId: payload.data.metadata.userId as Id<"users">,
-        status: "canceled",
-      });
-    } catch {}
+    await processSubscriptionEvent(payload, true);
   },
   onSubscriptionCanceled: async (payload) => {
-    try {
-      await convex.mutation(api.users.updateUserSubscription, {
-        userId: payload.data.metadata.userId as Id<"users">,
-        status: "canceled",
-      });
-    } catch {}
+    await processSubscriptionEvent(payload, true);
   },
   onSubscriptionCreated: async (payload) => {
-    try {
-      await convex.mutation(api.users.updateUserSubscription, {
-        userId: payload.data.metadata.userId as Id<"users">,
-        status: "active",
-        subscriptionId: payload.data.id,
-        stripeCustomerId: payload.data.customerId,
-        endsOn: payload.data.currentPeriodEnd?.toISOString(),
-        tier: payload.data.product.name,
-      });
-      await convex.mutation(api.subscriptions.upsertSubscription, {
-        userId: payload.data.metadata.userId as Id<"users">,
-        polarSubscriptionId: payload.data.id,
-        polarCustomerId: payload.data.customerId,
-        productId: payload.data.productId,
-        productName: payload.data.product.name,
-        status: payload.data.status,
-        currentPeriodStart: new Date(payload.data.currentPeriodStart).getTime(),
-        //@ts-ignore
-        currentPeriodEnd: payload.data.currentPeriodEnd
-          ? new Date(payload.data.currentPeriodEnd).getTime()
-          : undefined,
-        cancelAtPeriodEnd: payload.data.cancelAtPeriodEnd,
-        canceledAt: payload.data.canceledAt
-          ? new Date(payload.data.canceledAt).getTime()
-          : undefined,
-        trialStart: payload.data.trialStart
-          ? new Date(payload.data.trialStart).getTime()
-          : undefined,
-        trialEnd: payload.data.trialEnd
-          ? new Date(payload.data.trialEnd).getTime()
-          : undefined,
-      });
-    } catch {}
+    await processSubscriptionEvent(payload);
   },
   onSubscriptionUpdated: async (payload) => {
-    try {
-      await convex.mutation(api.users.updateUserSubscription, {
-        userId: payload.data.metadata.userId as Id<"users">,
-        status: "active",
-        subscriptionId: payload.data.id,
-        stripeCustomerId: payload.data.customerId,
-        endsOn: payload.data.currentPeriodEnd?.toISOString(),
-        tier: payload.data.product.name,
-      });
-      await convex.mutation(api.subscriptions.upsertSubscription, {
-        userId: payload.data.metadata.userId as Id<"users">,
-        polarSubscriptionId: payload.data.id,
-        polarCustomerId: payload.data.customerId,
-        productId: payload.data.productId,
-        productName: payload.data.product.name,
-        status: payload.data.status,
-        currentPeriodStart: new Date(payload.data.currentPeriodStart).getTime(),
-        //@ts-ignore
-        currentPeriodEnd: payload.data.currentPeriodEnd
-          ? new Date(payload.data.currentPeriodEnd).getTime()
-          : undefined,
-        cancelAtPeriodEnd: payload.data.cancelAtPeriodEnd,
-        canceledAt: payload.data.canceledAt
-          ? new Date(payload.data.canceledAt).getTime()
-          : undefined,
-        trialStart: payload.data.trialStart
-          ? new Date(payload.data.trialStart).getTime()
-          : undefined,
-        trialEnd: payload.data.trialEnd
-          ? new Date(payload.data.trialEnd).getTime()
-          : undefined,
-      });
-    } catch {}
+    await processSubscriptionEvent(payload);
   },
   onOrderCreated: async (payload) => {
     const isProration = payload.data.billingReason === "subscription_update";

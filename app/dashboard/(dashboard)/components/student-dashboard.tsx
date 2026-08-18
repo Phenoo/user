@@ -45,6 +45,7 @@ import {
 
 import { useAction, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { Skeleton } from "@/components/ui/skeleton";
 import LoadingComponent from "@/components/loader";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -52,47 +53,91 @@ import { Id } from "@/convex/_generated/dataModel";
 import NewStudyGroup from "../study-groups/_components/new-study-group";
 import CpaCard from "./cpa-card";
 import { GoogleMeetIntegration } from "@/components/google-meeting-integration";
-import { useState } from "react";
-
 import { useAuthToken } from "@convex-dev/auth/react";
 import { SearchDashboard } from "./search-dashboard";
 import { StudyAnalytics } from "../pomodoro/_components/study-analytics";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import QuickAccessHub from "./quick-access-hub";
 
-export const data = [
-  {
-    revenue: 10400,
-    subscription: 40,
-  },
-  {
-    revenue: 14405,
-    subscription: 90,
-  },
-  {
-    revenue: 9400,
-    subscription: 200,
-  },
-  {
-    revenue: 8200,
-    subscription: 278,
-  },
-  {
-    revenue: 7000,
-    subscription: 89,
-  },
-  {
-    revenue: 9600,
-    subscription: 239,
-  },
-  {
-    revenue: 11244,
-    subscription: 78,
-  },
-  {
-    revenue: 26475,
-    subscription: 89,
-  },
-];
+function CourseProgressItem({
+  course,
+  userId,
+  router,
+}: {
+  course: any;
+  userId: Id<"users">;
+  router: any;
+}) {
+  const decks =
+    useQuery(api.flashcards.getUserDecksByCourseId, {
+      courseId: course._id,
+      userId,
+    }) || [];
+
+  let totalCards = 0;
+  let masteredCards = 0;
+
+  decks.forEach((deck) => {
+    totalCards += deck.totalCards || 0;
+    masteredCards += deck.masteredCards || 0;
+  });
+
+  const progressRatio = totalCards > 0 ? masteredCards / totalCards : 0;
+  const filledBars = Math.round(progressRatio * 10);
+
+  return (
+    <div className="flex flex-col bg-card rounded border p-4">
+      <div className="flex justify-between gap-4 items-center">
+        <div>
+          <h4 className="font-semibold text-sm">{course.name}</h4>
+          <span className="text-xs text-muted-foreground">{course.code}</span>
+        </div>
+        <div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size={"icon"} variant="ghost" className="h-8 w-8">
+                <MoreHorizontal className="h-4 text-foreground w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onClick={() =>
+                  router.push(`/dashboard/courses/course/${course._id}`)
+                }
+              >
+                View Course
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() =>
+                  router.push(`/dashboard/flashcards?course=${course._id}`)
+                }
+              >
+                Study Flashcards
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+      <div className="flex justify-between w-full items-center mt-3 mb-2">
+        <p className="text-xs text-muted-foreground">Progress</p>
+        <h6 className="text-xs font-semibold">
+          <span className="text-base font-bold">{masteredCards}</span>/{totalCards}
+        </h6>
+      </div>
+      <div className="w-full grid grid-cols-10 gap-1">
+        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((item) => (
+          <div
+            key={item}
+            className={cn(
+              "h-8 w-full rounded-sm transition-colors",
+              item <= filledBars ? "bg-primary" : "bg-muted"
+            )}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export function StudentDashboard() {
   const user = useQuery(api.users.currentUser);
@@ -166,6 +211,18 @@ export function StudentDashboard() {
     fetchToken();
   }, []);
 
+  // Keyboard shortcut listener (Cmd+K / Ctrl+K for search)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setOpen((prev: boolean) => !prev);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   const handleGoogleAuth = async () => {
     try {
       const response = await fetch("/api/google-meet/auth");
@@ -211,7 +268,28 @@ export function StudentDashboard() {
     }) || [];
 
   if (user === undefined) {
-    return <LoadingComponent />;
+    return (
+      <div className="min-h-screen max-w-7xl p-4 mx-auto w-full flex flex-col gap-8">
+        <div className="space-y-2">
+          <Skeleton className="h-10 w-64" />
+          <Skeleton className="h-4 w-96" />
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
+            <Skeleton className="h-44 w-full rounded-2xl" />
+            <Skeleton className="h-32 w-full rounded-xl" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Skeleton className="h-36 w-full rounded-xl" />
+              <Skeleton className="h-36 w-full rounded-xl" />
+            </div>
+          </div>
+          <div className="space-y-6">
+            <Skeleton className="h-64 w-full rounded-xl" />
+            <Skeleton className="h-48 w-full rounded-xl" />
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -224,49 +302,60 @@ export function StudentDashboard() {
             </h4>
           </div>
           <div className="flex gap-4 items-center flex-wrap">
-            <div
-              className="flex gap-2 bg-card  rounded-3xl flex-1 items-center p-1 px-4"
+            <button
+              type="button"
+              aria-label="Open search dialog (Command K)"
+              className="flex gap-2 bg-card border rounded-3xl flex-1 items-center p-2.5 px-4 cursor-pointer hover:border-primary/50 transition-colors text-left"
               onClick={() => setOpen(true)}
             >
-              <CiSearch className="h-5 w-5 stroke-1" />
-              <Input
-                className=" min-w-[250px] dark:bg-transparent bg-transparent border-none shadow-none"
-                placeholder="Search"
-              />
-            </div>
+              <CiSearch className="h-5 w-5 stroke-1 text-muted-foreground" />
+              <span className="min-w-[180px] sm:min-w-[220px] text-sm text-muted-foreground">
+                Search tools, courses, tasks...
+              </span>
+              <kbd className="hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground ml-auto">
+                ⌘K
+              </kbd>
+            </button>
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button className="rounded-3xl">
+                <Button className="rounded-3xl gap-1.5" aria-label="Create new item">
                   Create
                   <Plus className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuLabel>Create</DropdownMenuLabel>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuLabel>Quick Create</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={() => router.push("/dashboard/pomodoro")}
                 >
-                  Pomodoro <GoStopwatch className="h-4 w-4 ml-auto" />
+                  Pomodoro <GoStopwatch className="h-4 w-4 ml-auto text-rose-500" />
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => router.push("/dashboard/tasks")}
                 >
-                  Task
-                  <RiTaskLine className="h-4 w-4 ml-auto" />
+                  Task <RiTaskLine className="h-4 w-4 ml-auto text-blue-500" />
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => router.push("/dashboard/flashcards")}
+                >
+                  Flashcard Deck <CgTranscript className="h-4 w-4 ml-auto text-amber-500" />
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => router.push("/dashboard/schedule")}
                 >
-                  Event
-                  <LuCalendarCheck2 className="h-4 w-4 ml-auto" />
+                  Event <LuCalendarCheck2 className="h-4 w-4 ml-auto text-emerald-500" />
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => router.push("/dashboard/study-groups")}
+                >
+                  Study Group <Users className="h-4 w-4 ml-auto text-purple-500" />
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => router.push("/dashboard/transcript")}
                 >
-                  Transcript
-                  <CgTranscript className="h-4 w-4 ml-auto" />
+                  Transcript <CgTranscript className="h-4 w-4 ml-auto text-cyan-500" />
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -292,7 +381,10 @@ export function StudentDashboard() {
               />
             )}
             {/* Flashcards Progress */}
-            <Card className="bg-transparent border-0 shadow-none border-none">
+
+            <QuickAccessHub />
+
+               <Card className="bg-transparent border-0 shadow-none border-none">
               <CardHeader className="flex flex-row items-center p-0 justify-between">
                 <CardTitle className="flex items-center gap-2 text-xl md:text-2xl">
                   Progress
@@ -305,96 +397,26 @@ export function StudentDashboard() {
                 </Link>
               </CardHeader>
               <CardContent className="p-0">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {courses
-                    .filter((_, i) => i < 3)
-                    .map((flashcard, index) => (
-                      <div
-                        key={index}
-                        className="flex flex-col bg-card rounded-sm "
-                      >
-                        <div className="flex justify-between gap-4">
-                          <div className="pt-4 pl-4">
-                            <h4>{flashcard.name}</h4>
-                          </div>
-                          <div>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  size={"icon"}
-                                  className="rounded-none bg-background"
-                                >
-                                  <MoreHorizontal className="h-4 text-foreground w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem
-                                  onClick={() =>
-                                    router.push(
-                                      `/dashboard/courses/course/${flashcard._id}`
-                                    )
-                                  }
-                                >
-                                  View Course
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() =>
-                                    router.push(
-                                      `/dashboard/flashcards?course=${flashcard._id}`
-                                    )
-                                  }
-                                >
-                                  Study Flashcards
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  onClick={() =>
-                                    router.push(
-                                      `/dashboard/courses/course/${flashcard._id}#assignments`
-                                    )
-                                  }
-                                >
-                                  View Assignments
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-                        </div>
-                        <div className="flex justify-between w-full  gap-4 p-4">
-                          <div>
-                            <p className="text-sm">Progress</p>
-                          </div>
-                          <div>
-                            <h6 className="text-sm">
-                              <span className="text-2xl">{0}</span>/{0}
-                            </h6>
-                          </div>
-                        </div>
-                        <div className="w-full grid grid-cols-10 gap-2 px-4">
-                          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((item, i) => (
-                            <div
-                              key={i}
-                              className={cn(
-                                "h-10 w-full rounded",
-                                item * 4 < 5 ? "bg-primary/50" : "bg-[#ddd] "
-                              )}
-                            ></div>
-                          ))}
-                        </div>
-                        <div className="flex justify-between w-full  gap-4 mt-2 p-4">
-                          <div></div>
-                          <div className="flex gap-1 bg-[#ddd] dark:bg-neutral-700 p-2 rounded">
-                            <IoFlagSharp className="h-4 w-4 mr-1" />
-                            <p className="text-xs">See More</p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                </div>
+                {courses.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {courses
+                      .filter((_, i) => i < 3)
+                      .map((course) => (
+                        <CourseProgressItem
+                          key={course._id}
+                          course={course}
+                          userId={user?._id as Id<"users">}
+                          router={router}
+                        />
+                      ))}
+                  </div>
+                ) : (
+                  <div className="p-6 text-center text-muted-foreground text-sm border rounded-lg">
+                    No courses added yet. Add your first course to track progress!
+                  </div>
+                )}
               </CardContent>
             </Card>
-
-            <StudyResourcesSection />
           </div>
 
           {/* Right Column */}

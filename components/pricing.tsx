@@ -151,7 +151,7 @@ const AuthPlan = ({ plan, billPlan }: { plan: PLAN; billPlan: Plan }) => {
       </div>
       <div className="flex flex-col items-start w-full px-4 py-2 md:px-8">
         {plan.title === "Free" ? (
-          <Link href={"/dashboaed"} className="w-full">
+          <Link href={"/dashboard"} className="w-full">
             <Button className="w-full">Continue</Button>
           </Link>
         ) : (

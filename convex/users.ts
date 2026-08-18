@@ -112,6 +112,9 @@ export const updateUserSubscription = mutation({
     status: v.optional(v.string()),
     endsOn: v.optional(v.string()),
     stripeCustomerId: v.optional(v.string()),
+    plan: v.optional(
+      v.union(v.literal("FREE"), v.literal("STUDENT"), v.literal("STUDENTPRO"))
+    ),
   },
   handler: async (ctx, args) => {
     const user = await ctx.db.get(args.userId as any);
@@ -119,13 +122,31 @@ export const updateUserSubscription = mutation({
       throw new Error("User not found");
     }
 
+    let calculatedPlan: "FREE" | "STUDENT" | "STUDENTPRO" = "FREE";
+
+    if (args.plan) {
+      calculatedPlan = args.plan;
+    } else if (args.status === "active" || args.status === "trialing") {
+      const tierLower = (args.tier || "").toLowerCase();
+      if (tierLower.includes("pro") || tierLower.includes("scholar") || tierLower.includes("studentpro")) {
+        calculatedPlan = "STUDENTPRO";
+      } else {
+        calculatedPlan = "STUDENT";
+      }
+    } else {
+      calculatedPlan = "FREE";
+    }
+
     await ctx.db.patch(args.userId as any, {
-      subscriptionTier: args.tier,
+      subscriptionPlan: calculatedPlan,
+      subscriptionTier: args.tier || (calculatedPlan === "FREE" ? "Free" : calculatedPlan === "STUDENTPRO" ? "Pro" : "Starter"),
       endsOn: args.endsOn,
       subscriptionId: args.subscriptionId,
       subscriptionStatus: args.status,
       stripeCustomerId: args.stripeCustomerId,
     });
+
+    return { success: true, plan: calculatedPlan };
   },
 });
 

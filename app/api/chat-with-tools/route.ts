@@ -2,13 +2,17 @@ import {
   convertToModelMessages,
   type InferUITools,
   stepCountIs,
-  streamText,
   tool,
   type UIDataTypes,
   type UIMessage,
   validateUIMessages,
 } from "ai"
 import { z } from "zod"
+import { streamTextWithGateway } from "@/lib/ai/gateway"
+import {
+  buildToolsChatSystemPrompt,
+  TOOLS_CHAT_PROMPT,
+} from "@/lib/ai/prompts"
 
 export const maxDuration = 30
 
@@ -142,19 +146,15 @@ export async function POST(req: Request) {
     tools,
   })
 
-  const result = streamText({
-    model: "openai/gpt-4o",
-    messages: convertToModelMessages(messages),
-    stopWhen: stepCountIs(5),
-    tools,
-    system: `You are a helpful AI study assistant for students. You have access to several tools:
-    
-1. Calculator - Use this for any math problems or calculations
-2. Study Timer - Help students set up study sessions
-3. Flashcard Generator - Create study flashcards for any topic
-4. Citation Generator - Generate proper citations for academic papers
-
-Always use the appropriate tool when a student asks for help with these tasks. Be encouraging and supportive in your responses.`,
+  const { result } = await streamTextWithGateway({
+    feature: "tool-chat",
+    promptVersion: `${TOOLS_CHAT_PROMPT.id}:${TOOLS_CHAT_PROMPT.version}`,
+    baseSystem: buildToolsChatSystemPrompt(),
+    request: {
+      messages: convertToModelMessages(messages),
+      stopWhen: stepCountIs(5),
+      tools,
+    },
   })
 
   return result.toUIMessageStreamResponse()

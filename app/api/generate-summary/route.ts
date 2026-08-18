@@ -1,10 +1,14 @@
-import { generateText } from "ai";
 import { z } from "zod";
 import {
   CommonErrors,
   successResponse,
-  handleApiError,
+  errorResponse,
 } from "@/lib/api-helpers";
+import { fetchMutation } from "convex/nextjs";
+import { api } from "@/convex/_generated/api";
+import { getUserFacingAIError } from "@/lib/ai/errors";
+import { generateTextWithGateway } from "@/lib/ai/gateway";
+import { buildSummaryPrompt, SUMMARY_PROMPT } from "@/lib/ai/prompts";
 
 export const maxDuration = 60;
 
@@ -18,6 +22,8 @@ const summaryRequestSchema = z.object({
     message: "Summary type must be 'brief', 'detailed', or 'bullet'",
   }),
   userId: z.string().min(1, "User ID is required"),
+  courseId: z.string().optional(),
+  courseName: z.string().optional(),
 });
 
 export async function POST(req: Request) {
@@ -33,44 +39,36 @@ export async function POST(req: Request) {
       );
     }
 
-    const { content, summaryType, userId } = validationResult.data;
+    const { content, summaryType, userId, courseId, courseName } = validationResult.data;
 
-    let prompt = "";
+    const prompt = buildSummaryPrompt({
+      content,
+      summaryType,
+      courseName,
+    });
 
-    if (summaryType === "brief") {
-      prompt = `Provide a brief summary (2-3 paragraphs) of the following content. Focus on the main points and key takeaways:\n\n${content}`;
-    } else if (summaryType === "detailed") {
-      prompt = `Provide a detailed summary of the following content. Include all major points, supporting details, and important examples:\n\n${content}`;
-    } else if (summaryType === "bullet") {
-      prompt = `Summarize the following content as a bullet-point list. Extract the key points and organize them clearly:\n\n${content}`;
-    }
-
-    const { text } = await generateText({
-      model: "openai/gpt-4o",
-      prompt,
-      maxOutputTokens: 3000,
-      temperature: 0.5,
+    const { text } = await generateTextWithGateway({
+      feature: "summary",
+      userId,
+      courseId,
+      courseName,
+      promptVersion: `${SUMMARY_PROMPT.id}:${SUMMARY_PROMPT.version}`,
+      retrievalQuery: courseId ? content.slice(0, 240) : undefined,
+      request: {
+        prompt,
+        maxOutputTokens: 3000,
+        temperature: 0.5,
+      },
     });
 
     // Save to Convex
     try {
-      const response = await fetch(
-        `${process.env.CONVEX_URL}/api/generatedContent/save`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            userId,
-            type: "summary",
-            prompt: `${summaryType} summary`,
-            content: text,
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        console.error("Failed to save summary to Convex");
-      }
+      await fetchMutation(api.generatedContent.save, {
+        userId,
+        type: "summary",
+        prompt: `${summaryType} summary`,
+        content: text,
+      });
     } catch (error) {
       console.error("Error saving summary to Convex:", error);
     }
@@ -78,6 +76,12 @@ export async function POST(req: Request) {
     return successResponse({ text }, "Summary generated successfully");
   } catch (error) {
     console.error("Error generating summary:", error);
-    return handleApiError(error, "Failed to generate summary");
+    const userFacingError = getUserFacingAIError(error);
+    return errorResponse(
+      userFacingError.message,
+      userFacingError.status,
+      undefined,
+      userFacingError.code
+    );
   }
 }

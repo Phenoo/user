@@ -8,7 +8,12 @@ const GenerateButton = ({
   className = "",
 }: SparkleButtonProps) => {
   return (
-    <button className="button">
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={`button ${className}`}
+    >
       <div className="dots_border"></div>
       <svg
         xmlns="http://www.w3.org/2000/svg"

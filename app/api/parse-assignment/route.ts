@@ -1,5 +1,13 @@
-import { generateObject } from "ai"
 import { z } from "zod"
+import { fetchMutation } from "convex/nextjs"
+import { api } from "@/convex/_generated/api"
+import { NextResponse } from "next/server"
+import { getUserFacingAIError } from "@/lib/ai/errors"
+import { generateObjectWithGateway } from "@/lib/ai/gateway"
+import {
+  ASSIGNMENT_PARSER_PROMPT,
+  buildAssignmentParserPrompt,
+} from "@/lib/ai/prompts"
 
 export const maxDuration = 60
 
@@ -13,35 +21,43 @@ const assignmentSchema = z.object({
 })
 
 export async function POST(req: Request) {
-  const { text, userId } = await req.json()
-
-  const { object } = await generateObject({
-    model: "openai/gpt-4o",
-    schema: assignmentSchema,
-    prompt: `Extract assignment information from the following text. Be thorough and extract all relevant details:\n\n${text}`,
-  })
-
-  // Save to Convex
   try {
-    const response = await fetch(`${process.env.CONVEX_URL}/api/assignments/save`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        userId,
-        title: object.title,
-        description: object.description,
-        dueDate: object.dueDate,
-        subject: object.subject,
-        extractedFrom: text,
-      }),
+    const { text, userId } = await req.json()
+
+    const { object } = await generateObjectWithGateway({
+      feature: "assignment-parser",
+      userId,
+      promptVersion: `${ASSIGNMENT_PARSER_PROMPT.id}:${ASSIGNMENT_PARSER_PROMPT.version}`,
+      retrievalQuery: text,
+      request: {
+        schema: assignmentSchema,
+        prompt: buildAssignmentParserPrompt(text),
+      },
     })
 
-    if (!response.ok) {
-      console.error("[v0] Failed to save assignment to Convex")
-    }
-  } catch (error) {
-    console.error("[v0] Error saving assignment to Convex:", error)
-  }
+    const parsedAssignment = object as z.infer<typeof assignmentSchema>
 
-  return Response.json({ assignment: object })
+    // Save to Convex
+    try {
+      await fetchMutation(api.assignments.save, {
+        userId,
+        title: parsedAssignment.title,
+        description: parsedAssignment.description,
+        dueDate: parsedAssignment.dueDate,
+        subject: parsedAssignment.subject,
+        extractedFrom: text,
+      })
+    } catch (error) {
+      console.error("[v0] Error saving assignment to Convex:", error)
+    }
+
+    return Response.json({ assignment: parsedAssignment })
+  } catch (error) {
+    console.error("[v0] Error parsing assignment:", error)
+    const userFacingError = getUserFacingAIError(error)
+    return NextResponse.json(
+      { error: userFacingError.message, code: userFacingError.code },
+      { status: userFacingError.status }
+    )
+  }
 }
