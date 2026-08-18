@@ -16,6 +16,8 @@ import {
   Shield,
   Loader2,
   RotateCw,
+  CheckCircle2,
+  AlertCircle,
 } from "lucide-react";
 import { FcGoogle } from "react-icons/fc";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -72,6 +74,26 @@ export default function AuthenticationCard() {
   const searchParams = useSearchParams();
 
   const currentStep = (searchParams.get("step") as AuthStep) || step || "login";
+  const connectedIntegration = searchParams.get("connected");
+  const callbackStatus = searchParams.get("status");
+  const callbackError = searchParams.get("error");
+
+  const integrationLabels: Record<string, string> = {
+    classroom: "Google Classroom",
+    drive: "Google Drive",
+    calendar: "Google Calendar",
+  };
+  const connectedLabel = connectedIntegration
+    ? integrationLabels[connectedIntegration] || "Google integration"
+    : "Google integration";
+  const callbackErrorMessages: Record<string, string> = {
+    invalid_callback_request:
+      "Google did not return a complete authorization response. Please sign in and try connecting again.",
+    csrf_validation_failed:
+      "Your Google connection session expired. Please sign in and start the connection again.",
+    callback_processing_error:
+      "We could not finish saving your Google connection. Please sign in and try again.",
+  };
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -374,6 +396,43 @@ export default function AuthenticationCard() {
         <div className="w-full flex items-center justify-center pt-6 pb-2">
           <Logo />
         </div>
+
+        {callbackStatus === "success" && connectedIntegration ? (
+          <div
+            className="mx-6 mb-2 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4"
+            role="status"
+          >
+            <div className="flex items-start gap-3">
+              <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-500" />
+              <div className="space-y-1">
+                <p className="font-semibold text-emerald-700 dark:text-emerald-300">
+                  {connectedLabel} connected
+                </p>
+                <p className="text-sm text-emerald-800/80 dark:text-emerald-200/80">
+                  Your Google account was connected successfully. Sign in below to continue to your workspace.
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : callbackError ? (
+          <div
+            className="mx-6 mb-2 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4"
+            role="alert"
+          >
+            <div className="flex items-start gap-3">
+              <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
+              <div className="space-y-1">
+                <p className="font-semibold text-amber-700 dark:text-amber-300">
+                  Google connection needs another try
+                </p>
+                <p className="text-sm text-amber-800/80 dark:text-amber-200/80">
+                  {callbackErrorMessages[callbackError] ||
+                    "We could not complete the Google connection. Please sign in and try again."}
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : null}
 
         <div className="p-8 flex flex-col">
           {/* STEP: LOGIN */}
