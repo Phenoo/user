@@ -449,18 +449,18 @@ export default function TranscriptPage() {
 
         <div className="space-y-1 bg-gray-50 p-4 rounded border border-gray-200">
           <h4 className="font-bold text-gray-900 uppercase tracking-wider text-[11px] border-b border-gray-300 pb-1 mb-2">
-            Grading Scale (4.0 Basis)
+            Grading Scale (5.0 Basis)
           </h4>
           <div className="grid grid-cols-3 gap-x-2 gap-y-1 text-[10px] text-gray-700">
-            <div>A+ = 4.0</div>
-            <div>B+ = 3.3</div>
-            <div>C+ = 2.3</div>
-            <div>A = 4.0</div>
-            <div>B = 3.0</div>
-            <div>C = 2.0</div>
-            <div>A- = 3.7</div>
-            <div>B- = 2.7</div>
-            <div>D = 1.0</div>
+            <div>A+ = 5.0</div>
+            <div>B+ = 4.3</div>
+            <div>C+ = 3.3</div>
+            <div>A = 5.0</div>
+            <div>B = 4.0</div>
+            <div>C = 3.0</div>
+            <div>A- = 4.7</div>
+            <div>B- = 3.7</div>
+            <div>D = 2.0</div>
           </div>
         </div>
       </div>
@@ -804,17 +804,18 @@ export default function TranscriptPage() {
                                       <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                      <SelectItem value="A+">A+ (4.0)</SelectItem>
-                                      <SelectItem value="A">A (4.0)</SelectItem>
-                                      <SelectItem value="A-">A- (3.7)</SelectItem>
-                                      <SelectItem value="B+">B+ (3.3)</SelectItem>
-                                      <SelectItem value="B">B (3.0)</SelectItem>
-                                      <SelectItem value="B-">B- (2.7)</SelectItem>
-                                      <SelectItem value="C+">C+ (2.3)</SelectItem>
-                                      <SelectItem value="C">C (2.0)</SelectItem>
-                                      <SelectItem value="C-">C- (1.7)</SelectItem>
-                                      <SelectItem value="D+">D+ (1.3)</SelectItem>
-                                      <SelectItem value="D">D (1.0)</SelectItem>
+                                      <SelectItem value="A+">A+ (5.0)</SelectItem>
+                                      <SelectItem value="A">A (5.0)</SelectItem>
+                                      <SelectItem value="A-">A- (4.7)</SelectItem>
+                                      <SelectItem value="B+">B+ (4.3)</SelectItem>
+                                      <SelectItem value="B">B (4.0)</SelectItem>
+                                      <SelectItem value="B-">B- (3.7)</SelectItem>
+                                      <SelectItem value="C+">C+ (3.3)</SelectItem>
+                                      <SelectItem value="C">C (3.0)</SelectItem>
+                                      <SelectItem value="C-">C- (2.7)</SelectItem>
+                                      <SelectItem value="D+">D+ (2.3)</SelectItem>
+                                      <SelectItem value="D">D (2.0)</SelectItem>
+                                      <SelectItem value="E">E (1.0)</SelectItem>
                                       <SelectItem value="F">F (0.0)</SelectItem>
                                     </SelectContent>
                                   </Select>

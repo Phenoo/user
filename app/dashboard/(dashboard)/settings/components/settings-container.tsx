@@ -419,9 +419,9 @@ function GoalSettings() {
             <Input
               id="target-gpa"
               type="number"
-              defaultValue="3.5"
+              defaultValue="4.5"
               min="0"
-              max="4"
+              max="5"
               step="0.1"
             />
           </div>

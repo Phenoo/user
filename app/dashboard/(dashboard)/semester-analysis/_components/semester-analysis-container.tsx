@@ -49,28 +49,13 @@ import { cn } from "@/lib/utils";
 import { BsArrowUpRight } from "react-icons/bs";
 import { Loader } from "@/components/ai-elements/loader";
 import { Skeleton } from "@/components/ui/skeleton";
-import { calculateCourseGrade } from "@/lib/gpa-utils";
+import { calculateCourseGrade, gradePoints } from "@/lib/gpa-utils";
 import { Course } from "../../courses/_components/courses-container";
 import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
-
-const gradePoints: { [key: string]: number } = {
-  "A+": 4.0,
-  A: 4.0,
-  "A-": 3.7,
-  "B+": 3.3,
-  B: 3.0,
-  "B-": 2.7,
-  "C+": 2.3,
-  C: 2.0,
-  "C-": 1.7,
-  "D+": 1.3,
-  D: 1.0,
-  F: 0.0,
-};
 
 const gradeColors: Record<string, string> = {
   "A+": "#10B981",
@@ -423,15 +408,15 @@ const SemesterAnalysisPageContainer = () => {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
-                Progress to 4.0
+                Progress to 5.0
               </CardTitle>
               <Target className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {((overallGPA / 4.0) * 100).toFixed(0)}%
+                {((overallGPA / 5.0) * 100).toFixed(0)}%
               </div>
-              <Progress value={(overallGPA / 4.0) * 100} className="mt-2" />
+              <Progress value={(overallGPA / 5.0) * 100} className="mt-2" />
             </CardContent>
           </Card>
         </div>
@@ -471,7 +456,7 @@ const SemesterAnalysisPageContainer = () => {
                       height={80}
                     />
                     <YAxis
-                      domain={[0, 4.0]}
+                      domain={[0, 5.0]}
                       tick={{ fontSize: 12 }}
                       tickFormatter={(value) => value.toFixed(1)}
                     />

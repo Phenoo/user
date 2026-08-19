@@ -17,22 +17,7 @@ import {
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
-import { calculateCourseGrade } from "@/lib/gpa-utils";
-
-const gradePoints: Record<string, number> = {
-  "A+": 4.0,
-  A: 4.0,
-  "A-": 3.7,
-  "B+": 3.3,
-  B: 3.0,
-  "B-": 2.7,
-  "C+": 2.3,
-  C: 2.0,
-  "C-": 1.7,
-  "D+": 1.3,
-  D: 1.0,
-  F: 0.0,
-};
+import { calculateCourseGrade, gradePoints } from "@/lib/gpa-utils";
 
 const chartColors = [
   "hsl(var(--chart-1))",
@@ -100,7 +85,7 @@ const StudentChartsView = () => {
                 <LineChart data={gradesTrend}>
                   <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                   <XAxis dataKey="semester" />
-                  <YAxis domain={[0, 4.0]} tickFormatter={(val) => val.toFixed(1)} />
+                  <YAxis domain={[0, 5.0]} tickFormatter={(val) => val.toFixed(1)} />
                   <Tooltip formatter={(val: number) => [val.toFixed(2), "GPA"]} />
                   <Line
                     type="monotone"
