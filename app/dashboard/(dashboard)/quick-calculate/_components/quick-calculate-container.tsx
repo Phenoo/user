@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -18,9 +18,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Trash2, Plus, Calculator, ArrowLeft } from "lucide-react";
+import { Trash2, Plus, Calculator, ArrowLeft, Award } from "lucide-react";
 import Link from "next/link";
-import { gradePoints } from "@/lib/gpa-utils";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import {
+  getGradePointsForScale,
+  getMaxGpaForScale,
+  getDegreeClassification,
+  GpaScaleType,
+} from "@/lib/gpa-utils";
+import { Badge } from "@/components/ui/badge";
 
 interface Course {
   id: string;
@@ -31,6 +39,13 @@ interface Course {
 }
 
 export default function GPACalculator() {
+  const user = useQuery(api.users.currentUser);
+  const settings = useQuery(
+    api.settings.getUserSettings,
+    user?._id ? { userId: user._id } : "skip"
+  );
+
+  const [selectedScale, setSelectedScale] = useState<GpaScaleType>("5.0");
   const [courses, setCourses] = useState<Course[]>([]);
   const [newCourse, setNewCourse] = useState({
     name: "",
@@ -38,6 +53,15 @@ export default function GPACalculator() {
     grade: "",
     semester: "",
   });
+
+  useEffect(() => {
+    if (settings?.gpaScale) {
+      setSelectedScale(settings.gpaScale as GpaScaleType);
+    }
+  }, [settings]);
+
+  const scaleGradePoints = getGradePointsForScale(selectedScale);
+  const maxScaleGpa = getMaxGpaForScale(selectedScale);
 
   const addCourse = () => {
     if (
@@ -66,7 +90,8 @@ export default function GPACalculator() {
     if (coursesToCalculate.length === 0) return 0;
 
     const totalPoints = coursesToCalculate.reduce((sum, course) => {
-      return sum + gradePoints[course.grade] * course.credits;
+      const points = scaleGradePoints[course.grade] ?? 0;
+      return sum + points * course.credits;
     }, 0);
 
     const totalCredits = coursesToCalculate.reduce(
@@ -78,6 +103,7 @@ export default function GPACalculator() {
   };
 
   const overallGPA = calculateGPA(courses);
+  const degreeClass = getDegreeClassification(overallGPA, selectedScale);
   const semesters = [
     ...new Set(courses.map((course) => course.semester)),
   ].sort();
@@ -92,12 +118,39 @@ export default function GPACalculator() {
               Back to Home
             </Button>
           </Link>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            GPA Calculator
-          </h1>
-          <p className="text-gray-600 dark:text-gray-300">
-            Add your courses and calculate your GPA instantly
-          </p>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                GPA Calculator
+              </h1>
+              <p className="text-gray-600 dark:text-gray-300">
+                Add your courses and calculate your GPA instantly
+              </p>
+            </div>
+
+            {/* Scale Selector */}
+            <div className="flex items-center gap-2 bg-muted/60 p-1.5 rounded-lg border">
+              <span className="text-xs font-medium px-2 text-muted-foreground">
+                Scale:
+              </span>
+              <Button
+                variant={selectedScale === "5.0" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setSelectedScale("5.0")}
+                className="text-xs h-8"
+              >
+                Nigerian 5.0 (NUC)
+              </Button>
+              <Button
+                variant={selectedScale === "4.0" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setSelectedScale("4.0")}
+                className="text-xs h-8"
+              >
+                Standard 4.0 (US)
+              </Button>
+            </div>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -106,7 +159,7 @@ export default function GPACalculator() {
             <CardHeader>
               <CardTitle>Add Course</CardTitle>
               <CardDescription>
-                Enter course details to add to your GPA calculation
+                Enter course details ({selectedScale === "5.0" ? "70%+ = A = 5.0" : "93%+ = A = 4.0"})
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -123,7 +176,7 @@ export default function GPACalculator() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="credits">Credit Hours</Label>
+                  <Label htmlFor="credits">Credit Units / Hours</Label>
                   <Input
                     id="credits"
                     type="number"
@@ -148,9 +201,9 @@ export default function GPACalculator() {
                       <SelectValue placeholder="Select grade" />
                     </SelectTrigger>
                     <SelectContent>
-                      {Object.keys(gradePoints).map((grade) => (
+                      {Object.keys(scaleGradePoints).map((grade) => (
                         <SelectItem key={grade} value={grade}>
-                          {grade} ({gradePoints[grade].toFixed(1)})
+                          {grade} ({scaleGradePoints[grade].toFixed(1)})
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -160,7 +213,7 @@ export default function GPACalculator() {
                   <Label htmlFor="semester">Semester</Label>
                   <Input
                     id="semester"
-                    placeholder="e.g., Fall 2024"
+                    placeholder="e.g., 1st Semester 2024/2025"
                     value={newCourse.semester}
                     onChange={(e) =>
                       setNewCourse({ ...newCourse, semester: e.target.value })
@@ -185,10 +238,19 @@ export default function GPACalculator() {
             </CardHeader>
             <CardContent>
               <div className="text-center mb-6">
-                <div className="text-4xl font-bold text-blue-600 dark:text-blue-400 mb-2">
-                  {overallGPA.toFixed(2)}
+                <div className="text-4xl font-bold text-blue-600 dark:text-blue-400 mb-1">
+                  {overallGPA.toFixed(2)}{" "}
+                  <span className="text-sm font-normal text-muted-foreground">
+                    / {maxScaleGpa.toFixed(1)}
+                  </span>
                 </div>
-                <p className="text-gray-600 dark:text-gray-300">Overall GPA</p>
+                <div className="mt-2">
+                  <span
+                    className={`inline-block text-xs font-semibold px-2.5 py-1 rounded border ${degreeClass.color}`}
+                  >
+                    {degreeClass.title}
+                  </span>
+                </div>
               </div>
 
               {semesters.length > 0 && (
@@ -263,9 +325,10 @@ export default function GPACalculator() {
                         </td>
                         <td className="p-2">{course.semester}</td>
                         <td className="p-2">
-                          {(gradePoints[course.grade] * course.credits).toFixed(
-                            1
-                          )}
+                          {(
+                            (scaleGradePoints[course.grade] ?? 0) *
+                            course.credits
+                          ).toFixed(1)}
                         </td>
                         <td className="p-2">
                           <Button

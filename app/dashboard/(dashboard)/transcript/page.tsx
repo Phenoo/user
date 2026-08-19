@@ -38,7 +38,13 @@ import Link from "next/link";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useRouter } from "next/navigation";
-import { calculateCourseGrade, gradePoints } from "@/lib/gpa-utils";
+import {
+  calculateCourseGrade,
+  getGradePointsForScale,
+  getMaxGpaForScale,
+  getDegreeClassification,
+  GpaScaleType,
+} from "@/lib/gpa-utils";
 import { toast } from "sonner";
 
 interface StudentInfo {
@@ -69,6 +75,10 @@ interface CourseItem {
 export default function TranscriptPage() {
   const router = useRouter();
   const user = useQuery(api.users.currentUser);
+  const settings = useQuery(
+    api.settings.getUserSettings,
+    user?._id ? { userId: user._id } : "skip"
+  );
 
   // Safe query loading using "skip" when user is not ready
   const coursesData = useQuery(
@@ -87,6 +97,7 @@ export default function TranscriptPage() {
 
   const [activeTab, setActiveTab] = useState<"preview" | "customize">("preview");
   const [isExporting, setIsExporting] = useState(false);
+  const [selectedScale, setSelectedScale] = useState<GpaScaleType>("5.0");
 
   // Manual grade overrides per course ID
   const [gradeOverrides, setGradeOverrides] = useState<Record<string, string>>({});
@@ -105,17 +116,26 @@ export default function TranscriptPage() {
 
   const transcriptPrintRef = useRef<HTMLDivElement>(null);
 
-  // Populate student info once user profile loads
+  // Populate student info and scale once user profile loads
   useEffect(() => {
     if (user) {
       setStudentInfo((prev) => ({
         ...prev,
-        name: user.name || prev.name,
+        name: user.name || (user as any).fullName || user.email?.split("@")[0] || prev.name,
         major: user.major || prev.major,
         university: user.school || prev.university,
       }));
     }
   }, [user]);
+
+  useEffect(() => {
+    if (settings?.gpaScale) {
+      setSelectedScale(settings.gpaScale as GpaScaleType);
+    }
+  }, [settings]);
+
+  const scaleGradePoints = getGradePointsForScale(selectedScale);
+  const maxScaleGpa = getMaxGpaForScale(selectedScale);
 
   // Construct courses with calculated or overridden grades
   const coursesWithGrades: CourseItem[] = useMemo(() => {
@@ -125,7 +145,10 @@ export default function TranscriptPage() {
       const courseAssessments = assessmentsData.filter(
         (a) => a.courseId === course._id
       );
-      const { percentage, letterGrade } = calculateCourseGrade(courseAssessments);
+      const { percentage, letterGrade } = calculateCourseGrade(
+        courseAssessments,
+        selectedScale
+      );
       const hasAssessments = courseAssessments.some(
         (a) => a.status === "graded" && a.score !== undefined
       );
@@ -153,7 +176,7 @@ export default function TranscriptPage() {
         hasAssessments,
       };
     });
-  }, [coursesData, assessmentsData, gradeOverrides]);
+  }, [coursesData, assessmentsData, gradeOverrides, selectedScale]);
 
   const handleGradeChange = (courseId: string, grade: string) => {
     setGradeOverrides((prev) => ({
@@ -165,12 +188,12 @@ export default function TranscriptPage() {
   const calculateGPA = (coursesToCalculate: CourseItem[]) => {
     if (coursesToCalculate.length === 0) return 0;
     const gradedCourses = coursesToCalculate.filter(
-      (c) => gradePoints[c.grade] !== undefined
+      (c) => scaleGradePoints[c.grade] !== undefined
     );
     if (gradedCourses.length === 0) return 0;
 
     const totalPoints = gradedCourses.reduce((sum, course) => {
-      return sum + (gradePoints[course.grade] ?? 0) * course.credits;
+      return sum + (scaleGradePoints[course.grade] ?? 0) * course.credits;
     }, 0);
 
     const totalCredits = gradedCourses.reduce(
@@ -213,19 +236,30 @@ export default function TranscriptPage() {
     });
   }, [semesterGroups]);
 
-  const overallGPA = useMemo(() => calculateGPA(coursesWithGrades), [coursesWithGrades]);
+  const overallGPA = useMemo(() => calculateGPA(coursesWithGrades), [coursesWithGrades, selectedScale]);
   const totalCredits = useMemo(() => {
     return coursesWithGrades.reduce((sum, course) => sum + course.credits, 0);
   }, [coursesWithGrades]);
+  const degreeClass = useMemo(() => getDegreeClassification(overallGPA, selectedScale), [overallGPA, selectedScale]);
 
   const handlePrint = () => {
+    const studentName = studentInfo.name?.trim() || user?.name || "Student";
+    const originalTitle = document.title;
+    document.title = `${studentName} - Academic Transcript`;
     window.print();
+    setTimeout(() => {
+      document.title = originalTitle;
+    }, 1000);
   };
 
   const handleDownload = async () => {
     try {
       setIsExporting(true);
-      toast.loading("Generating PDF transcript...", { id: "pdf-gen" });
+      const studentName = studentInfo.name?.trim() || user?.name || user?.email?.split("@")[0] || "Student";
+      const cleanName = studentName.replace(/[^a-zA-Z0-9_-]/g, "_");
+      const cleanFileName = `${cleanName}_Academic_Transcript.pdf`;
+
+      toast.loading(`Generating PDF transcript for ${studentName}...`, { id: "pdf-gen" });
 
       const jsPDF = (await import("jspdf")).default;
       const html2canvas = (await import("html2canvas")).default;
@@ -275,9 +309,8 @@ export default function TranscriptPage() {
         heightLeft -= pdfHeight - margin * 2;
       }
 
-      const cleanFileName = `${studentInfo.name.replace(/\s+/g, "_")}_Academic_Transcript.pdf`;
       pdf.save(cleanFileName);
-      toast.success("Transcript downloaded successfully!", { id: "pdf-gen" });
+      toast.success(`Transcript for ${studentName} downloaded successfully!`, { id: "pdf-gen" });
     } catch (error) {
       console.error("PDF export failed:", error);
       toast.error("Could not export PDF. You can also use the 'Print' button to Save as PDF.", {
@@ -391,7 +424,7 @@ export default function TranscriptPage() {
                 </thead>
                 <tbody className="divide-y divide-gray-200 text-gray-800 text-[11px]">
                   {semesterCourses.map((course) => {
-                    const gradePoint = gradePoints[course.grade] ?? 0;
+                    const gradePoint = scaleGradePoints[course.grade] ?? 0;
                     const pointsEarned = (gradePoint * course.credits).toFixed(1);
 
                     return (
@@ -441,27 +474,46 @@ export default function TranscriptPage() {
             <span className="text-gray-600">Total Credits Earned:</span>
             <span className="font-bold text-gray-900">{totalCredits.toFixed(1)}</span>
           </div>
+          <div className="flex justify-between py-0.5">
+            <span className="text-gray-600">Degree Classification:</span>
+            <span className="font-bold text-emerald-800">{degreeClass.title}</span>
+          </div>
           <div className="flex justify-between py-1 border-t border-gray-300 text-sm">
             <span className="font-bold text-gray-900">Cumulative GPA:</span>
-            <span className="font-black text-blue-700 text-base">{overallGPA.toFixed(2)}</span>
+            <span className="font-black text-blue-700 text-base">
+              {overallGPA.toFixed(2)} / {maxScaleGpa.toFixed(1)}
+            </span>
           </div>
         </div>
 
         <div className="space-y-1 bg-gray-50 p-4 rounded border border-gray-200">
           <h4 className="font-bold text-gray-900 uppercase tracking-wider text-[11px] border-b border-gray-300 pb-1 mb-2">
-            Grading Scale (5.0 Basis)
+            {selectedScale === "5.0"
+              ? "Grading Scale (5.0 Basis — Nigerian NUC System)"
+              : "Grading Scale (4.0 Basis — US Standard)"}
           </h4>
-          <div className="grid grid-cols-3 gap-x-2 gap-y-1 text-[10px] text-gray-700">
-            <div>A+ = 5.0</div>
-            <div>B+ = 4.3</div>
-            <div>C+ = 3.3</div>
-            <div>A = 5.0</div>
-            <div>B = 4.0</div>
-            <div>C = 3.0</div>
-            <div>A- = 4.7</div>
-            <div>B- = 3.7</div>
-            <div>D = 2.0</div>
-          </div>
+          {selectedScale === "5.0" ? (
+            <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[10px] text-gray-700">
+              <div>A = 5.0 (70% – 100%)</div>
+              <div>D = 2.0 (45% – 49%)</div>
+              <div>B = 4.0 (60% – 69%)</div>
+              <div>E = 1.0 (40% – 44%)</div>
+              <div>C = 3.0 (50% – 59%)</div>
+              <div>F = 0.0 (0% – 39%)</div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-3 gap-x-2 gap-y-1 text-[10px] text-gray-700">
+              <div>A+ = 4.0</div>
+              <div>B+ = 3.3</div>
+              <div>C+ = 2.3</div>
+              <div>A = 4.0</div>
+              <div>B = 3.0</div>
+              <div>C = 2.0</div>
+              <div>A- = 3.7</div>
+              <div>B- = 2.7</div>
+              <div>D = 1.0</div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -610,6 +662,27 @@ export default function TranscriptPage() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4 text-sm">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="gpaScaleSelect">Grading Scale</Label>
+                        <Select
+                          value={selectedScale}
+                          onValueChange={(val: GpaScaleType) =>
+                            setSelectedScale(val)
+                          }
+                        >
+                          <SelectTrigger id="gpaScaleSelect">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="5.0">
+                              Nigerian 5.0 (NUC) — 70%+ = A (5.0)
+                            </SelectItem>
+                            <SelectItem value="4.0">
+                              Standard 4.0 (US) — 93%+ = A (4.0)
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                       <div className="space-y-1.5">
                         <Label htmlFor="name">Full Name</Label>
                         <Input
@@ -793,33 +866,25 @@ export default function TranscriptPage() {
                                   </div>
                                 </div>
 
-                                <div className="flex items-center gap-2">
-                                  <Select
-                                    value={course.grade}
-                                    onValueChange={(grade) =>
-                                      handleGradeChange(course.id, grade)
-                                    }
-                                  >
-                                    <SelectTrigger className="w-24 h-8 text-xs font-bold">
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="A+">A+ (5.0)</SelectItem>
-                                      <SelectItem value="A">A (5.0)</SelectItem>
-                                      <SelectItem value="A-">A- (4.7)</SelectItem>
-                                      <SelectItem value="B+">B+ (4.3)</SelectItem>
-                                      <SelectItem value="B">B (4.0)</SelectItem>
-                                      <SelectItem value="B-">B- (3.7)</SelectItem>
-                                      <SelectItem value="C+">C+ (3.3)</SelectItem>
-                                      <SelectItem value="C">C (3.0)</SelectItem>
-                                      <SelectItem value="C-">C- (2.7)</SelectItem>
-                                      <SelectItem value="D+">D+ (2.3)</SelectItem>
-                                      <SelectItem value="D">D (2.0)</SelectItem>
-                                      <SelectItem value="E">E (1.0)</SelectItem>
-                                      <SelectItem value="F">F (0.0)</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                </div>
+                                  <div className="flex items-center gap-2">
+                                    <Select
+                                      value={course.grade}
+                                      onValueChange={(grade) =>
+                                        handleGradeChange(course.id, grade)
+                                      }
+                                    >
+                                      <SelectTrigger className="w-24 h-8 text-xs font-bold">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {Object.keys(scaleGradePoints).map((grade) => (
+                                          <SelectItem key={grade} value={grade}>
+                                            {grade} ({scaleGradePoints[grade].toFixed(1)})
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
                               </div>
                             ))}
                           </div>

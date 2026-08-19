@@ -49,7 +49,13 @@ import { cn } from "@/lib/utils";
 import { BsArrowUpRight } from "react-icons/bs";
 import { Loader } from "@/components/ai-elements/loader";
 import { Skeleton } from "@/components/ui/skeleton";
-import { calculateCourseGrade, gradePoints } from "@/lib/gpa-utils";
+import {
+  calculateCourseGrade,
+  getGradePointsForScale,
+  getMaxGpaForScale,
+  getDegreeClassification,
+  GpaScaleType,
+} from "@/lib/gpa-utils";
 import { Course } from "../../courses/_components/courses-container";
 import {
   ChartContainer,
@@ -70,6 +76,7 @@ const gradeColors: Record<string, string> = {
   "D+": "#EF4444",
   D: "#F87171",
   "D-": "#FCA5A5",
+  E: "#F97316",
   F: "#DC2626",
 };
 
@@ -109,6 +116,14 @@ const SemesterAnalysisPageContainer = () => {
     api.assessments.getUserAssessments,
     user?._id ? { userId: user._id as Id<"users"> } : "skip"
   );
+  const settings = useQuery(
+    api.settings.getUserSettings,
+    user?._id ? { userId: user._id as Id<"users"> } : "skip"
+  );
+
+  const activeScale: GpaScaleType = (settings?.gpaScale as GpaScaleType) || "5.0";
+  const scaleGradePoints = getGradePointsForScale(activeScale);
+  const maxScaleGpa = getMaxGpaForScale(activeScale);
 
   // Safe data handling
   const safeCourses = courses || [];
@@ -119,7 +134,7 @@ const SemesterAnalysisPageContainer = () => {
     if (!coursesToCalculate || coursesToCalculate.length === 0) return 0;
 
     const totalPoints = coursesToCalculate.reduce((sum, course) => {
-      const points = gradePoints[course.grade] || 0;
+      const points = scaleGradePoints[course.grade] || 0;
       return sum + points * course.credits;
     }, 0);
 
@@ -183,8 +198,10 @@ const SemesterAnalysisPageContainer = () => {
         (a) => a.courseId === course._id
       );
 
-      const { percentage, letterGrade } =
-        calculateCourseGrade(courseAssessments);
+      const { percentage, letterGrade } = calculateCourseGrade(
+        courseAssessments,
+        activeScale
+      );
 
       return {
         ...course,
@@ -207,7 +224,10 @@ const SemesterAnalysisPageContainer = () => {
       (a) => a.courseId === course._id
     );
 
-    const { percentage, letterGrade } = calculateCourseGrade(courseAssessments);
+    const { percentage, letterGrade } = calculateCourseGrade(
+      courseAssessments,
+      activeScale
+    );
 
     return {
       ...course,
@@ -221,6 +241,7 @@ const SemesterAnalysisPageContainer = () => {
   });
 
   const overallGPA = calculateGPA(allCoursesWithGrades);
+  const degreeClass = getDegreeClassification(overallGPA, activeScale);
 
   const gpaData = years
     .map((year) => {
@@ -400,23 +421,37 @@ const SemesterAnalysisPageContainer = () => {
               <Calendar className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{overallGPA.toFixed(2)}</div>
-              <p className="text-xs text-muted-foreground">All semesters</p>
+              <div className="text-2xl font-bold">
+                {overallGPA.toFixed(2)}{" "}
+                <span className="text-xs font-normal text-muted-foreground">
+                  / {maxScaleGpa.toFixed(1)}
+                </span>
+              </div>
+              <div className="mt-1">
+                <span
+                  className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded border ${degreeClass.color}`}
+                >
+                  {degreeClass.title}
+                </span>
+              </div>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
-                Progress to 5.0
+                Progress to {maxScaleGpa.toFixed(1)}
               </CardTitle>
               <Target className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {((overallGPA / 5.0) * 100).toFixed(0)}%
+                {((overallGPA / maxScaleGpa) * 100).toFixed(0)}%
               </div>
-              <Progress value={(overallGPA / 5.0) * 100} className="mt-2" />
+              <Progress
+                value={(overallGPA / maxScaleGpa) * 100}
+                className="mt-2"
+              />
             </CardContent>
           </Card>
         </div>
@@ -431,7 +466,9 @@ const SemesterAnalysisPageContainer = () => {
           <TabsContent value="trends" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>GPA Trend Over Time</CardTitle>
+                <CardTitle>
+                  GPA Trend Over Time ({activeScale === "5.0" ? "5.0 NUC" : "4.0 Scale"})
+                </CardTitle>
                 <CardDescription>
                   Track your academic performance across semesters
                 </CardDescription>
@@ -456,7 +493,7 @@ const SemesterAnalysisPageContainer = () => {
                       height={80}
                     />
                     <YAxis
-                      domain={[0, 5.0]}
+                      domain={[0, maxScaleGpa]}
                       tick={{ fontSize: 12 }}
                       tickFormatter={(value) => value.toFixed(1)}
                     />

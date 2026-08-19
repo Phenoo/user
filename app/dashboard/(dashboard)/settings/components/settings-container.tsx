@@ -26,7 +26,15 @@ import {
   Trash2,
   CreditCard,
   ArrowLeft,
+  Loader2,
 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
@@ -353,18 +361,135 @@ function NotificationSettings() {
 }
 
 function GoalSettings() {
+  const user = useQuery(api.users.currentUser);
+  const settings = useQuery(
+    api.settings.getUserSettings,
+    user?._id ? { userId: user._id } : "skip"
+  );
+  const updateSettings = useMutation(api.settings.updateUserSettings);
+
+  const [gpaScale, setGpaScale] = useState<"5.0" | "4.0">("5.0");
+  const [targetGpa, setTargetGpa] = useState<string>("4.5");
+  const [dailyHours, setDailyHours] = useState<string>("4");
+  const [dailyPomodoros, setDailyPomodoros] = useState<string>("8");
+  const [subjectsPerDay, setSubjectsPerDay] = useState<string>("3");
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (settings) {
+      setGpaScale((settings.gpaScale as "5.0" | "4.0") || "5.0");
+      setTargetGpa(
+        settings.gpaTarget !== undefined
+          ? String(settings.gpaTarget)
+          : settings.gpaScale === "4.0"
+            ? "3.8"
+            : "4.5"
+      );
+      setDailyHours(
+        settings.dailyStudyGoal
+          ? String(settings.dailyStudyGoal / 60)
+          : "4"
+      );
+    }
+  }, [settings]);
+
+  const handleSave = async () => {
+    try {
+      setIsSaving(true);
+      const parsedGpa = parseFloat(targetGpa);
+      const maxGpa = gpaScale === "4.0" ? 4.0 : 5.0;
+      const validGpa = !isNaN(parsedGpa)
+        ? Math.min(Math.max(parsedGpa, 0), maxGpa)
+        : gpaScale === "4.0"
+          ? 3.8
+          : 4.5;
+
+      await updateSettings({
+        gpaScale,
+        gpaTarget: validGpa,
+        dailyStudyGoal: parseFloat(dailyHours) ? parseFloat(dailyHours) * 60 : 240,
+      });
+
+      toast.success("Study goals and GPA scale updated successfully!");
+    } catch (error) {
+      console.error("Failed to update goal settings:", error);
+      toast.error("Failed to update goal settings");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const maxAllowedGpa = gpaScale === "4.0" ? 4.0 : 5.0;
+
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-semibold">Study Goals</h2>
+        <h2 className="text-2xl font-semibold">Study Goals & GPA System</h2>
         <p className="text-muted-foreground mt-1">
-          Set and track your academic and productivity goals.
+          Set and track your academic targets and choose your institution's GPA scale.
         </p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Daily Goals</CardTitle>
+          <CardTitle>Grading System & GPA Scale</CardTitle>
+          <CardDescription>
+            Choose the grading system used by your university or program
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="gpa-scale">Grading Scale</Label>
+            <Select
+              value={gpaScale}
+              onValueChange={(val: "5.0" | "4.0") => {
+                setGpaScale(val);
+                if (val === "4.0" && parseFloat(targetGpa) > 4.0) {
+                  setTargetGpa("3.8");
+                } else if (val === "5.0" && parseFloat(targetGpa) <= 4.0) {
+                  setTargetGpa("4.5");
+                }
+              }}
+            >
+              <SelectTrigger id="gpa-scale" className="w-full">
+                <SelectValue placeholder="Select grading scale" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="5.0">
+                  Nigerian 5-Point System (NUC) — 70%+ = A (5.0)
+                </SelectItem>
+                <SelectItem value="4.0">
+                  Standard 4.0 Scale (US) — 93%+ = A (4.0)
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              {gpaScale === "5.0"
+                ? "Nigerian NUC Standard: A (70-100%) = 5.0, B (60-69%) = 4.0, C (50-59%) = 3.0, D (45-49%) = 2.0, E (40-44%) = 1.0, F (<40%) = 0.0"
+                : "Standard US Scale: A+/A (93-100%) = 4.0, B (83-86%) = 3.0, C (73-76%) = 2.0, D (60-66%) = 1.0, F (<60%) = 0.0"}
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="target-gpa">
+              Target GPA (0.0 – {maxAllowedGpa.toFixed(1)})
+            </Label>
+            <Input
+              id="target-gpa"
+              type="number"
+              value={targetGpa}
+              onChange={(e) => setTargetGpa(e.target.value)}
+              min="0"
+              max={maxAllowedGpa}
+              step="0.05"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Daily Study Routine</CardTitle>
           <CardDescription>
             Set targets for your daily study routine
           </CardDescription>
@@ -375,9 +500,10 @@ function GoalSettings() {
             <Input
               id="daily-hours"
               type="number"
-              defaultValue="4"
+              value={dailyHours}
+              onChange={(e) => setDailyHours(e.target.value)}
               min="1"
-              max="12"
+              max="16"
               step="0.5"
             />
           </div>
@@ -388,9 +514,10 @@ function GoalSettings() {
             <Input
               id="daily-pomodoros"
               type="number"
-              defaultValue="8"
+              value={dailyPomodoros}
+              onChange={(e) => setDailyPomodoros(e.target.value)}
               min="1"
-              max="20"
+              max="30"
             />
           </div>
           <div className="space-y-2">
@@ -398,46 +525,22 @@ function GoalSettings() {
             <Input
               id="subjects-per-day"
               type="number"
-              defaultValue="3"
+              value={subjectsPerDay}
+              onChange={(e) => setSubjectsPerDay(e.target.value)}
               min="1"
-              max="8"
+              max="10"
             />
           </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Academic Goals</CardTitle>
-          <CardDescription>
-            Track your semester and course objectives
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="target-gpa">Target GPA</Label>
-            <Input
-              id="target-gpa"
-              type="number"
-              defaultValue="4.5"
-              min="0"
-              max="5"
-              step="0.1"
-            />
-          </div>
-          <div>
-            <Label htmlFor="graduation-date">Expected Graduation</Label>
-            <Input id="graduation-date" type="date" />
-          </div>
-          <div className="flex items-center justify-between">
-            <div>
-              <Label>Honor Roll Goal</Label>
-              <p className="text-sm text-muted-foreground">
-                Aim for honor roll this semester
-              </p>
-            </div>
-            <Switch />
-          </div>
+          <Button onClick={handleSave} disabled={isSaving} className="mt-2">
+            {isSaving ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Saving Goals...
+              </>
+            ) : (
+              "Save Goal Settings"
+            )}
+          </Button>
         </CardContent>
       </Card>
     </div>
