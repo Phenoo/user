@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +19,14 @@ export function YouTubeVideoCard({
   onWatch,
   className,
 }: YouTubeVideoCardProps) {
+  const [thumbnailSrc, setThumbnailSrc] = useState(
+    video.thumbnail || "/placeholder.jpg"
+  );
+
+  useEffect(() => {
+    setThumbnailSrc(video.thumbnail || "/placeholder.jpg");
+  }, [video.thumbnail]);
+
   const handleWatchClick = () => {
     if (onWatch) {
       onWatch(video);
@@ -62,11 +71,12 @@ export function YouTubeVideoCard({
         {/* Video Thumbnail */}
         <div className="aspect-video relative group overflow-hidden rounded-t-lg">
           <Image
-            src={video.thumbnail || "/placeholder.jpg"}
+            src={thumbnailSrc}
             alt={video.title}
             fill
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             className="w-full h-full object-cover"
+            onError={() => setThumbnailSrc("/placeholder.jpg")}
           />
 
           {/* Play Button Overlay */}
