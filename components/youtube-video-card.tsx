@@ -20,11 +20,11 @@ export function YouTubeVideoCard({
   className,
 }: YouTubeVideoCardProps) {
   const [thumbnailSrc, setThumbnailSrc] = useState(
-    video.thumbnail || "/placeholder.jpg"
+    video.thumbnail || "/course-video-placeholder.png"
   );
 
   useEffect(() => {
-    setThumbnailSrc(video.thumbnail || "/placeholder.jpg");
+    setThumbnailSrc(video.thumbnail || "/course-video-placeholder.png");
   }, [video.thumbnail]);
 
   const handleWatchClick = () => {
@@ -76,7 +76,7 @@ export function YouTubeVideoCard({
             fill
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             className="w-full h-full object-cover"
-            onError={() => setThumbnailSrc("/placeholder.jpg")}
+            onError={() => setThumbnailSrc("/course-video-placeholder.png")}
           />
 
           {/* Play Button Overlay */}
