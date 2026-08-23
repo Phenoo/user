@@ -31,9 +31,15 @@ import { Id } from "@/convex/_generated/dataModel";
 import { cn } from "@/lib/utils";
 import { useParams, usePathname } from "next/navigation";
 
-const NewStudyGroup = ({ title = true }: { title?: boolean }) => {
+const NewStudyGroup = ({
+  title = true,
+  defaultCourseId,
+}: {
+  title?: boolean;
+  defaultCourseId?: string;
+}) => {
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
-  const [course, setCourse] = useState("");
+  const [course, setCourse] = useState(defaultCourseId || "");
 
   const createGroupService = useMutation(api.studyGroups.createStudyGroup);
   const user = useQuery(api.users.currentUser);
@@ -52,6 +58,10 @@ const NewStudyGroup = ({ title = true }: { title?: boolean }) => {
     aiModeration: false,
   });
 
+  useEffect(() => {
+    if (defaultCourseId) setCourse(defaultCourseId);
+  }, [defaultCourseId]);
+
   const generateMeetLink = () => {
     const realMeetUrl = "https://meet.google.com/new";
     setNewGroup((prev) => ({ ...prev, googleCalendarLink: realMeetUrl }));
@@ -66,7 +76,7 @@ const NewStudyGroup = ({ title = true }: { title?: boolean }) => {
     toast.success("Opening Zoom to create a meeting room!");
   };
 
-  const createGroup = () => {
+  const createGroup = async () => {
     if (!newGroup.name) {
       toast.error("Group name cannot be empty.");
       return;
@@ -75,17 +85,27 @@ const NewStudyGroup = ({ title = true }: { title?: boolean }) => {
       toast.error("Course need to be added.");
       return;
     }
+    if (!userId) {
+      toast.error("Your account is still loading. Please try again.");
+      return;
+    }
     if (!newGroup.description) {
       toast.error("Group description is needed.");
       return;
     }
 
+    const maxMembers = Number.parseInt(newGroup.maxMembers, 10);
+    if (!Number.isFinite(maxMembers) || maxMembers < 1) {
+      toast.error("Maximum members must be at least 1.");
+      return;
+    }
+
     try {
-      createGroupService({
+      await createGroupService({
         name: newGroup.name,
         description: newGroup.description,
         location: newGroup.location,
-        maxMembers: Number.parseInt(newGroup.maxMembers),
+        maxMembers,
         meetingSchedule: "",
         //@ts-ignore
         meetingType: newGroup.meetingType,
@@ -113,7 +133,9 @@ const NewStudyGroup = ({ title = true }: { title?: boolean }) => {
         isPublic: true,
         aiModeration: false,
       });
-    } catch {
+      setCourse(defaultCourseId || "");
+    } catch (error) {
+      console.error("Failed to create study group:", error);
       toast.error("Study Group creation failed.");
     }
   };

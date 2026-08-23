@@ -116,6 +116,7 @@ export function YouTubeSection({
               <SelectItem value="all">All Videos</SelectItem>
               <SelectItem value="Highly Relevant">Highly Relevant</SelectItem>
               <SelectItem value="Relevant">Relevant</SelectItem>
+              <SelectItem value="Somewhat Relevant">Somewhat Relevant</SelectItem>
             </SelectContent>
           </Select>
         </div>

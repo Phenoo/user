@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 
@@ -31,28 +31,6 @@ import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { RequireIndicator } from "@/components/require-indicator";
 
-interface Course {
-  id: string;
-  name: string;
-  code: string;
-  year: string;
-  session: string;
-  credits: number;
-  instructor: string;
-  description?: string;
-  colorTag: string;
-}
-
-const COURSE_COLORS = [
-  "bg-[#FED35B] border-[#FED35B] text-black",
-  "bg-[#B6C682] border-[#B6C682] text-black",
-  "bg-[#C3ABFF] border-[#C3ABFF] text-black",
-  "bg-[#D2D2FB] border-[#D2D2FB] text-black",
-  "bg-[#b6caeb] border-[#b6caeb] text-black",
-  "bg-primary border-primary text-black",
-  "bg-[#ef6438] border-[#ef6438] text-white",
-];
-
 const EditCoursesSheet = ({
   isEditing,
   setIsEditing,
@@ -62,8 +40,6 @@ const EditCoursesSheet = ({
   setIsEditing: any;
   course: any;
 }) => {
-  const [editingCourse, setEditingCourse] = useState<Course | null>(null);
-
   const [newCourse, setNewCourse] = useState({
     _id: "",
     name: "",
@@ -73,26 +49,63 @@ const EditCoursesSheet = ({
     credits: 3,
     instructor: "",
     description: "",
+    lmsLink: "",
   });
   const editCourse = useMutation(api.courses.editCourse);
 
   const user = useQuery(api.users.currentUser);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const yearOptions = useMemo(() => {
+    const options = [
+      "2030",
+      "2029",
+      "2028",
+      "2027",
+      "2026",
+      "2025",
+      "2024",
+      "2023",
+      "2022",
+      "2021",
+    ];
+    if (newCourse.academicYear && !options.includes(newCourse.academicYear)) {
+      options.push(newCourse.academicYear);
+    }
+    return options;
+  }, [newCourse.academicYear]);
 
   const handleSubmit = async () => {
+    if (
+      !newCourse._id ||
+      !newCourse.name.trim() ||
+      !newCourse.code.trim() ||
+      !newCourse.academicYear ||
+      !newCourse.session
+    ) {
+      toast.error("Please fill in all required course fields.");
+      return;
+    }
+    if (!user?._id) {
+      toast.error("Your account is still loading. Please try again.");
+      return;
+    }
+
+    setIsSaving(true);
     try {
       await editCourse({
         courseId: newCourse._id as Id<"courses">,
-        userId: user?._id!,
-        name: newCourse.name,
-        code: newCourse.code,
+        userId: user._id,
+        name: newCourse.name.trim(),
+        code: newCourse.code.trim(),
         academicYear: newCourse.academicYear,
         session: newCourse.session,
         instructor: newCourse.instructor,
         credits: newCourse.credits, // Ensure credits is a number
-        description: newCourse.description || undefined,
-        lmsLink: "",
+        description: newCourse.description.trim() || undefined,
+        lmsLink: newCourse.lmsLink.trim() || undefined,
       });
-      toast.success(`${newCourse.name} has been added successfully.`);
+      toast.success(`${newCourse.name} has been updated successfully.`);
       setNewCourse({
         _id: "",
         name: "",
@@ -102,17 +115,31 @@ const EditCoursesSheet = ({
         credits: 3,
         instructor: "",
         description: "",
+        lmsLink: "",
       });
       setIsEditing(false);
       // Close the sheet, show a success message, clear form
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
       toast.error(`Failed to update course: ${errorMessage}`);
+    } finally {
+      setIsSaving(false);
     }
   };
 
   useEffect(() => {
-    setNewCourse(course);
+    if (!course) return;
+    setNewCourse({
+      _id: course._id || "",
+      name: course.name || "",
+      code: course.code || "",
+      academicYear: course.academicYear || "",
+      session: course.session || "",
+      credits: course.credits || 3,
+      instructor: course.instructor || "",
+      description: course.description || "",
+      lmsLink: course.lmsLink || "",
+    });
   }, [course]);
 
   return (
@@ -121,7 +148,6 @@ const EditCoursesSheet = ({
       onOpenChange={(open) => {
         setIsEditing(open);
         if (!open) {
-          setEditingCourse(null);
           setNewCourse({
             _id: "",
             name: "",
@@ -131,6 +157,7 @@ const EditCoursesSheet = ({
             credits: 3,
             instructor: "",
             description: "",
+            lmsLink: "",
           });
         }
       }}
@@ -182,15 +209,11 @@ const EditCoursesSheet = ({
                   <SelectValue placeholder="Select year" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="2030">2030</SelectItem>
-                  <SelectItem value="2029">2029</SelectItem>
-                  <SelectItem value="2027">2027</SelectItem>
-                  <SelectItem value="2026">2026</SelectItem>
-                  <SelectItem value="2025">2025</SelectItem>
-                  <SelectItem value="2024">2024</SelectItem>
-                  <SelectItem value="2023">2023</SelectItem>
-                  <SelectItem value="2022">2022</SelectItem>
-                  <SelectItem value="2021">2021</SelectItem>
+                  {yearOptions.map((year) => (
+                    <SelectItem key={year} value={year}>
+                      {year}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -225,7 +248,7 @@ const EditCoursesSheet = ({
                 onChange={(e) =>
                   setNewCourse({
                     ...newCourse,
-                    credits: Number.parseInt(e.target.value) || 2,
+                    credits: Number.parseInt(e.target.value) || 1,
                   })
                 }
                 min="1"
@@ -277,15 +300,15 @@ const EditCoursesSheet = ({
                 credits: 3,
                 instructor: "",
                 description: "",
+                lmsLink: "",
               });
-              setEditingCourse(null);
             }}
             className="w-full"
           >
             Cancel
           </Button>
-          <Button className="w-full" onClick={handleSubmit}>
-            Update Course
+          <Button className="w-full" onClick={handleSubmit} disabled={isSaving}>
+            {isSaving ? "Updating..." : "Update Course"}
           </Button>
         </SheetFooter>
       </SheetContent>

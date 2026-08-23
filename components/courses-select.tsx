@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/select";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Id } from "@/convex/_generated/dataModel";
 const CoursesSelect = ({
   course,
   onChange,
@@ -22,9 +21,10 @@ const CoursesSelect = ({
   const user = useQuery(api.users.currentUser);
 
   const getCourses =
-    useQuery(api.courses.getAllCourses, {
-      userId: user?._id as Id<"users">,
-    }) || [];
+    useQuery(
+      api.courses.getAllCourses,
+      user?._id ? { userId: user._id } : "skip"
+    ) || [];
 
   return (
     <Select

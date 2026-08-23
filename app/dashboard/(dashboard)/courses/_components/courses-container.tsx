@@ -78,9 +78,10 @@ export default function CoursescontainerPage() {
 
   const user = useQuery(api.users.currentUser);
 
-  const coursesQuery = useQuery(api.courses.getAllCourses, {
-    userId: user?._id as Id<"users">,
-  });
+  const coursesQuery = useQuery(
+    api.courses.getAllCourses,
+    user?._id ? { userId: user._id } : "skip"
+  );
 
   const [newCourse, setNewCourse] = useState({
     name: "",

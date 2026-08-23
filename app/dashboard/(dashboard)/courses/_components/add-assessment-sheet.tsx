@@ -64,34 +64,46 @@ export function AddAssessmentSheet({
       return;
     }
 
-    const parsedScore = score ? parseInt(score) : null;
-    const parsedMaxScore = maxScore ? parseInt(maxScore) : null;
-    const parsedWeight = parseInt(weight);
+    const parsedScore = score.trim() ? Number(score) : undefined;
+    const parsedMaxScore = maxScore.trim() ? Number(maxScore) : undefined;
+    const parsedWeight = Number(weight);
 
-    if (isNaN(parsedWeight)) {
-      toast.error("Weight must be a valid number.");
+    if (!Number.isFinite(parsedWeight) || parsedWeight < 0 || parsedWeight > 100) {
+      toast.error("Weight must be a number between 0 and 100.");
       setIsLoading(false);
       return;
     }
-    if (parsedScore !== null && (isNaN(parsedScore) || parsedScore < 0)) {
+    if (
+      parsedScore !== undefined &&
+      (!Number.isFinite(parsedScore) || parsedScore < 0)
+    ) {
       toast.error("Score must be a valid non-negative number.");
       setIsLoading(false);
       return;
     }
     if (
-      parsedMaxScore !== null &&
-      (isNaN(parsedMaxScore) || parsedMaxScore <= 0)
+      parsedMaxScore !== undefined &&
+      (!Number.isFinite(parsedMaxScore) || parsedMaxScore <= 0)
     ) {
       toast.error("Max Score must be a valid positive number.");
       setIsLoading(false);
       return;
     }
     if (
-      parsedScore !== null &&
-      parsedMaxScore !== null &&
+      parsedScore !== undefined &&
+      parsedMaxScore !== undefined &&
       parsedScore > parsedMaxScore
     ) {
       toast.error("Score cannot be greater than Max Score.");
+      setIsLoading(false);
+      return;
+    }
+    if (
+      (parsedScore === undefined) !== (parsedMaxScore === undefined) ||
+      (status === "graded" &&
+        (parsedScore === undefined || parsedMaxScore === undefined))
+    ) {
+      toast.error("Enter both Score and Max Score, or leave both blank.");
       setIsLoading(false);
       return;
     }
@@ -102,8 +114,8 @@ export function AddAssessmentSheet({
         courseId,
         name,
         type,
-        score: parsedScore || 0,
-        maxScore: parsedMaxScore || 0,
+        score: parsedScore,
+        maxScore: parsedMaxScore,
         weight: parsedWeight,
         date,
         feedback: feedback || "",

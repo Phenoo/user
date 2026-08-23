@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 
 import { cn } from "@/lib/utils";
 import { FlashcardDeck } from "../page";
@@ -18,6 +20,22 @@ export interface FlashcardItemProps {
 
 export function FlashcardContainer({ decks }: { decks: FlashcardDeck[] }) {
   const [activeTab, setActiveTab] = useState("all");
+  const user = useQuery(api.users.currentUser);
+  const overview = useQuery(
+    api.flashcards.getFlashcardOverview,
+    user?._id ? {} : "skip"
+  );
+
+  const visibleDecks = decks.filter((deck) => {
+    if (activeTab === "all") return true;
+
+    const stats = overview?.decks.find((item) => item._id === deck._id)?.stats;
+    if (!stats) return true;
+
+    return activeTab === "unmastered"
+      ? stats.total > stats.mature
+      : stats.due > 0;
+  });
 
   return (
     <div className="w-full">
@@ -58,7 +76,7 @@ export function FlashcardContainer({ decks }: { decks: FlashcardDeck[] }) {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {decks.map((deck) => (
+        {visibleDecks.map((deck) => (
           <Link key={deck._id} href={`/dashboard/flashcards/${deck._id}`}>
             <FlashcardItem
               item={{
@@ -75,6 +93,11 @@ export function FlashcardContainer({ decks }: { decks: FlashcardDeck[] }) {
           </Link>
         ))}
       </div>
+      {visibleDecks.length === 0 && (
+        <p className="py-8 text-center text-sm text-muted-foreground">
+          No {activeTab === "review" ? "cards ready for review" : "unmastered decks"} found.
+        </p>
+      )}
     </div>
   );
 }

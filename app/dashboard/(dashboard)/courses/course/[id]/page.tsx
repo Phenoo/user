@@ -55,6 +55,16 @@ import { calculateCourseGrade } from "@/lib/gpa-utils";
 import NewStudyGroup from "../../../study-groups/_components/new-study-group";
 import { CourseMaterialsPanel } from "../../_components/course-materials-panel";
 
+const WEEKDAYS = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+] as const;
+
 interface Schedule {
   id: string;
   day: string;
@@ -103,18 +113,24 @@ export default function CoursePage() {
 
   const sectionParams = searchParams.get("section");
 
-  const course = useQuery(api.courses.getCourseById, {
-    courseId: courseId as Id<"courses">,
-    currentuserId: user?._id as Id<"users">,
-  });
+  const course = useQuery(
+    api.courses.getCourseById,
+    user?._id
+      ? {
+          courseId: courseId as Id<"courses">,
+          currentuserId: user._id,
+        }
+      : "skip"
+  );
   const [isEditing, setIsEditing] = useState(false);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const router = useRouter();
   const deleteCourse = useMutation(api.courses.deleteCourse);
+  const addCalendarEvent = useMutation(api.events.add);
 
-  const [activeSection, setActiveSection] = useState("overview");
   const [isAddAssessmentOpen, setIsAddAssessmentOpen] = useState(false);
+  const [isAddingToCalendar, setIsAddingToCalendar] = useState(false);
   const [deletingText, setDeletingText] = useState("");
 
   const dbSchedules =
@@ -132,10 +148,15 @@ export default function CoursePage() {
   }));
 
   const flashcards =
-    useQuery(api.flashcards.getUserDecksByCourseId, {
-      courseId: courseId as Id<"courses">,
-      userId: user?._id as Id<"users">,
-    }) || [];
+    useQuery(
+      api.flashcards.getUserDecksByCourseId,
+      user?._id
+        ? {
+            courseId: courseId as Id<"courses">,
+            userId: user._id,
+          }
+        : "skip"
+    ) || [];
 
   const studyGroups = useQuery(api.studyGroups.getAllStudyGroups);
 
@@ -144,10 +165,15 @@ export default function CoursePage() {
   );
 
   const assessments =
-    useQuery(api.assessments.getAssessmentsByCourseId, {
-      courseId: courseId as Id<"courses">,
-      userId: user?._id as Id<"users">,
-    }) || [];
+    useQuery(
+      api.assessments.getAssessmentsByCourseId,
+      user?._id
+        ? {
+            courseId: courseId as Id<"courses">,
+            userId: user._id,
+          }
+        : "skip"
+    ) || [];
   const courseMaterialSummary = useQuery(
     (api as any).courseDocuments.getCourseMaterialSummary,
     user ? { userId: user._id, courseId: courseId as Id<"courses"> } : "skip"
@@ -176,6 +202,11 @@ export default function CoursePage() {
     upcomingDeadlines,
   };
 
+  const assignmentCompletion =
+    assessments.length > 0
+      ? Math.round((completedAssessmentsCount / assessments.length) * 100)
+      : 0;
+
   const sections = [
     { id: "overview", label: "Overview", icon: BookOpen },
     { id: "schedules", label: "Schedules", icon: Calendar },
@@ -189,13 +220,15 @@ export default function CoursePage() {
 
   const calculateWeightedScore = () => {
     const gradedAssessments = assessments.filter(
-      (a) => a.status === "graded" && a.score !== null
+      (a) =>
+        a.status === "graded" &&
+        a.score != null &&
+        a.maxScore != null &&
+        a.maxScore > 0
     );
     const totalWeight = gradedAssessments.reduce((sum, a) => sum + a.weight, 0);
     const weightedSum = gradedAssessments.reduce(
-      //@ts-ignore
-
-      (sum, a) => sum + (a.score / a.maxScore) * a.weight,
+      (sum, a) => sum + (a.score! / a.maxScore!) * a.weight,
       0
     );
     return totalWeight > 0 ? (weightedSum / totalWeight) * 100 : 0;
@@ -203,14 +236,17 @@ export default function CoursePage() {
 
   const getGradeByType = (type: string) => {
     const typeAssessments = assessments.filter(
-      (a) => a.type === type && a.status === "graded"
+      (a) =>
+        a.type === type &&
+        a.status === "graded" &&
+        a.score != null &&
+        a.maxScore != null &&
+        a.maxScore > 0
     );
     if (typeAssessments.length === 0) return null;
     const average =
       typeAssessments.reduce(
-        //@ts-ignore
-
-        (sum, a) => sum + (a.score / a.maxScore) * 100,
+        (sum, a) => sum + (a.score! / a.maxScore!) * 100,
         0
       ) / typeAssessments.length;
     return Math.round(average);
@@ -238,6 +274,90 @@ export default function CoursePage() {
   const handleEditCourse = (course: Course) => {
     setIsEditing(true);
     setEditingCourse(course);
+  };
+
+  const navigateToSection = (section: string) => {
+    router.push(`${pathname}?section=${section}`);
+  };
+
+  const parseScheduleTime = (value: string) => {
+    const match = value.trim().match(/^(\d{1,2})(?::(\d{2}))?\s*(AM|PM)?$/i);
+    if (!match) return null;
+
+    let hours = Number(match[1]);
+    const minutes = Number(match[2] || 0);
+    const meridiem = match[3]?.toUpperCase();
+
+    if (minutes > 59 || hours > (meridiem ? 12 : 23)) return null;
+    if (meridiem === "AM" && hours === 12) hours = 0;
+    if (meridiem === "PM" && hours !== 12) hours += 12;
+
+    return { hours, minutes };
+  };
+
+  const getNextClassDate = (day: string, time: string) => {
+    const dayIndex = WEEKDAYS.indexOf(day as (typeof WEEKDAYS)[number]);
+    const parsedTime = parseScheduleTime(time);
+    if (dayIndex === -1 || !parsedTime) return null;
+
+    const now = new Date();
+    const nextClass = new Date(now);
+    const daysUntilClass = (dayIndex - now.getDay() + 7) % 7;
+    nextClass.setDate(now.getDate() + daysUntilClass);
+    nextClass.setHours(parsedTime.hours, parsedTime.minutes, 0, 0);
+
+    if (nextClass <= now) nextClass.setDate(nextClass.getDate() + 7);
+    return nextClass;
+  };
+
+  const handleAddToCalendar = async () => {
+    if (!user?._id) {
+      toast.error("You need to be signed in to add classes to your calendar.");
+      return;
+    }
+
+    if (schedules.length === 0) {
+      toast.info("There are no class sessions to add yet.");
+      return;
+    }
+
+    setIsAddingToCalendar(true);
+    try {
+      const events = schedules.flatMap((schedule) => {
+        const [startTime, endTime] = schedule.time.split(" - ");
+        const startDate = getNextClassDate(schedule.day, startTime);
+        const endTimeValue = parseScheduleTime(endTime);
+        if (!startDate || !endTimeValue) return [];
+
+        const endDate = new Date(startDate);
+        endDate.setHours(endTimeValue.hours, endTimeValue.minutes, 0, 0);
+        if (endDate <= startDate) endDate.setDate(endDate.getDate() + 1);
+
+        return [{
+          title: `${course?.code ? `${course.code}: ` : ""}${course?.name || "Class"}`,
+          description: `${schedule.type}${schedule.topic ? ` - ${schedule.topic}` : ""}${schedule.location !== "TBD" ? `\nLocation: ${schedule.location}` : ""}`,
+          startDate: startDate.toISOString(),
+          endDate: endDate.toISOString(),
+          color: "blue",
+          userId: user._id,
+        }];
+      });
+
+      if (events.length === 0) {
+        toast.error("The class schedule has an unsupported time format.");
+        return;
+      }
+
+      await Promise.all(events.map((event) => addCalendarEvent(event)));
+      toast.success(
+        `${events.length} upcoming ${events.length === 1 ? "class" : "classes"} added to your calendar.`
+      );
+    } catch (error) {
+      console.error("Failed to add course schedule to calendar:", error);
+      toast.error("Failed to add the class schedule to your calendar.");
+    } finally {
+      setIsAddingToCalendar(false);
+    }
   };
 
   if (!user || course === undefined) {
@@ -373,7 +493,7 @@ export default function CoursePage() {
                   <button
                     key={section.id}
                     onClick={() => {
-                      router.push(`${pathname}?section=${section.id}`);
+                      navigateToSection(section.id);
                     }}
                     className={cn(
                       `flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap`,
@@ -400,7 +520,7 @@ export default function CoursePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <Card
                 className="cursor-pointer hover:shadow-lg transition-shadow"
-                onClick={() => setActiveSection("schedules")}
+                onClick={() => navigateToSection("schedules")}
               >
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2">
@@ -420,7 +540,7 @@ export default function CoursePage() {
 
               <Card
                 className="cursor-pointer hover:shadow-lg transition-shadow"
-                onClick={() => setActiveSection("groups")}
+                onClick={() => navigateToSection("groups")}
               >
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2">
@@ -433,14 +553,14 @@ export default function CoursePage() {
                     Join study groups and collaborate with peers
                   </p>
                   <Badge variant="secondary">
-                    {getStudyGroupsById?.length} groups available
+                    {getStudyGroupsById?.length ?? 0} groups available
                   </Badge>
                 </CardContent>
               </Card>
 
               <Card
                 className="cursor-pointer hover:shadow-lg transition-shadow"
-                onClick={() => setActiveSection("statistics")}
+                onClick={() => navigateToSection("statistics")}
               >
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2">
@@ -460,7 +580,7 @@ export default function CoursePage() {
 
               <Card
                 className="cursor-pointer hover:shadow-lg transition-shadow"
-                onClick={() => setActiveSection("flashcards")}
+                onClick={() => navigateToSection("flashcards")}
               >
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2">
@@ -480,7 +600,7 @@ export default function CoursePage() {
 
               <Card
                 className="cursor-pointer hover:shadow-lg transition-shadow"
-                onClick={() => setActiveSection("videos")}
+                onClick={() => navigateToSection("videos")}
               >
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2">
@@ -500,7 +620,7 @@ export default function CoursePage() {
 
               <Card
                 className="cursor-pointer hover:shadow-lg transition-shadow"
-                onClick={() => setActiveSection("documents")}
+                onClick={() => navigateToSection("documents")}
               >
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2">
@@ -520,7 +640,7 @@ export default function CoursePage() {
 
               <Card
                 className="cursor-pointer hover:shadow-lg transition-shadow"
-                onClick={() => setActiveSection("assessments")}
+                onClick={() => navigateToSection("assessments")}
               >
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2">
@@ -547,9 +667,12 @@ export default function CoursePage() {
                   Class Schedule
                 </h2>
 
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add to Calendar
+                <Button
+                  onClick={handleAddToCalendar}
+                  disabled={isAddingToCalendar || schedules.length === 0}
+                >
+                  <Calendar className="h-4 w-4 mr-2" />
+                  {isAddingToCalendar ? "Adding..." : "Add to Calendar"}
                 </Button>
               </div>
 
@@ -592,7 +715,7 @@ export default function CoursePage() {
                 <h2 className="text-2xl font-bold text-foreground">
                   Study Groups
                 </h2>
-                <NewStudyGroup />
+                <NewStudyGroup defaultCourseId={courseId} />
               </div>
 
               <div className="grid gap-4 min-h-[150px]">
@@ -674,19 +797,13 @@ export default function CoursePage() {
                           {statistics.assignments.total}
                         </span>
                         <Badge variant="secondary">
-                          {Math.round(
-                            (statistics.assignments.completed /
-                              statistics.assignments.total) *
-                              100
-                          )}
+                          {assignmentCompletion}
                           %
                         </Badge>
                       </div>
                       <Progress
                         value={
-                          (statistics.assignments.completed /
-                            statistics.assignments.total) *
-                          100
+                          assignmentCompletion
                         }
                         className="h-2"
                       />
@@ -898,7 +1015,9 @@ export default function CoursePage() {
                           <div className="flex items-center gap-6 text-sm text-muted-foreground">
                             <span>Due: {assessment.date}</span>
                             <span>Weight: {assessment.weight}%</span>
-                            {assessment.score !== null && (
+                            {assessment.score != null &&
+                              assessment.maxScore != null &&
+                              assessment.maxScore > 0 && (
                               <span>
                                 Score: {assessment.score}/{assessment.maxScore}(
                                 {Math.round(
@@ -919,7 +1038,9 @@ export default function CoursePage() {
                         </div>
 
                         <div className="text-right">
-                          {assessment.score !== null ? (
+                          {assessment.score != null &&
+                          assessment.maxScore != null &&
+                          assessment.maxScore > 0 ? (
                             <div className="text-2xl font-bold">
                               {Math.round(
                                 //@ts-ignore

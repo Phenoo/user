@@ -25,6 +25,7 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { useParams } from "next/navigation";
+import { toast } from "sonner";
 import { cardColors } from "./flashcardpage-container";
 import { useUsageTracking } from "@/hooks/use-usage-tracking";
 import { UsageIndicator } from "@/components/usage-tracking/usage-indicator";
@@ -50,6 +51,11 @@ const NewFlashcard = () => {
   });
 
   const createDeck = async () => {
+    if (!userId || !newDeck.name.trim() || !newDeck.courseId) {
+      toast.error("Add a deck name and course first.");
+      return;
+    }
+
     try {
       // Track usage before creating deck
       const usageTracked = await trackUsage("DECKS_CREATED");
@@ -70,6 +76,7 @@ const NewFlashcard = () => {
       });
       setSelectedDeck(deckId);
       setIsCreateDeckOpen(false);
+      toast.success("Flashcard deck created successfully.");
       setNewDeck({
         name: "",
         description: "",
@@ -81,6 +88,9 @@ const NewFlashcard = () => {
       });
     } catch (error) {
       console.error("Failed to create deck:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Failed to create flashcard deck."
+      );
     }
   };
 
