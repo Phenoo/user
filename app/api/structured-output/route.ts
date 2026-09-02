@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { generateObjectWithGateway } from "@/lib/ai/gateway";
+import { getUserFacingAIError } from "@/lib/ai/errors";
 import {
   buildRecipePrompt,
   STRUCTURED_OUTPUT_PROMPT,
@@ -14,16 +15,25 @@ const recipeSchema = z.object({
 });
 
 export async function POST(req: Request) {
-  const { prompt } = await req.json();
+  try {
+    const { prompt } = await req.json();
 
-  const { object } = await generateObjectWithGateway({
-    feature: "structured-output",
-    promptVersion: `${STRUCTURED_OUTPUT_PROMPT.id}:${STRUCTURED_OUTPUT_PROMPT.version}`,
-    request: {
-      schema: recipeSchema,
-      prompt: buildRecipePrompt(prompt),
-    },
-  });
+    const { object } = await generateObjectWithGateway({
+      abortSignal: req.signal,
+      feature: "structured-output",
+      promptVersion: `${STRUCTURED_OUTPUT_PROMPT.id}:${STRUCTURED_OUTPUT_PROMPT.version}`,
+      request: {
+        schema: recipeSchema,
+        prompt: buildRecipePrompt(prompt),
+      },
+    });
 
-  return Response.json({ recipe: object });
+    return Response.json({ recipe: object });
+  } catch (error) {
+    const userFacingError = getUserFacingAIError(error);
+    return Response.json(
+      { error: userFacingError.message, code: userFacingError.code },
+      { status: userFacingError.status }
+    );
+  }
 }

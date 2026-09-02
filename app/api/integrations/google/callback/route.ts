@@ -1,9 +1,14 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { verifyOAuthState } from "@/lib/integrations/google/state";
 import { createGoogleMeetService, getGoogleIntegrationRedirectUri } from "@/lib/google-meet";
+import { getRequiredGoogleScopes, hasGoogleScopes } from "@/lib/integrations/google/scopes";
+import { getAuthenticatedUser } from "@/lib/server/convex-auth";
+import {
+  getPersistedGoogleCredentials,
+  persistGoogleCredentials,
+} from "@/lib/integrations/google/credentials";
 import { fetchMutation } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
-import { Id } from "@/convex/_generated/dataModel";
 
 async function handleGoogleCallback(
   request: NextRequest,
@@ -47,7 +52,15 @@ async function handleGoogleCallback(
       );
     }
 
-    const { integration, userId } = stateData;
+    const authentication = await getAuthenticatedUser();
+    if (!authentication || authentication.user._id !== stateData.userId) {
+      console.error("[GoogleCallback] OAuth user does not match the active session");
+      return NextResponse.redirect(
+        `${appUrl}/dashboard?error=oauth_user_mismatch`
+      );
+    }
+
+    const { integration } = stateData;
 
     // 2. Exchange authorization code server-side
     const service = createGoogleMeetService({
@@ -58,7 +71,6 @@ async function handleGoogleCallback(
     // 3. Inspect granted scopes from Google TokenInfo
     let grantedScopes: string[] = [];
     let accountEmail: string | undefined;
-
     try {
       const tokenInfoRes = await fetch(
         `https://oauth2.googleapis.com/tokeninfo?access_token=${tokenDetails.accessToken}`
@@ -68,7 +80,7 @@ async function handleGoogleCallback(
         if (tokenInfo.scope) {
           grantedScopes = tokenInfo.scope.split(" ");
         }
-        if (tokenInfo.email) {
+        if (typeof tokenInfo.email === "string") {
           accountEmail = tokenInfo.email;
         }
       }
@@ -76,40 +88,63 @@ async function handleGoogleCallback(
       console.warn("[GoogleCallback] Could not inspect granted scopes:", infoErr);
     }
 
-    // 4. Preserve existing refresh token if Google did not return a new one
-    const existingRefreshToken = request.cookies.get("google_meet_refresh_token")?.value;
-    const finalRefreshToken = tokenDetails.refreshToken || existingRefreshToken;
-
-    // 5. Save connected account to Convex database
-    if (userId) {
-      try {
-        const providerName: "google-calendar" | "google-drive" | "google-classroom" =
-          integration === "classroom"
-            ? "google-classroom"
-            : integration === "drive"
-            ? "google-drive"
-            : "google-calendar";
-
-        await fetchMutation(api.integrations.upsertConnectedAccount, {
-          userId: userId as Id<"users">,
-          provider: providerName,
-          email: accountEmail,
-          scopes: grantedScopes,
-          status: "connected",
-          accessToken: tokenDetails.accessToken,
-          refreshToken: finalRefreshToken,
-          expiresAt: tokenDetails.expiresAt,
-        });
-      } catch (convexErr) {
-        console.error("[GoogleCallback] Error saving connected account to Convex:", convexErr);
-      }
+    if (!hasGoogleScopes(grantedScopes, getRequiredGoogleScopes(integration))) {
+      return NextResponse.redirect(
+        `${appUrl}/dashboard?error=insufficient_google_permissions&integration=${integration}`
+      );
     }
 
-    // 6. Build response redirect back to dashboard
+    // 4. Preserve the durable refresh token when incremental authorization
+    // returns only a new access token.
+    let existingRefreshToken: string | undefined;
+    try {
+      existingRefreshToken = (
+        await getPersistedGoogleCredentials(authentication)
+      )?.credentials.refreshToken;
+    } catch (error) {
+      console.warn(
+        "[GoogleCallback] Existing credentials could not be reused; replacing them:",
+        error
+      );
+    }
+    const finalRefreshToken = tokenDetails.refreshToken || existingRefreshToken;
+
+    await persistGoogleCredentials(
+      authentication,
+      {
+        accessToken: tokenDetails.accessToken,
+        refreshToken: finalRefreshToken,
+      },
+      {
+        scopes: grantedScopes,
+        email: accountEmail,
+        expiresAt: tokenDetails.expiresAt,
+      }
+    );
+
+    const provider =
+      integration === "classroom"
+        ? "google-classroom"
+        : integration === "drive"
+          ? "google-drive"
+          : "google-calendar";
+    await fetchMutation(
+      api.integrations.upsertConnectedAccount,
+      {
+        userId: authentication.user._id,
+        provider,
+        email: accountEmail,
+        scopes: grantedScopes,
+        status: "connected",
+      },
+      { token: authentication.token }
+    );
+
+    // 5. Redirect after durable credentials and connection metadata are saved.
     const redirectUrl = `${appUrl}/dashboard?connected=${integration}&status=success`;
     const response = NextResponse.redirect(redirectUrl);
 
-    // 7. Store tokens securely in server httpOnly cookies
+    // 6. Store tokens in server-only cookies, never in client-readable data.
     response.cookies.set("google_meet_token", tokenDetails.accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -132,7 +167,7 @@ async function handleGoogleCallback(
     response.cookies.delete("google_oauth_nonce");
 
     return response;
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("[GoogleCallback] Unhandled error during OAuth callback:", err);
     return NextResponse.redirect(
       `${appUrl}/dashboard?error=callback_processing_error`

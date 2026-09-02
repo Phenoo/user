@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, useMotionTemplate, useMotionValue } from "framer-motion";
-import React, { useCallback, useEffect, useRef } from "react";
+import React, { useEffect } from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -21,52 +21,25 @@ export function MagicCard({
   gradientOpacity = 0.8,
   gradientFrom = "#9E7AFF",
   gradientTo = "#FE8BBB",
+  onMouseMove,
+  onMouseLeave,
+  ...props
 }: MagicCardProps) {
-  const cardRef = useRef<HTMLDivElement>(null);
   const mouseX = useMotionValue(-gradientSize);
   const mouseY = useMotionValue(-gradientSize);
 
-  const handleMouseMove = useCallback(
-    (e: MouseEvent) => {
-      if (cardRef.current) {
-        const { left, top } = cardRef.current.getBoundingClientRect();
-        const clientX = e.clientX;
-        const clientY = e.clientY;
-        mouseX.set(clientX - left);
-        mouseY.set(clientY - top);
-      }
-    },
-    [mouseX, mouseY]
-  );
+  const handleMouseMove = (event: React.MouseEvent<HTMLDivElement>) => {
+    const { left, top } = event.currentTarget.getBoundingClientRect();
+    mouseX.set(event.clientX - left);
+    mouseY.set(event.clientY - top);
+    onMouseMove?.(event);
+  };
 
-  const handleMouseOut = useCallback(
-    (e: MouseEvent) => {
-      if (!e.relatedTarget) {
-        document.removeEventListener("mousemove", handleMouseMove);
-        mouseX.set(-gradientSize);
-        mouseY.set(-gradientSize);
-      }
-    },
-    [handleMouseMove, mouseX, gradientSize, mouseY]
-  );
-
-  const handleMouseEnter = useCallback(() => {
-    document.addEventListener("mousemove", handleMouseMove);
+  const handleMouseLeave = (event: React.MouseEvent<HTMLDivElement>) => {
     mouseX.set(-gradientSize);
     mouseY.set(-gradientSize);
-  }, [handleMouseMove, mouseX, gradientSize, mouseY]);
-
-  useEffect(() => {
-    document.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("mouseout", handleMouseOut);
-    document.addEventListener("mouseenter", handleMouseEnter);
-
-    return () => {
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseout", handleMouseOut);
-      document.removeEventListener("mouseenter", handleMouseEnter);
-    };
-  }, [handleMouseEnter, handleMouseMove, handleMouseOut]);
+    onMouseLeave?.(event);
+  };
 
   useEffect(() => {
     mouseX.set(-gradientSize);
@@ -75,8 +48,10 @@ export function MagicCard({
 
   return (
     <div
-      ref={cardRef}
+      {...props}
       className={cn("group relative flex size-full rounded-xl", className)}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
     >
       <div className="absolute inset-px z-10 rounded-xl bg-background" />
       <div className="relative z-30 w-full">{children}</div>

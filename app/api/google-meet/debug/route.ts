@@ -1,6 +1,14 @@
 import { NextResponse } from "next/server";
+import { getAuthenticatedUser } from "@/lib/server/convex-auth";
 
 export async function GET() {
+  if (process.env.NODE_ENV === "production") {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+  if (!(await getAuthenticatedUser())) {
+    return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+  }
+
   const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "";
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET || "";
   const redirectUri = process.env.NEXT_PUBLIC_GOOGLE_REDIRECT_URI || "";

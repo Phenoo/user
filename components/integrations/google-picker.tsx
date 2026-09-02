@@ -24,7 +24,7 @@ export function GooglePicker({ courseId, onFileSelected }: GooglePickerProps) {
     setIsLoading(true);
     try {
       // 1. Check/acquire valid accessToken for drive.file
-      const tokenRes = await fetch("/api/google-meet/token");
+      const tokenRes = await fetch("/api/google-meet/token?integration=drive");
       const tokenData = await tokenRes.json();
 
       if (!tokenData.accessToken) {

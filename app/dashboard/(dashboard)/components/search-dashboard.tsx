@@ -35,9 +35,10 @@ export function SearchDashboard({
   setOpen,
 }: {
   open: boolean;
-  setOpen: any;
+  setOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
   const router = useRouter();
+  const [searchTerm, setSearchTerm] = React.useState("");
 
   const user = useQuery(api.users.currentUser);
   const userId = user?._id;
@@ -46,13 +47,18 @@ export function SearchDashboard({
     useQuery(api.courses.getAllCourses, userId ? { userId } : "skip") || [];
   const decks =
     useQuery(api.flashcards.getUserDecks, userId ? { userId } : "skip") || [];
+  const searchResults = useQuery(
+    api.search.global,
+    searchTerm.trim().length >= 2
+      ? { search: searchTerm.trim(), limit: 20 }
+      : "skip"
+  );
 
   React.useEffect(() => {
     const down = (e: KeyboardEvent) => {
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
-        //@ts-ignore
-        setOpen((open) => !open);
+        setOpen((current) => !current);
       }
     };
 
@@ -68,9 +74,46 @@ export function SearchDashboard({
   return (
     <>
       <CommandDialog open={open} onOpenChange={setOpen}>
-        <CommandInput placeholder="Search for features, courses, flashcards..." />
+        <CommandInput
+          value={searchTerm}
+          onValueChange={setSearchTerm}
+          placeholder="Search courses, tasks, documents, and flashcards..."
+        />
         <CommandList>
           <CommandEmpty>No results found.</CommandEmpty>
+
+          {!!searchResults?.length && (
+            <>
+              <CommandGroup heading="Your study content">
+                {searchResults.map((result) => (
+                  <CommandItem
+                    key={`${result.type}:${result.id}`}
+                    value={`${result.title} ${result.subtitle}`}
+                    onSelect={() =>
+                      handleSelect(() => router.push(result.href))
+                    }
+                  >
+                    {result.type === "course" ? (
+                      <BookOpen className="mr-2 h-4 w-4" />
+                    ) : result.type === "deck" || result.type === "flashcard" ? (
+                      <Brain className="mr-2 h-4 w-4" />
+                    ) : result.type === "task" || result.type === "assignment" ? (
+                      <CheckSquare className="mr-2 h-4 w-4" />
+                    ) : (
+                      <FileText className="mr-2 h-4 w-4" />
+                    )}
+                    <span className="min-w-0">
+                      <span className="block truncate">{result.title}</span>
+                      <span className="block truncate text-xs text-muted-foreground">
+                        {result.subtitle}
+                      </span>
+                    </span>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+              <CommandSeparator />
+            </>
+          )}
 
           <CommandGroup heading="AI Suggestions">
             <CommandItem
@@ -133,7 +176,7 @@ export function SearchDashboard({
                     key={course._id}
                     onSelect={() =>
                       handleSelect(() =>
-                        router.push(`/dashboard/courses/${course._id}`)
+                        router.push(`/dashboard/courses/course/${course._id}`)
                       )
                     }
                   >
@@ -159,7 +202,7 @@ export function SearchDashboard({
             <CommandItem
               onSelect={() =>
                 handleSelect(() =>
-                  router.push("/dashboard/dashboard/flashcards?mode=study")
+                  router.push("/dashboard/flashcards?mode=study")
                 )
               }
             >

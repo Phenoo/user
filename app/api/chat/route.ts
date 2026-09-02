@@ -92,6 +92,7 @@ export async function POST(req: Request) {
     }
 
     const { result } = await streamTextWithGateway({
+      abortSignal: req.signal,
       feature: "chat",
       userId,
       courseId,

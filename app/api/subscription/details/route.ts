@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { polarClient } from "@/lib/polar-client";
+import { getAuthenticatedSubscription } from "@/lib/server/convex-auth";
 
 export async function GET(request: NextRequest) {
   try {
@@ -11,6 +12,15 @@ export async function GET(request: NextRequest) {
         { error: "Subscription ID is required" },
         { status: 400 }
       );
+    }
+
+    const authentication = await getAuthenticatedSubscription();
+    if (!authentication) {
+      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+    }
+
+    if (authentication.subscription?.polarSubscriptionId !== subscriptionId) {
+      return NextResponse.json({ error: "Subscription not found" }, { status: 404 });
     }
 
     const subscription = await polarClient.getSubscription(subscriptionId);

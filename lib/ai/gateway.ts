@@ -1,10 +1,15 @@
 import { streamText, generateText, generateObject } from "ai";
-import { fetchQuery } from "convex/nextjs";
+import { fetchMutation, fetchQuery } from "convex/nextjs";
+import { convexAuthNextjsToken } from "@convex-dev/auth/nextjs/server";
 import { api } from "@/convex/_generated/api";
 import { resolveModel } from "./router";
 import { getProviderModel } from "./providers";
 import { getFeatureCreditCost, getPlanEntitlements, SubscriptionPlan } from "./entitlements";
-import { AIEntitlementError } from "./errors";
+import {
+  AIAuthenticationError,
+  AICreditLimitError,
+  AIEntitlementError,
+} from "./errors";
 import { trackTokenUsage } from "@/lib/ai-token-tracker";
 
 export interface AIGatewayRequest {
@@ -17,6 +22,7 @@ export interface AIGatewayRequest {
   courseCode?: string;
   requestedModelId?: string;
   promptVersion?: string;
+  abortSignal?: AbortSignal;
   retrievalQuery?: string;
   baseSystem?: string;
   request?: {
@@ -41,23 +47,24 @@ export interface GroundedSource {
 }
 
 export interface AIGatewayResult {
+  requestId: string;
   modelId: string;
   providerModel: any;
   creditCost: number;
   sources: GroundedSource[];
   systemPrompt?: string;
+  maxOutputTokens: number;
   trackUsage: (usage: {
     promptTokens: number;
     completionTokens: number;
     cachedInputTokens?: number;
     reasoningTokens?: number;
   }) => Promise<void>;
+  fail: (error: unknown) => Promise<void>;
 }
 
 export async function prepareAIGatewayRequest(params: AIGatewayRequest): Promise<AIGatewayResult> {
   const {
-    userId = "anonymous",
-    userPlan = "FREE",
     feature,
     mode = "standard",
     courseId,
@@ -66,6 +73,22 @@ export async function prepareAIGatewayRequest(params: AIGatewayRequest): Promise
     retrievalQuery,
     baseSystem,
   } = params;
+
+  const token = await convexAuthNextjsToken();
+  if (!token) {
+    throw new AIAuthenticationError();
+  }
+
+  const user = await fetchQuery(api.users.currentUser, {}, { token });
+  if (!user) {
+    throw new AIAuthenticationError();
+  }
+
+  const userId = user._id;
+  const userPlan: SubscriptionPlan =
+    user.subscriptionPlan === "STUDENT" || user.subscriptionPlan === "STUDENTPRO"
+      ? user.subscriptionPlan
+      : "FREE";
 
   const entitlements = getPlanEntitlements(userPlan);
 
@@ -81,6 +104,27 @@ export async function prepareAIGatewayRequest(params: AIGatewayRequest): Promise
 
   const providerModel = getProviderModel(definition.provider, modelId);
   const creditCost = getFeatureCreditCost(feature, mode);
+  const requestId = crypto.randomUUID();
+  const startedAt = Date.now();
+  const creditStatus = await fetchMutation(
+    (api as any).aiRequests.reserveRequest,
+    {
+      userId,
+      requestId,
+      provider: definition.provider,
+      model: modelId,
+      feature,
+      mode,
+      courseId,
+      courseName,
+      promptVersion: params.promptVersion,
+    },
+    { token }
+  );
+
+  if (!creditStatus.allowed) {
+    throw new AICreditLimitError(creditStatus.reason);
+  }
 
   let sources: GroundedSource[] = [];
   let groundedSystemPrompt = baseSystem || "";
@@ -95,7 +139,8 @@ export async function prepareAIGatewayRequest(params: AIGatewayRequest): Promise
           courseId,
           query: retrievalQuery,
           limit: 4,
-        }
+        },
+        { token }
       );
 
       if (retrievalResult && retrievalResult.chunks && retrievalResult.chunks.length > 0) {
@@ -123,24 +168,58 @@ export async function prepareAIGatewayRequest(params: AIGatewayRequest): Promise
     if (!userId || userId === "anonymous") return;
     await trackTokenUsage({
       userId,
+      requestId,
+      token,
       model: modelId,
       feature,
+      mode,
+      creditsUsed: creditCost,
       courseId,
       courseName,
       promptTokens: usage.promptTokens,
       completionTokens: usage.completionTokens,
       cachedInputTokens: usage.cachedInputTokens,
       reasoningTokens: usage.reasoningTokens,
+      latencyMs: Date.now() - startedAt,
+    });
+  };
+
+  const fail = async (error: unknown) => {
+    const isCanceled =
+      error instanceof Error &&
+      (error.name === "AbortError" || error.message.toLowerCase().includes("abort"));
+
+    await trackTokenUsage({
+      userId,
+      requestId,
+      token,
+      model: modelId,
+      feature,
+      mode,
+      creditsUsed: creditCost,
+      courseId,
+      courseName,
+      promptTokens: 0,
+      completionTokens: 0,
+      status: isCanceled ? "canceled" : "error",
+      errorCode: error instanceof Error ? error.name : "AI_REQUEST_FAILED",
+      latencyMs: Date.now() - startedAt,
     });
   };
 
   return {
+    requestId,
     modelId,
     providerModel,
     creditCost,
     sources,
     systemPrompt: groundedSystemPrompt.trim() || undefined,
+    maxOutputTokens: Math.min(
+      params.request?.maxOutputTokens ?? entitlements.maxTokensPerRequest,
+      entitlements.maxTokensPerRequest
+    ),
     trackUsage,
+    fail,
   };
 }
 
@@ -154,6 +233,8 @@ export async function streamTextWithGateway(params: AIGatewayRequest) {
     prompt: params.request?.prompt,
     tools: params.request?.tools,
     stopWhen: params.request?.stopWhen,
+    maxOutputTokens: prepared.maxOutputTokens,
+    abortSignal: params.abortSignal,
     onFinish: async (event: any) => {
       const usage = event.usage;
       if (usage) {
@@ -165,9 +246,18 @@ export async function streamTextWithGateway(params: AIGatewayRequest) {
         });
       }
     },
+    onError: async (event: { error: unknown }) => {
+      await prepared.fail(event.error);
+    },
   };
 
-  const result = streamText(options);
+  let result;
+  try {
+    result = streamText(options);
+  } catch (error) {
+    await prepared.fail(error);
+    throw error;
+  }
 
   return {
     result,
@@ -183,6 +273,8 @@ export async function generateTextWithGateway(params: AIGatewayRequest) {
   const options: any = {
     model: prepared.providerModel,
     system: prepared.systemPrompt,
+    maxOutputTokens: prepared.maxOutputTokens,
+    abortSignal: params.abortSignal,
   };
 
   if (params.request?.messages && params.request.messages.length > 0) {
@@ -195,7 +287,13 @@ export async function generateTextWithGateway(params: AIGatewayRequest) {
     options.temperature = params.request.temperature;
   }
 
-  const result = await generateText(options);
+  let result;
+  try {
+    result = await generateText(options);
+  } catch (error) {
+    await prepared.fail(error);
+    throw error;
+  }
 
   const usage = (result as any).usage;
   const inputTokens = usage?.inputTokens ?? usage?.promptTokens ?? 0;
@@ -216,16 +314,18 @@ export async function generateTextWithGateway(params: AIGatewayRequest) {
 }
 
 export async function generateObjectWithGateway(params: AIGatewayRequest) {
-  const prepared = await prepareAIGatewayRequest(params);
-
   if (!params.request?.schema) {
     throw new Error("generateObjectWithGateway requires a schema in params.request");
   }
+
+  const prepared = await prepareAIGatewayRequest(params);
 
   const options: any = {
     model: prepared.providerModel,
     schema: params.request.schema,
     system: prepared.systemPrompt,
+    maxOutputTokens: prepared.maxOutputTokens,
+    abortSignal: params.abortSignal,
   };
 
   if (params.request?.messages && params.request.messages.length > 0) {
@@ -234,7 +334,13 @@ export async function generateObjectWithGateway(params: AIGatewayRequest) {
     options.prompt = params.request.prompt;
   }
 
-  const result = await generateObject(options);
+  let result;
+  try {
+    result = await generateObject(options);
+  } catch (error) {
+    await prepared.fail(error);
+    throw error;
+  }
 
   const usage = (result as any).usage;
   const inputTokens = usage?.inputTokens ?? usage?.promptTokens ?? 0;

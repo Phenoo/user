@@ -48,6 +48,7 @@ const schema = defineSchema({
     polarCustomerId: v.string(),
     productId: v.string(),
     productName: v.string(),
+    priceId: v.string(),
     status: v.union(
       v.literal("active"),
       v.literal("canceled"),
@@ -135,6 +136,15 @@ const schema = defineSchema({
     .index("by_user", ["userId"])
     .index("by_user_provider", ["userId", "provider"]),
 
+  googleCredentials: defineTable({
+    userId: v.id("users"),
+    encryptedCredentials: v.string(),
+    scopes: v.array(v.string()),
+    email: v.optional(v.string()),
+    expiresAt: v.optional(v.number()),
+    updatedAt: v.number(),
+  }).index("by_user", ["userId"]),
+
   integrationSyncs: defineTable({
     userId: v.id("users"),
     provider: v.union(
@@ -173,6 +183,9 @@ const schema = defineSchema({
     credits: v.number(),
     description: v.optional(v.string()),
     lmsLink: v.optional(v.string()), // Learning Management System link
+    source: v.optional(v.union(v.literal("manual"), v.literal("google-classroom"))),
+    externalId: v.optional(v.string()),
+    externalUpdatedAt: v.optional(v.string()),
     colorTag: v.optional(v.string()), // Hex color or predefined color name for visual ID
     status: v.union(
       v.literal("active"),
@@ -181,6 +194,7 @@ const schema = defineSchema({
     ), // Course status
   })
     .index("by_userId", ["userId"])
+    .index("by_user_source_external", ["userId", "source", "externalId"])
     .index("by_userId_academicYear", ["userId", "academicYear"])
     .index("by_userId_session", ["userId", "session"])
     .index("by_userId_academicYear_session_code", [
@@ -202,7 +216,13 @@ const schema = defineSchema({
     endDate: v.string(), // ISO date
     color: v.string(),
     userId: v.string(),
-  }),
+    courseId: v.optional(v.id("courses")),
+    source: v.optional(v.union(v.literal("manual"), v.literal("google-classroom"))),
+    externalId: v.optional(v.string()),
+    lmsLink: v.optional(v.string()),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_source_external", ["userId", "source", "externalId"]),
 
   assessments: defineTable({
     courseId: v.id("courses"),
@@ -691,6 +711,8 @@ const schema = defineSchema({
     emailNotifications: v.boolean(),
     pushNotifications: v.boolean(),
     studyReminders: v.boolean(),
+    assignmentReminders: v.optional(v.boolean()),
+    examReminders: v.optional(v.boolean()),
     reminderTime: v.optional(v.string()), // Format: "HH:MM"
     weeklyReport: v.boolean(),
 
@@ -723,6 +745,28 @@ const schema = defineSchema({
     createdAt: v.number(),
     updatedAt: v.number(),
   }).index("by_user", ["userId"]),
+
+  notifications: defineTable({
+    userId: v.id("users"),
+    type: v.union(
+      v.literal("assignment"),
+      v.literal("exam"),
+      v.literal("study_session"),
+      v.literal("subscription"),
+      v.literal("system")
+    ),
+    title: v.string(),
+    message: v.string(),
+    actionUrl: v.optional(v.string()),
+    dedupKey: v.optional(v.string()),
+    scheduledFor: v.optional(v.number()),
+    isRead: v.boolean(),
+    readAt: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index("by_user_created", ["userId", "createdAt"])
+    .index("by_user_read", ["userId", "isRead"])
+    .index("by_user_dedup", ["userId", "dedupKey"]),
 
   subscriptionChanges: defineTable({
     userId: v.id("users"),
@@ -808,13 +852,21 @@ const schema = defineSchema({
   }).index("by_user_and_type", ["userId", "type"]),
   assignments: defineTable({
     userId: v.string(),
+    courseId: v.optional(v.id("courses")),
     title: v.string(),
     description: v.string(),
     dueDate: v.optional(v.string()),
     subject: v.optional(v.string()),
     extractedFrom: v.string(), // Original text that was parsed
+    source: v.optional(v.union(v.literal("manual"), v.literal("google-classroom"))),
+    externalId: v.optional(v.string()),
+    externalUpdatedAt: v.optional(v.string()),
+    alternateLink: v.optional(v.string()),
     createdAt: v.number(),
-  }).index("by_user", ["userId"]),
+    updatedAt: v.optional(v.number()),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_source_external", ["userId", "source", "externalId"]),
 
   courseDocuments: defineTable({
     userId: v.id("users"),
@@ -844,12 +896,15 @@ const schema = defineSchema({
     textContent: v.optional(v.string()),
     chunkCount: v.optional(v.number()),
     fileUrl: v.optional(v.string()),
+    externalId: v.optional(v.string()),
+    externalUpdatedAt: v.optional(v.string()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
     .index("by_user", ["userId"])
     .index("by_course", ["courseId"])
     .index("by_user_course", ["userId", "courseId"])
+    .index("by_user_source_external", ["userId", "source", "externalId"])
     .index("by_course_status", ["courseId", "processingStatus"])
     .index("by_source", ["source"]),
 
@@ -965,7 +1020,12 @@ const schema = defineSchema({
     estimatedCostUSD: v.number(),
     creditsUsed: v.optional(v.number()),
     latencyMs: v.optional(v.number()),
-    status: v.union(v.literal("success"), v.literal("error")),
+    status: v.union(
+      v.literal("reserved"),
+      v.literal("success"),
+      v.literal("error"),
+      v.literal("canceled")
+    ),
     errorCode: v.optional(v.string()),
     retrievalChunkCount: v.optional(v.number()),
     retrievalLatencyMs: v.optional(v.number()),

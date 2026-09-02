@@ -167,6 +167,7 @@ export async function POST(req: Request) {
       );
 
       const { object } = await generateObjectWithGateway({
+        abortSignal: req.signal,
         feature: "course-parser",
         userId,
         promptVersion: `${COURSE_PARSER_PROMPT.id}:${COURSE_PARSER_PROMPT.version}`,

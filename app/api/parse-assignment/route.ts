@@ -25,6 +25,7 @@ export async function POST(req: Request) {
     const { text, userId } = await req.json()
 
     const { object } = await generateObjectWithGateway({
+      abortSignal: req.signal,
       feature: "assignment-parser",
       userId,
       promptVersion: `${ASSIGNMENT_PARSER_PROMPT.id}:${ASSIGNMENT_PARSER_PROMPT.version}`,

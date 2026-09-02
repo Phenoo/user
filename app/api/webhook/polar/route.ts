@@ -7,11 +7,39 @@ import { NextResponse } from "next/server";
 
 const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
+type SubscriptionStatus =
+  | "active"
+  | "canceled"
+  | "incomplete"
+  | "incomplete_expired"
+  | "past_due"
+  | "trialing"
+  | "unpaid";
+
+function normalizeSubscriptionStatus(
+  status: unknown,
+  isCancel: boolean
+): SubscriptionStatus {
+  if (isCancel) return "canceled";
+
+  switch (status) {
+    case "active":
+    case "canceled":
+    case "incomplete":
+    case "incomplete_expired":
+    case "past_due":
+    case "trialing":
+    case "unpaid":
+      return status;
+    default:
+      return "incomplete";
+  }
+}
+
 const processSubscriptionEvent = async (payload: any, isCancel = false) => {
   const userId = payload.data?.metadata?.userId as Id<"users">;
   if (!userId) {
-    console.error("No userId found in metadata for Polar webhook event");
-    return;
+    throw new Error("No userId found in metadata for Polar webhook event");
   }
 
   const productName = payload.data?.product?.name || "";
@@ -26,10 +54,10 @@ const processSubscriptionEvent = async (payload: any, isCancel = false) => {
     }
   }
 
-  const status = isCancel ? "canceled" : payload.data?.status || "active";
+  const status = normalizeSubscriptionStatus(payload.data?.status, isCancel);
 
-  try {
-    await convex.mutation(api.users.updateUserSubscription, {
+  await convex.mutation(api.users.updateUserSubscription, {
+      webhookSecret: process.env.POLAR_WEBHOOK_SECRET!,
       userId,
       status,
       subscriptionId: payload.data?.id,
@@ -39,31 +67,27 @@ const processSubscriptionEvent = async (payload: any, isCancel = false) => {
         : undefined,
       tier: productName || (plan === "STUDENTPRO" ? "Pro" : plan === "STUDENT" ? "Starter" : "Free"),
       plan,
-    });
-  } catch (err) {
-    console.error("Error updating user subscription in Convex:", err);
-  }
+  });
 
-  if (!isCancel) {
-    try {
-      const priceId =
-        payload.data?.priceId ||
-        payload.data?.prices?.[0]?.id ||
-        payload.data?.productId ||
-        "default_price";
+  const priceId =
+    payload.data?.priceId ||
+    payload.data?.prices?.[0]?.id ||
+    payload.data?.productId ||
+    "default_price";
 
-      const currentPeriodEnd = payload.data?.currentPeriodEnd
-        ? new Date(payload.data.currentPeriodEnd).getTime()
-        : Date.now() + 30 * 24 * 60 * 60 * 1000;
+  const currentPeriodEnd = payload.data?.currentPeriodEnd
+    ? new Date(payload.data.currentPeriodEnd).getTime()
+    : Date.now() + 30 * 24 * 60 * 60 * 1000;
 
-      await convex.mutation(api.subscriptions.upsertSubscription, {
+  await convex.mutation(api.subscriptions.upsertSubscription, {
+        webhookSecret: process.env.POLAR_WEBHOOK_SECRET!,
         userId,
         polarSubscriptionId: payload.data.id,
         polarCustomerId: payload.data.customerId || "",
         productId: payload.data.productId || "",
         productName: payload.data.product?.name || "",
         priceId,
-        status: payload.data.status || "active",
+        status,
         currentPeriodStart: payload.data?.currentPeriodStart
           ? new Date(payload.data.currentPeriodStart).getTime()
           : Date.now(),
@@ -78,11 +102,7 @@ const processSubscriptionEvent = async (payload: any, isCancel = false) => {
         trialEnd: payload.data?.trialEnd
           ? new Date(payload.data.trialEnd).getTime()
           : undefined,
-      });
-    } catch (err) {
-      console.error("Error upserting subscription record in Convex:", err);
-    }
-  }
+  });
 };
 
 export const POST = Webhooks({
@@ -107,6 +127,7 @@ export const POST = Webhooks({
     const isProration = payload.data.billingReason === "subscription_update";
 
     await convex.mutation(api.subscriptions.recordInvoice, {
+      webhookSecret: process.env.POLAR_WEBHOOK_SECRET!,
       userId: payload.data.metadata.userId as Id<"users">,
       polarInvoiceId: payload.data.id, // Use order ID as invoice ID
       subscriptionId: payload.data.subscriptionId ?? "",
@@ -123,11 +144,13 @@ export const POST = Webhooks({
         api.subscriptions.getCurrentSubscription,
         {
           userId: payload.data.metadata.userId as Id<"users">,
+          webhookSecret: process.env.POLAR_WEBHOOK_SECRET!,
         }
       );
 
       if (subscription) {
         await convex.mutation(api.subscriptions.recordPlanChange, {
+          webhookSecret: process.env.POLAR_WEBHOOK_SECRET!,
           userId: payload.data.metadata.userId as Id<"users">,
           subscriptionId: subscription._id,
           changeType: payload.data.subtotalAmount > 0 ? "upgrade" : "downgrade",

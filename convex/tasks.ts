@@ -1,13 +1,23 @@
-import { v } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { auth } from "./auth";
+
+async function assertCurrentUser(ctx: any, userId: string) {
+  const currentUserId = await auth.getUserId(ctx);
+  if (!currentUserId || currentUserId !== userId) {
+    throw new ConvexError("Unauthorized access");
+  }
+}
 
 // Get all tasks for a user
 export const getTasks = query({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
+    await assertCurrentUser(ctx, args.userId);
+
     return await ctx.db
       .query("tasks")
-      .filter((q) => q.eq(q.field("userId"), args.userId))
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
       .order("desc")
       .collect();
   },
@@ -24,6 +34,8 @@ export const createTask = mutation({
     userId: v.id("users"),
   },
   handler: async (ctx, args) => {
+    await assertCurrentUser(ctx, args.userId);
+
     return await ctx.db.insert("tasks", {
       ...args,
       status: "todo",
@@ -55,6 +67,12 @@ export const updateTask = mutation({
   },
   handler: async (ctx, args) => {
     const { id, ...updates } = args;
+    const task = await ctx.db.get(id);
+    if (!task) {
+      throw new ConvexError("Task not found");
+    }
+    await assertCurrentUser(ctx, task.userId);
+
     return await ctx.db.patch(id, {
       ...updates,
       updatedAt: new Date().toISOString(),
@@ -66,6 +84,12 @@ export const updateTask = mutation({
 export const deleteTask = mutation({
   args: { id: v.id("tasks") },
   handler: async (ctx, args) => {
+    const task = await ctx.db.get(args.id);
+    if (!task) {
+      throw new ConvexError("Task not found");
+    }
+    await assertCurrentUser(ctx, task.userId);
+
     return await ctx.db.delete(args.id);
   },
 });
@@ -75,7 +99,8 @@ export const toggleTask = mutation({
   args: { id: v.id("tasks") },
   handler: async (ctx, args) => {
     const task = await ctx.db.get(args.id);
-    if (!task) throw new Error("Task not found");
+    if (!task) throw new ConvexError("Task not found");
+    await assertCurrentUser(ctx, task.userId);
 
     return await ctx.db.patch(args.id, {
       completed: !task.completed,

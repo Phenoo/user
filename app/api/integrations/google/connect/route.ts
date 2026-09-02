@@ -3,12 +3,16 @@ import crypto from "crypto";
 import { getRequiredGoogleScopes, GoogleIntegrationType } from "@/lib/integrations/google/scopes";
 import { signOAuthState } from "@/lib/integrations/google/state";
 import { getGoogleIntegrationRedirectUri } from "@/lib/google-meet";
+import { getAuthenticatedUser } from "@/lib/server/convex-auth";
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const integrationParam = searchParams.get("integration");
-    const userId = searchParams.get("userId") || undefined;
+    const authentication = await getAuthenticatedUser();
+    if (!authentication) {
+      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+    }
 
     if (!integrationParam || !["classroom", "drive", "calendar"].includes(integrationParam)) {
       return NextResponse.json(
@@ -36,7 +40,7 @@ export async function GET(request: NextRequest) {
       integration,
       nonce,
       timestamp: Date.now(),
-      userId,
+      userId: authentication.user._id,
     });
 
     const scopesToRequest = [
@@ -50,9 +54,9 @@ export async function GET(request: NextRequest) {
       client_id: clientId,
       redirect_uri: redirectUri,
       response_type: "code",
-      // Keep the authorization code out of the browser URL and receive the
-      // complete OAuth response in the callback POST body.
-      response_mode: process.env.NODE_ENV === "production" ? "form_post" : "query",
+      // A top-level GET callback includes the app's Lax authentication cookie,
+      // allowing the callback to verify the active user against signed state.
+      response_mode: "query",
       scope: scopesToRequest.join(" "),
       access_type: "offline",
       include_granted_scopes: "true",
@@ -67,19 +71,21 @@ export async function GET(request: NextRequest) {
     response.cookies.set("google_oauth_nonce", nonce, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      // Google submits the production callback cross-site via POST. Lax
-      // cookies are excluded from that request, so production needs None.
-      // Local development uses query mode and can safely keep Lax.
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      sameSite: "lax",
       maxAge: 15 * 60, // 15 mins
       path: "/",
     });
 
     return response;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[GoogleConnect] Error generating connect URL:", error);
     return NextResponse.json(
-      { error: error?.message || "Failed to initiate Google OAuth flow" },
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to initiate Google OAuth flow",
+      },
       { status: 500 }
     );
   }

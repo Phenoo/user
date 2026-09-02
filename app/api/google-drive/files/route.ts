@@ -1,37 +1,37 @@
 import { type NextRequest, NextResponse } from "next/server";
+
 import { createGoogleMeetService } from "@/lib/google-meet";
+import {
+  resolveGoogleCredentials,
+  setGoogleCredentialCookies,
+} from "@/lib/integrations/google/credentials";
+import { getAuthenticatedUser } from "@/lib/server/convex-auth";
 
 export async function GET(request: NextRequest) {
+  const authentication = await getAuthenticatedUser();
+  if (!authentication) {
+    return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+  }
+
   try {
-    let token = request.cookies.get("google_meet_token")?.value;
-    const refreshToken = request.cookies.get("google_meet_refresh_token")?.value;
-
+    const credentials = await resolveGoogleCredentials(
+      request,
+      authentication,
+      "drive"
+    );
     const googleMeetService = createGoogleMeetService();
-
-    if (!token && refreshToken) {
-      try {
-        const refreshed = await googleMeetService.refreshAccessToken(refreshToken);
-        token = refreshed.accessToken;
-      } catch (err) {
-        console.warn("Failed auto refresh for Drive:", err);
-      }
-    }
-
-    if (!token) {
-      return NextResponse.json(
-        { error: "Unauthorized. Please connect your Google account." },
-        { status: 401 }
-      );
-    }
-
-    googleMeetService.setAccessToken(token);
+    googleMeetService.setAccessToken(credentials.accessToken);
     const files = await googleMeetService.getDriveFiles(30);
-
-    return NextResponse.json({ files });
-  } catch (error: any) {
-    console.error("Google Drive API Error:", error);
+    const response = NextResponse.json({ files });
+    setGoogleCredentialCookies(response, credentials);
+    return response;
+  } catch (error: unknown) {
+    console.error("Google Drive API error:", error);
     return NextResponse.json(
-      { error: error?.message || "Failed to list Google Drive files" },
+      {
+        error:
+          error instanceof Error ? error.message : "Failed to list Google Drive files",
+      },
       { status: 500 }
     );
   }

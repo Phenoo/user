@@ -1,6 +1,7 @@
 import { ConvexError, v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { createDeterministicEmbedding, cosineSimilarity } from "../lib/ai/retrieval/embeddings";
+import { auth } from "./auth";
 
 function normalizeText(input: string) {
   return input
@@ -110,6 +111,11 @@ function scoreDocumentTitle(title: string, query: string) {
 }
 
 async function assertCourseAccess(ctx: any, userId: any, courseId: any) {
+  const authenticatedUserId = await auth.getUserId(ctx);
+  if (!authenticatedUserId || authenticatedUserId !== userId) {
+    throw new ConvexError("Unauthorized access");
+  }
+
   const course = await ctx.db.get(courseId);
 
   if (!course || course.userId !== userId) {
@@ -288,6 +294,78 @@ export const createManualMaterial = mutation({
     });
 
     return materialId;
+  },
+});
+
+export const upsertGoogleDriveMaterial = mutation({
+  args: {
+    userId: v.id("users"),
+    courseId: v.id("courses"),
+    externalId: v.string(),
+    title: v.string(),
+    content: v.string(),
+    fileName: v.optional(v.string()),
+    mimeType: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await assertCourseAccess(ctx, args.userId, args.courseId);
+    const content = args.content.trim();
+    if (content.length < 40) {
+      throw new ConvexError(
+        "StudentApp could not extract enough text from that Drive file."
+      );
+    }
+
+    const now = Date.now();
+    const existing = await ctx.db
+      .query("courseDocuments")
+      .withIndex("by_user_source_external", (q) =>
+        q
+          .eq("userId", args.userId)
+          .eq("source", "google-drive")
+          .eq("externalId", args.externalId)
+      )
+      .unique();
+    const materialData = {
+      userId: args.userId,
+      courseId: args.courseId,
+      title: args.title,
+      fileName: args.fileName,
+      mimeType: args.mimeType,
+      fileSize: content.length,
+      source: "google-drive" as const,
+      processingStatus: "processing" as const,
+      textContent: content,
+      externalId: args.externalId,
+      updatedAt: now,
+    };
+    const materialId = existing
+      ? existing._id
+      : await ctx.db.insert("courseDocuments", {
+          ...materialData,
+          createdAt: now,
+        });
+
+    if (existing) {
+      await ctx.db.patch(existing._id, materialData);
+    }
+
+    const chunkCount = await replaceChunks(ctx, {
+      userId: args.userId,
+      courseId: args.courseId,
+      documentId: materialId,
+      content,
+      createdAt: now,
+    });
+    await ctx.db.patch(materialId, {
+      processingStatus: "ready",
+      processingError: undefined,
+      chunkCount,
+      pageCount: 1,
+      updatedAt: now,
+    });
+
+    return { materialId, created: !existing };
   },
 });
 
@@ -470,9 +548,20 @@ export const retrieveCourseContext = query({
       )
       .collect();
 
-    const ranked = (
-      await Promise.all(
-        chunks.map(async (chunk) => {
+    const documentIds = Array.from(
+      new Set(chunks.map((chunk) => chunk.documentId))
+    );
+    const documents = await Promise.all(
+      documentIds.map((documentId) => ctx.db.get(documentId))
+    );
+    const documentsById = new Map(
+      documents
+        .filter((document) => document !== null)
+        .map((document) => [document._id, document])
+    );
+
+    const ranked = chunks
+        .map((chunk) => {
           const keywordScore = scoreChunk(
             chunk.content,
             args.query,
@@ -483,7 +572,7 @@ export const retrieveCourseContext = query({
             queryEmbedding
           );
 
-          const document = await ctx.db.get(chunk.documentId);
+          const document = documentsById.get(chunk.documentId);
 
           if (!document) {
             return null;
@@ -511,8 +600,6 @@ export const retrieveCourseContext = query({
             relevanceScore: score,
           };
         })
-      )
-    )
       .filter(Boolean)
       .sort((a: any, b: any) => b.relevanceScore - a.relevanceScore)
       .slice(0, limit);

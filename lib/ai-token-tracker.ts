@@ -1,19 +1,25 @@
 import { fetchMutation } from "convex/nextjs";
-import { nanoid } from "nanoid";
 
 import { api } from "@/convex/_generated/api";
 import { calculateUsageCost } from "@/lib/ai/pricing";
 
 export interface TrackTokenUsageParams {
   userId: string;
+  requestId: string;
+  token: string;
   model?: string;
   feature: string;
+  mode?: "standard" | "deep-reasoning";
+  creditsUsed: number;
   courseId?: string;
   courseName?: string;
   promptTokens: number;
   completionTokens: number;
   cachedInputTokens?: number;
   reasoningTokens?: number;
+  status?: "success" | "error" | "canceled";
+  errorCode?: string;
+  latencyMs?: number;
 }
 
 export function calculateTokenCost(
@@ -32,14 +38,21 @@ export function calculateTokenCost(
 
 export async function trackTokenUsage({
   userId,
+  requestId,
+  token,
   model = "deepseek-chat",
   feature,
+  mode = "standard",
+  creditsUsed,
   courseId,
   courseName,
   promptTokens,
   completionTokens,
   cachedInputTokens = 0,
   reasoningTokens = 0,
+  status = "success",
+  errorCode,
+  latencyMs,
 }: TrackTokenUsageParams): Promise<void> {
   if (!userId) {
     return;
@@ -51,14 +64,13 @@ export async function trackTokenUsage({
     completionTokens +
     reasoningTokens;
 
-  try {
-    await fetchMutation((api as any).aiRequests.recordRequest, {
+  await fetchMutation((api as any).aiRequests.recordRequest, {
       userId,
-      requestId: nanoid(),
+      requestId,
       provider: model.startsWith("gpt-") ? "openai" : "deepseek",
       model,
       feature,
-      mode: "standard",
+      mode,
       courseId,
       courseName,
       inputTokens: promptTokens,
@@ -73,13 +85,9 @@ export async function trackTokenUsage({
         reasoningTokens,
         totalTokens,
       }),
-      status: "success",
-      creditsUsed: 0,
-    });
-  } catch (error) {
-    console.error(
-      `[AI Token Tracker] Failed to record token usage for ${userId}:`,
-      error
-    );
-  }
+      status,
+      errorCode,
+      latencyMs,
+      creditsUsed,
+    }, { token });
 }

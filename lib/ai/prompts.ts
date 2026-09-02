@@ -10,7 +10,7 @@ export const COURSE_CHAT_PROMPT: PromptDefinition = {
 
 export const SUMMARY_PROMPT: PromptDefinition = {
   id: "summary",
-  version: "v2",
+  version: "v3",
 };
 
 export const FLASHCARDS_PROMPT: PromptDefinition = {
@@ -25,7 +25,7 @@ export const ESSAY_PROMPT: PromptDefinition = {
 
 export const STUDY_GUIDE_PROMPT: PromptDefinition = {
   id: "study-guide",
-  version: "v2",
+  version: "v3",
 };
 
 export const ASSIGNMENT_PARSER_PROMPT: PromptDefinition = {
@@ -110,15 +110,18 @@ export function buildSummaryPrompt({
     ? `[Course Reference: ${courseName}]\n\n`
     : "";
 
+  const instructions =
+    "Preserve important terminology, definitions, formulas, and relationships from the source. Do not invent facts or add information that is not supported by the source text.";
+
   if (summaryType === "brief") {
-    return `${courseContext}Provide a brief summary (2-3 paragraphs) of the following content. Focus on the main points and key takeaways:\n\n${content}`;
+    return `${courseContext}You are an expert academic tutor. Provide a brief summary in 2-3 paragraphs. Focus on the main points and key takeaways. ${instructions}\n\nSource text:\n---\n${content}\n---`;
   }
 
   if (summaryType === "detailed") {
-    return `${courseContext}Provide a detailed summary of the following content. Include all major points, supporting details, and important examples:\n\n${content}`;
+    return `${courseContext}You are an expert academic tutor. Provide a detailed, structured summary. Include all major points, supporting details, examples, definitions, and formulas that appear in the source. ${instructions}\n\nSource text:\n---\n${content}\n---`;
   }
 
-  return `${courseContext}Summarize the following content as a bullet-point list. Extract the key points and organize them clearly:\n\n${content}`;
+  return `${courseContext}You are an expert academic tutor. Summarize the source as a clear, nested bullet-point list. Group related ideas and include important definitions, formulas, and examples from the source. ${instructions}\n\nSource text:\n---\n${content}\n---`;
 }
 
 export function buildFlashcardsPrompt({
@@ -200,18 +203,23 @@ export function buildStudyGuidePrompt({
 }) {
   const topicsList = topics.join(", ");
 
-  return `Create a comprehensive study guide for ${subject} covering the following topics: ${topicsList}
+  return `You are an expert academic tutor creating a practical study guide for a student.
 
-${examDate ? `Exam date: ${examDate}` : ""}
+Subject: ${subject}
+Topics: ${topicsList}
 
-Please include:
-1. Key concepts and definitions for each topic
-2. Important formulas, theories, or principles
-3. Practice questions with answers
-4. Study tips and memory aids
-5. Common mistakes to avoid
+${examDate ? `Exam date: ${examDate}` : "No exam date was provided."}
 
-Format the study guide in a clear, organized manner that is easy to review.`;
+Create a clear Markdown guide with these sections:
+1. Learning objectives
+2. Key concepts and definitions for each topic
+3. Important formulas, theories, or principles, where applicable
+4. Common mistakes and misconceptions
+5. Practice questions, followed by a separate answer key with brief explanations
+6. Study tips and memory aids
+7. A prioritized revision checklist
+
+Use only the subject and topics provided. Do not invent a lecturer's syllabus, institution-specific requirements, citations, or facts presented as course-specific. If a topic is ambiguous, state the assumption briefly and keep the material broadly academically accurate. Make the guide concise enough to review but detailed enough to support exam preparation.`;
 }
 
 export function buildAssignmentParserPrompt(text: string) {

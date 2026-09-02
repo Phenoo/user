@@ -144,7 +144,6 @@ export function StudentDashboard() {
   const router = useRouter();
   const token = useAuthToken();
   const [open, setOpen] = useState(false);
-  const [googleMeetToken, setGoogleMeetToken] = useState<string | null>(null);
 
   const getProfile = useAction(api.users.getUserProfile);
 
@@ -169,46 +168,38 @@ export function StudentDashboard() {
     }
   };
 
-  // Handle OAuth callback and token retrieval
+  // Handle the OAuth redirect result without exposing the server-side token.
   useEffect(() => {
-    // Ensure we're running on the client side
-    if (typeof window === "undefined") return;
-
     const urlParams = new URLSearchParams(window.location.search);
-    const googleConnected = urlParams.get("google_connected");
+    const googleConnected = urlParams.get("connected");
     const error = urlParams.get("error");
 
-    // Clean up URL parameters
     if (googleConnected || error) {
-      const newUrl = window.location.pathname;
-      window.history.replaceState({}, document.title, newUrl);
+      urlParams.delete("connected");
+      urlParams.delete("status");
+      urlParams.delete("error");
+      urlParams.delete("integration");
+      const query = urlParams.toString();
+      window.history.replaceState(
+        {},
+        document.title,
+        `${window.location.pathname}${query ? `?${query}` : ""}`
+      );
     }
 
     if (error) {
       let errorMessage = "Failed to connect Google account";
       if (error === "no_code") {
         errorMessage = "Authorization code not received from Google";
-      } else if (error === "callback_error") {
+      } else if (error === "callback_error" || error === "callback_processing_error") {
         errorMessage = "Error processing Google authorization";
+      } else if (error === "insufficient_google_permissions") {
+        errorMessage = "Google did not grant all required permissions";
+      } else if (error === "oauth_user_mismatch") {
+        errorMessage = "Your signed-in account changed during Google authorization";
       }
       alert(errorMessage);
-      return;
     }
-
-    // Fetch token from secure httpOnly cookie via API
-    const fetchToken = async () => {
-      try {
-        const response = await fetch("/api/google-meet/token");
-        const data = await response.json();
-        if (data.connected && data.token) {
-          setGoogleMeetToken(data.token);
-        }
-      } catch (err) {
-        console.error("Error fetching Google token:", err);
-      }
-    };
-
-    fetchToken();
   }, []);
 
   // Keyboard shortcut listener (Cmd+K / Ctrl+K for search)
@@ -222,39 +213,6 @@ export function StudentDashboard() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
-
-  const handleGoogleAuth = async () => {
-    try {
-      const response = await fetch("/api/google-meet/auth");
-      const data = await response.json();
-
-      if (!response.ok) {
-        console.error("Auth error:", data);
-        alert(
-          `Google OAuth setup error: ${data.error}\n\n${data.details || ""}`
-        );
-        return;
-      }
-
-      if (data.authUrl) {
-        window.open(data.authUrl, "_blank", "width=500,height=600");
-      }
-    } catch (error) {
-      console.error("Error initiating Google auth:", error);
-      alert(
-        "Failed to initiate Google authentication. Please check your internet connection and try again."
-      );
-    }
-  };
-
-  const handleGoogleDisconnect = async () => {
-    try {
-      await fetch("/api/google-meet/token", { method: "DELETE" });
-      setGoogleMeetToken(null);
-    } catch (err) {
-      console.error("Error disconnecting Google:", err);
-    }
-  };
 
   const userId = user?._id;
 
@@ -464,11 +422,7 @@ export function StudentDashboard() {
                 </Link>
               </CardContent>
             </Card>
-            <GoogleMeetIntegration
-              accessToken={googleMeetToken ?? ""}
-              onAuthRequired={handleGoogleAuth}
-              onDisconnect={handleGoogleDisconnect}
-            />
+            <GoogleMeetIntegration />
           </div>
         </div>
       </div>

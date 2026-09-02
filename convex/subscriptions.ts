@@ -1,11 +1,104 @@
-import { v } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
+import { auth } from "./auth";
+
+const subscriptionStatus = v.union(
+  v.literal("active"),
+  v.literal("canceled"),
+  v.literal("incomplete"),
+  v.literal("incomplete_expired"),
+  v.literal("past_due"),
+  v.literal("trialing"),
+  v.literal("unpaid")
+);
+
+const invoiceStatus = v.union(
+  v.literal("draft"),
+  v.literal("open"),
+  v.literal("paid"),
+  v.literal("uncollectible"),
+  v.literal("void")
+);
+
+function hasValidWebhookSecret(webhookSecret?: string) {
+  return Boolean(
+    process.env.POLAR_WEBHOOK_SECRET &&
+      webhookSecret === process.env.POLAR_WEBHOOK_SECRET
+  );
+}
+
+async function assertCurrentUser(ctx: any, userId: Id<"users">) {
+  const currentUserId = await auth.getUserId(ctx);
+  if (!currentUserId || currentUserId !== userId) {
+    throw new ConvexError("Unauthorized access");
+  }
+}
+
+function assertWebhook(webhookSecret: string) {
+  if (!hasValidWebhookSecret(webhookSecret)) {
+    throw new ConvexError("Unauthorized webhook request");
+  }
+}
+
+async function createSubscriptionNotification(
+  ctx: any,
+  userId: Id<"users">,
+  dedupKey: string,
+  title: string,
+  message: string
+) {
+  const existing = await ctx.db
+    .query("notifications")
+    .withIndex("by_user_dedup", (q: any) =>
+      q.eq("userId", userId).eq("dedupKey", dedupKey)
+    )
+    .unique();
+  if (existing) return;
+
+  await ctx.db.insert("notifications", {
+    userId,
+    type: "subscription",
+    title,
+    message,
+    actionUrl: "/dashboard/settings?section=billing",
+    dedupKey,
+    isRead: false,
+    createdAt: Date.now(),
+  });
+}
+
+function getSubscriptionNotice(status: string, productName: string) {
+  const plan = productName || "Your subscription";
+  switch (status) {
+    case "active":
+      return { title: "Subscription active", message: `${plan} is now active.` };
+    case "trialing":
+      return { title: "Trial started", message: `${plan} trial is now active.` };
+    case "canceled":
+      return { title: "Subscription canceled", message: `${plan} has been canceled.` };
+    case "past_due":
+    case "unpaid":
+      return {
+        title: "Payment needs attention",
+        message: `Update your billing details to keep ${plan} active.`,
+      };
+    default:
+      return null;
+  }
+}
 
 // Get current user's subscription
 export const getCurrentSubscription = query({
-  args: { userId: v.id("users") },
+  args: {
+    userId: v.id("users"),
+    webhookSecret: v.optional(v.string()),
+  },
   handler: async (ctx, args) => {
+    if (!hasValidWebhookSecret(args.webhookSecret)) {
+      await assertCurrentUser(ctx, args.userId);
+    }
+
     const subscription = await ctx.db
       .query("subscriptions")
       .withIndex("by_user", (q) => q.eq("userId", args.userId))
@@ -33,6 +126,8 @@ export const getProducts = query({
 export const getInvoices = query({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
+    await assertCurrentUser(ctx, args.userId);
+
     const invoices = await ctx.db
       .query("invoices")
       .withIndex("by_user", (q) => q.eq("userId", args.userId))
@@ -86,13 +181,14 @@ export const getInvoices = query({
 // });
 export const upsertSubscription = mutation({
   args: {
+    webhookSecret: v.string(),
     userId: v.id("users"),
     polarSubscriptionId: v.string(),
     polarCustomerId: v.string(),
     productId: v.string(),
     productName: v.string(),
     priceId: v.string(),
-    status: v.string(),
+    status: subscriptionStatus,
     currentPeriodStart: v.number(),
     currentPeriodEnd: v.number(),
     cancelAtPeriodEnd: v.boolean(),
@@ -101,6 +197,9 @@ export const upsertSubscription = mutation({
     trialEnd: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    assertWebhook(args.webhookSecret);
+    const { webhookSecret: _webhookSecret, ...subscriptionData } = args;
+
     const existing = await ctx.db
       .query("subscriptions")
       .withIndex("by_polar_subscription", (q) =>
@@ -110,6 +209,7 @@ export const upsertSubscription = mutation({
 
     if (existing) {
       const planChanged = existing.productId !== args.productId;
+      const statusChanged = existing.status !== args.status;
 
       if (planChanged) {
         await ctx.db.insert("subscriptionChanges", {
@@ -126,7 +226,8 @@ export const upsertSubscription = mutation({
       await ctx.db.patch(existing._id, {
         productId: args.productId,
         productName: args.productName,
-        status: args.status as any,
+        priceId: args.priceId,
+        status: args.status,
         currentPeriodStart: args.currentPeriodStart,
         currentPeriodEnd: args.currentPeriodEnd,
         cancelAtPeriodEnd: args.cancelAtPeriodEnd,
@@ -136,12 +237,36 @@ export const upsertSubscription = mutation({
           : existing.previousProductId,
         lastPlanChangeAt: planChanged ? Date.now() : existing.lastPlanChangeAt,
       });
+
+      if (statusChanged) {
+        const notice = getSubscriptionNotice(args.status, args.productName);
+        if (notice) {
+          await createSubscriptionNotification(
+            ctx,
+            args.userId,
+            `subscription:${args.polarSubscriptionId}:${args.status}:${args.currentPeriodEnd}`,
+            notice.title,
+            notice.message
+          );
+        }
+      }
       return existing._id;
     } else {
-      return await ctx.db.insert("subscriptions", {
-        ...args,
-        status: args.status as any,
+      const subscriptionId = await ctx.db.insert("subscriptions", {
+        ...subscriptionData,
+        status: args.status,
       });
+      const notice = getSubscriptionNotice(args.status, args.productName);
+      if (notice) {
+        await createSubscriptionNotification(
+          ctx,
+          args.userId,
+          `subscription:${args.polarSubscriptionId}:${args.status}:${args.currentPeriodEnd}`,
+          notice.title,
+          notice.message
+        );
+      }
+      return subscriptionId;
     }
   },
 });
@@ -150,9 +275,11 @@ export const cancelSubscription = mutation({
   args: {
     userId: v.id("users"),
     polarSubscriptionId: v.string(),
-    status: v.string(),
+    status: subscriptionStatus,
   },
   handler: async (ctx, args) => {
+    await assertCurrentUser(ctx, args.userId);
+
     const existing = await ctx.db
       .query("subscriptions")
       .withIndex("by_polar_subscription", (q) =>
@@ -162,7 +289,7 @@ export const cancelSubscription = mutation({
 
     if (existing) {
       await ctx.db.patch(existing?._id, {
-        status: args.status as any,
+        status: args.status,
       });
     }
 
@@ -208,6 +335,8 @@ export const syncProduct = mutation({
 export const getSubscriptionHistory = query({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
+    await assertCurrentUser(ctx, args.userId);
+
     const subscriptions = await ctx.db
       .query("subscriptions")
       .withIndex("by_user", (q) => q.eq("userId", args.userId))
@@ -221,17 +350,21 @@ export const getSubscriptionHistory = query({
 // Record invoice from webhook
 export const recordInvoice = mutation({
   args: {
+    webhookSecret: v.string(),
     userId: v.id("users"),
     polarInvoiceId: v.string(),
     subscriptionId: v.string(),
     amount: v.number(),
     currency: v.string(),
-    status: v.string(),
+    status: invoiceStatus,
     invoiceDate: v.number(),
     paidAt: v.optional(v.number()),
     invoiceUrl: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    assertWebhook(args.webhookSecret);
+    const { webhookSecret: _webhookSecret, ...invoiceData } = args;
+
     const existing = await ctx.db
       .query("invoices")
       .withIndex("by_polar_invoice", (q) =>
@@ -241,16 +374,25 @@ export const recordInvoice = mutation({
 
     if (existing) {
       await ctx.db.patch(existing._id, {
-        status: args.status as any,
+        status: args.status,
         paidAt: args.paidAt,
       });
       return existing._id;
     } else {
-      return await ctx.db.insert("invoices", {
-        ...args,
-        status: args.status as any,
+      const invoiceId = await ctx.db.insert("invoices", {
+        ...invoiceData,
         subscriptionId: args.subscriptionId,
       });
+      if (args.status === "paid") {
+        await createSubscriptionNotification(
+          ctx,
+          args.userId,
+          `invoice:${args.polarInvoiceId}:paid`,
+          "Payment received",
+          `Your ${args.currency.toUpperCase()} ${(args.amount / 100).toFixed(2)} payment was received.`
+        );
+      }
+      return invoiceId;
     }
   },
 });
@@ -258,6 +400,8 @@ export const recordInvoice = mutation({
 export const getPlanChangeHistory = query({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
+    await assertCurrentUser(ctx, args.userId);
+
     const changes = await ctx.db
       .query("subscriptionChanges")
       .withIndex("by_user", (q) => q.eq("userId", args.userId))
@@ -270,6 +414,7 @@ export const getPlanChangeHistory = query({
 
 export const recordPlanChange = mutation({
   args: {
+    webhookSecret: v.string(),
     userId: v.id("users"),
     subscriptionId: v.id("subscriptions"),
     changeType: v.union(
@@ -287,6 +432,8 @@ export const recordPlanChange = mutation({
     prorationAmount: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    return await ctx.db.insert("subscriptionChanges", args);
+    assertWebhook(args.webhookSecret);
+    const { webhookSecret: _webhookSecret, ...changeData } = args;
+    return await ctx.db.insert("subscriptionChanges", changeData);
   },
 });

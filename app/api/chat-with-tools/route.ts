@@ -9,6 +9,8 @@ import {
 } from "ai"
 import { z } from "zod"
 import { streamTextWithGateway } from "@/lib/ai/gateway"
+import { getUserFacingAIError } from "@/lib/ai/errors"
+import { evaluateArithmeticExpression } from "@/lib/math/evaluate-expression"
 import {
   buildToolsChatSystemPrompt,
   TOOLS_CHAT_PROMPT,
@@ -26,20 +28,7 @@ const calculatorTool = tool({
 
     // Simple math evaluation (in production, use a proper math library)
     try {
-      // Basic calculator implementation
-      let result: number
-
-      // Handle common math operations
-      if (expression.includes("sqrt")) {
-        const num = Number.parseFloat(expression.replace(/sqrt$$|$$/g, ""))
-        result = Math.sqrt(num)
-      } else if (expression.includes("^")) {
-        const [base, exp] = expression.split("^").map((n) => Number.parseFloat(n.trim()))
-        result = Math.pow(base, exp)
-      } else {
-        // Use Function constructor for basic arithmetic (be careful in production)
-        result = Function(`"use strict"; return (${expression})`)()
-      }
+      const result = evaluateArithmeticExpression(expression)
 
       yield {
         state: "ready" as const,
@@ -139,26 +128,35 @@ const tools = {
 export type ChatWithToolsMessage = UIMessage<never, UIDataTypes, InferUITools<typeof tools>>
 
 export async function POST(req: Request) {
-  const body = await req.json()
+  try {
+    const body = await req.json()
 
-  const { userId, userCourses } = body
+    const { userId, userCourses } = body
 
-  const messages = await validateUIMessages<ChatWithToolsMessage>({
-    messages: body.messages,
-    tools,
-  })
-
-  const { result } = await streamTextWithGateway({
-    feature: "tool-chat",
-    userId,
-    promptVersion: `${TOOLS_CHAT_PROMPT.id}:${TOOLS_CHAT_PROMPT.version}`,
-    baseSystem: buildToolsChatSystemPrompt(userCourses),
-    request: {
-      messages: convertToModelMessages(messages),
-      stopWhen: stepCountIs(5),
+    const messages = await validateUIMessages<ChatWithToolsMessage>({
+      messages: body.messages,
       tools,
-    },
-  })
+    })
 
-  return result.toUIMessageStreamResponse()
+    const { result } = await streamTextWithGateway({
+      abortSignal: req.signal,
+      feature: "tool-chat",
+      userId,
+      promptVersion: `${TOOLS_CHAT_PROMPT.id}:${TOOLS_CHAT_PROMPT.version}`,
+      baseSystem: buildToolsChatSystemPrompt(userCourses),
+      request: {
+        messages: convertToModelMessages(messages),
+        stopWhen: stepCountIs(5),
+        tools,
+      },
+    })
+
+    return result.toUIMessageStreamResponse()
+  } catch (error) {
+    const userFacingError = getUserFacingAIError(error)
+    return Response.json(
+      { error: userFacingError.message, code: userFacingError.code },
+      { status: userFacingError.status }
+    )
+  }
 }

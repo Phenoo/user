@@ -45,13 +45,14 @@ export function FloatingAIChat() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pathname = usePathname();
 
   const user = useQuery(api.users.currentUser);
   const courses =
     useQuery(
       api.courses.getAllCourses,
-      user?._id ? { userId: user._id as Id<"users"> } : "skip"
+      isOpen && user?._id ? { userId: user._id as Id<"users"> } : "skip"
     ) || [];
 
   const { messages, sendMessage, status, setMessages } = useChat({
@@ -76,6 +77,14 @@ export function FloatingAIChat() {
       scrollToBottom();
     }
   }, [messages, isOpen, status]);
+
+  useEffect(() => {
+    return () => {
+      if (copyTimerRef.current) {
+        clearTimeout(copyTimerRef.current);
+      }
+    };
+  }, []);
 
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -142,7 +151,10 @@ export function FloatingAIChat() {
     navigator.clipboard.writeText(text);
     setCopiedId(id);
     toast.success("Copied to clipboard");
-    setTimeout(() => setCopiedId(null), 2000);
+    if (copyTimerRef.current) {
+      clearTimeout(copyTimerRef.current);
+    }
+    copyTimerRef.current = setTimeout(() => setCopiedId(null), 2000);
   };
 
   const handleClear = () => {

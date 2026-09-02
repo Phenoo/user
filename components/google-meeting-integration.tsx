@@ -16,17 +16,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  Calendar,
-  Clock,
-  ExternalLink,
-  Plus,
-  Video,
   CheckCircle2,
   Loader2,
-  ShieldCheck,
-  BookOpen,
-  FolderOpen,
-  Sparkles,
+  RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery, useMutation } from "convex/react";
@@ -34,20 +26,10 @@ import { api } from "@/convex/_generated/api";
 import { useUsageTracking } from "@/hooks/use-usage-tracking";
 import { UsageIndicator } from "./usage-tracking/usage-indicator";
 
-interface GoogleCalendarIntegrationProps {
-  accessToken?: string;
-  onAuthRequired?: () => void;
-  onDisconnect?: () => void;
-}
-
-export function GoogleCalendarIntegration({
-  accessToken,
-  onAuthRequired,
-  onDisconnect,
-}: GoogleCalendarIntegrationProps) {
+export function GoogleCalendarIntegration() {
   const user = useQuery(api.users.currentUser);
   const addEventMutation = useMutation(api.events.add);
-  const upsertConnectedAccountMutation = useMutation(api.integrations.upsertConnectedAccount);
+  const sanitizeStoredTokensMutation = useMutation(api.integrations.sanitizeStoredTokens);
   const [isValidating, setIsValidating] = useState(true);
   const [isConnected, setIsConnected] = useState(false);
   const [cookieState, setCookieState] = useState<{
@@ -56,6 +38,7 @@ export function GoogleCalendarIntegration({
     hasCalendar?: boolean;
   }>({});
   const [isCreating, setIsCreating] = useState(false);
+  const [isSyncingClassroom, setIsSyncingClassroom] = useState(false);
   const [addVideoCall, setAddVideoCall] = useState(true);
   const { trackUsage } = useUsageTracking();
 
@@ -95,57 +78,25 @@ export function GoogleCalendarIntegration({
         const cookieData = await cookieRes.json();
 
         if (isMounted && cookieRes.ok && cookieData.connected) {
-          setIsConnected(true);
           const hasCl = Boolean(cookieData.hasClassroom);
           const hasDr = Boolean(cookieData.hasDrive);
           const hasCal = Boolean(cookieData.hasCalendar);
 
+          setIsConnected(hasCal);
           setCookieState({
             hasClassroom: hasCl,
             hasDrive: hasDr,
             hasCalendar: hasCal,
           });
 
-          // Sync to Convex if user is logged in
-          if (user?._id) {
-            if (hasCl) {
-              upsertConnectedAccountMutation({
-                userId: user._id,
-                provider: "google-classroom",
-                status: "connected",
-                scopes: [],
-              }).catch(() => {});
-            }
-            if (hasDr) {
-              upsertConnectedAccountMutation({
-                userId: user._id,
-                provider: "google-drive",
-                status: "connected",
-                scopes: [],
-              }).catch(() => {});
-            }
-            if (hasCal) {
-              upsertConnectedAccountMutation({
-                userId: user._id,
-                provider: "google-calendar",
-                status: "connected",
-                scopes: [],
-              }).catch(() => {});
-            }
-          }
-        }
-
-        // 2. Also check post accessToken if provided
-        if (accessToken) {
-          const response = await fetch("/api/google-meet/validate", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ accessToken }),
+        } else if (isMounted) {
+          setIsConnected(false);
+          setCookieState({
+            hasClassroom: false,
+            hasDrive: false,
+            hasCalendar: false,
           });
-          const data = await response.json();
-          if (isMounted && response.ok && data.isConnected) {
-            setIsConnected(true);
-          }
+
         }
       } catch (err) {
         console.warn("Backend validation fallback:", err);
@@ -159,7 +110,14 @@ export function GoogleCalendarIntegration({
     return () => {
       isMounted = false;
     };
-  }, [accessToken, user, upsertConnectedAccountMutation]);
+  }, [user?._id]);
+
+  useEffect(() => {
+    if (!user?._id) return;
+    sanitizeStoredTokensMutation({}).catch((error) => {
+      console.warn("Could not remove legacy stored Google tokens:", error);
+    });
+  }, [user?._id, sanitizeStoredTokensMutation]);
 
   const handleCreateEvent = async () => {
     const title = eventForm.summary.trim();
@@ -212,7 +170,6 @@ export function GoogleCalendarIntegration({
               .split(",")
               .map((email) => email.trim())
               .filter(Boolean),
-            accessToken: accessToken || undefined,
           }),
         });
 
@@ -288,53 +245,51 @@ export function GoogleCalendarIntegration({
     }
   };
 
-
-
-  const [localConnected, setLocalConnected] = useState<Record<string, boolean>>({});
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      const connectedParam = params.get("connected");
-      if (connectedParam) {
-        localStorage.setItem(`connected_google-${connectedParam}`, "true");
-      }
-
-      setLocalConnected({
-        "google-classroom": localStorage.getItem("connected_google-classroom") === "true",
-        "google-drive": localStorage.getItem("connected_google-drive") === "true",
-        "google-calendar": localStorage.getItem("connected_google-calendar") === "true",
-      });
-    }
-  }, []);
-
   const integrationsList = useQuery(
     api.integrations.listAvailable,
     user?._id ? { userId: user._id } : "skip"
   );
 
-  const isClassroomConnected =
-    integrationsList?.find((i) => i.provider === "google-classroom")?.status ===
-      "connected" ||
-    Boolean(cookieState.hasClassroom) ||
-    Boolean(localConnected["google-classroom"]);
-
-  const isDriveConnected =
-    integrationsList?.find((i) => i.provider === "google-drive")?.status ===
-      "connected" ||
-    Boolean(cookieState.hasDrive) ||
-    Boolean(localConnected["google-drive"]);
-
-  const isCalendarConnected =
-    isConnected ||
-    integrationsList?.find((i) => i.provider === "google-calendar")?.status ===
-      "connected" ||
-    Boolean(cookieState.hasCalendar) ||
-    Boolean(localConnected["google-calendar"]);
+  const classroomIntegration = integrationsList?.find(
+    (integration) => integration.provider === "google-classroom"
+  );
+  const isClassroomConnected = Boolean(cookieState.hasClassroom);
+  const isDriveConnected = Boolean(cookieState.hasDrive);
+  const isCalendarConnected = isConnected && Boolean(cookieState.hasCalendar);
 
   const handleConnectIntegration = (integration: "classroom" | "drive" | "calendar") => {
-    const userIdParam = user?._id ? `&userId=${user._id}` : "";
-    window.location.href = `/api/integrations/google/connect?integration=${integration}${userIdParam}`;
+    window.location.href = `/api/integrations/google/connect?integration=${integration}`;
+  };
+
+  const handleSyncClassroom = async () => {
+    setIsSyncingClassroom(true);
+    try {
+      const response = await fetch("/api/integrations/google/classroom/sync", {
+        method: "POST",
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (
+          response.status === 403 ||
+          data.code === "INSUFFICIENT_SCOPE" ||
+          data.code === "REVOKED"
+        ) {
+          toast.error("Google Classroom needs to be reconnected.");
+          handleConnectIntegration("classroom");
+          return;
+        }
+        throw new Error(data.error || "Failed to sync Google Classroom");
+      }
+
+      toast.success(data.message || "Google Classroom sync complete");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to sync Google Classroom"
+      );
+    } finally {
+      setIsSyncingClassroom(false);
+    }
   };
 
   const integrations = [
@@ -375,7 +330,9 @@ export function GoogleCalendarIntegration({
     {
       id: "google-classroom",
       name: "Google Classroom",
-      description: "Import coursework, syllabi, class resources & deadlines",
+      description: classroomIntegration?.lastSyncAt
+        ? `Courses, coursework & materials · Last synced ${new Date(classroomIntegration.lastSyncAt).toLocaleString()}`
+        : "Import coursework, class resources & deadlines",
       connected: Boolean(isClassroomConnected),
       statusLabel: isClassroomConnected ? "Connected" : "Not Connected",
       onConnect: () => handleConnectIntegration("classroom"),
@@ -499,7 +456,20 @@ export function GoogleCalendarIntegration({
                 </div>
 
                 <div className="shrink-0">
-                  {item.connected ? (
+                  {item.connected && item.id === "google-classroom" ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handleSyncClassroom}
+                      disabled={isSyncingClassroom}
+                      className="h-7 px-3 text-[11px] gap-1.5"
+                    >
+                      <RefreshCw
+                        className={`w-3 h-3 ${isSyncingClassroom ? "animate-spin" : ""}`}
+                      />
+                      {isSyncingClassroom ? "Syncing" : "Sync now"}
+                    </Button>
+                  ) : item.connected ? (
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
                       {item.statusLabel}

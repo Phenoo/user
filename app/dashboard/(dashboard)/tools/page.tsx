@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -43,6 +43,44 @@ const SkeletonLoader = () => (
   </div>
 );
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+async function readGeneratedText(
+  response: Response,
+  fallbackError: string
+): Promise<string> {
+  let payload: unknown = null;
+
+  try {
+    payload = await response.json();
+  } catch {
+    // Keep the fallback message for non-JSON responses.
+  }
+
+  if (!response.ok) {
+    const message =
+      isRecord(payload) && typeof payload.error === "string"
+        ? payload.error
+        : fallbackError;
+    throw new Error(message);
+  }
+
+  const data = isRecord(payload) && isRecord(payload.data) ? payload.data : null;
+  const text = data && typeof data.text === "string"
+    ? data.text
+    : isRecord(payload) && typeof payload.text === "string"
+      ? payload.text
+      : "";
+
+  if (!text.trim()) {
+    throw new Error("The AI service returned an empty response. Please try again.");
+  }
+
+  return text;
+}
+
 export default function ToolsPage() {
   const user = useQuery(api.users.currentUser);
   const userId = user?._id || "";
@@ -58,6 +96,7 @@ export default function ToolsPage() {
   const [summaryContent, setSummaryContent] = useState("");
   const [summaryType, setSummaryType] = useState("brief");
   const [summaryResult, setSummaryResult] = useState("");
+  const [summaryError, setSummaryError] = useState("");
   const [summaryLoading, setSummaryLoading] = useState(false);
 
   // Study Guide State
@@ -65,7 +104,20 @@ export default function ToolsPage() {
   const [studyTopics, setStudyTopics] = useState("");
   const [examDate, setExamDate] = useState("");
   const [studyGuideResult, setStudyGuideResult] = useState("");
+  const [studyGuideError, setStudyGuideError] = useState("");
   const [studyGuideLoading, setStudyGuideLoading] = useState(false);
+
+  const summaryAbortRef = useRef<AbortController | null>(null);
+  const studyGuideAbortRef = useRef<AbortController | null>(null);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+      summaryAbortRef.current?.abort();
+      studyGuideAbortRef.current?.abort();
+    };
+  }, []);
 
   // Copy state
   const [copiedEssay, setCopiedEssay] = useState(false);
@@ -110,77 +162,126 @@ export default function ToolsPage() {
   };
 
   const handleGenerateSummary = async () => {
-    if (!summaryContent.trim()) {
-      toast.error("Please enter content to summarize");
+    const content = summaryContent.trim();
+
+    if (content.length < 50) {
+      toast.error("Please enter at least 50 characters to summarize");
+      return;
+    }
+
+    if (!userId) {
+      toast.error("Please sign in before using the AI tools");
       return;
     }
 
     setSummaryLoading(true);
     setSummaryResult("");
+    setSummaryError("");
+    const controller = new AbortController();
+    summaryAbortRef.current = controller;
 
     try {
       const response = await fetch("/api/generate-summary", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          content: summaryContent,
+          content,
           summaryType,
           userId,
         }),
+        signal: controller.signal,
       });
 
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to generate summary");
-      }
-      setSummaryResult(data.data?.text || data.text);
+      const generatedText = await readGeneratedText(
+        response,
+        "Failed to generate summary"
+      );
+      if (!isMountedRef.current) return;
+      setSummaryResult(generatedText);
       toast.success("Summary generated successfully");
     } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return;
+      }
+      if (!isMountedRef.current) return;
       console.error("Error generating summary:", error);
       const message = error instanceof Error ? error.message : "Failed to generate summary";
-      setSummaryResult(`Failed to generate summary. ${message}`);
+      setSummaryError(message);
       toast.error(message);
     } finally {
-      setSummaryLoading(false);
+      if (summaryAbortRef.current === controller) {
+        summaryAbortRef.current = null;
+      }
+      if (isMountedRef.current) {
+        setSummaryLoading(false);
+      }
     }
   };
 
   const handleGenerateStudyGuide = async () => {
-    if (!studySubject.trim() || !studyTopics.trim()) {
+    const subject = studySubject.trim();
+    const topicsArray = studyTopics
+      .split(",")
+      .map((topic) => topic.trim())
+      .filter(Boolean);
+
+    if (subject.length < 2 || topicsArray.length === 0) {
       toast.error("Please enter both subject and topics");
+      return;
+    }
+
+    if (topicsArray.length > 20) {
+      toast.error("Please enter no more than 20 topics");
+      return;
+    }
+
+    if (!userId) {
+      toast.error("Please sign in before using the AI tools");
       return;
     }
 
     setStudyGuideLoading(true);
     setStudyGuideResult("");
+    setStudyGuideError("");
+    const controller = new AbortController();
+    studyGuideAbortRef.current = controller;
 
     try {
-      const topicsArray = studyTopics.split(",").map((t) => t.trim());
-
       const response = await fetch("/api/generate-study-guide", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          subject: studySubject,
+          subject,
           topics: topicsArray,
           examDate,
           userId,
         }),
+        signal: controller.signal,
       });
 
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to generate study guide");
-      }
-      setStudyGuideResult(data.data?.text || data.text);
+      const generatedText = await readGeneratedText(
+        response,
+        "Failed to generate study guide"
+      );
+      if (!isMountedRef.current) return;
+      setStudyGuideResult(generatedText);
       toast.success("Study guide generated successfully");
     } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return;
+      }
+      if (!isMountedRef.current) return;
       console.error("Error generating study guide:", error);
       const message = error instanceof Error ? error.message : "Failed to generate study guide";
-      setStudyGuideResult(`Failed to generate study guide. ${message}`);
+      setStudyGuideError(message);
       toast.error(message);
     } finally {
-      setStudyGuideLoading(false);
+      if (studyGuideAbortRef.current === controller) {
+        studyGuideAbortRef.current = null;
+      }
+      if (isMountedRef.current) {
+        setStudyGuideLoading(false);
+      }
     }
   };
 
@@ -188,8 +289,13 @@ export default function ToolsPage() {
     text: string,
     type: "essay" | "summary" | "study-guide"
   ) => {
-    await navigator.clipboard.writeText(text);
-    toast.success("Copied to clipboard");
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success("Copied to clipboard");
+    } catch {
+      toast.error("Could not copy the content. Please select and copy it manually.");
+      return;
+    }
 
     if (type === "essay") {
       setCopiedEssay(true);
@@ -216,7 +322,7 @@ export default function ToolsPage() {
           </Link>
           <h1 className="text-4xl font-bold mb-2">AI Text Generation Tools</h1>
           <p className="text-muted-foreground">
-            Generate essays, summaries, and study guides powered by GPT-4o
+            Generate essays, summaries, and study guides with AI
           </p>
         </div>
 
@@ -327,7 +433,10 @@ export default function ToolsPage() {
                   )}
                 </div>
 
-                <div className="min-h-[400px] max-h-[600px] overflow-y-auto">
+                <div
+                  className="min-h-[400px] max-h-[600px] overflow-y-auto"
+                  aria-live="polite"
+                >
                   {essayLoading ? (
                     <SkeletonLoader />
                   ) : essayResult ? (
@@ -365,6 +474,9 @@ export default function ToolsPage() {
                       rows={10}
                       className="h-96 overflow-y-auto"
                     />
+                    <p className="text-xs text-muted-foreground">
+                      {summaryContent.trim().length}/50 minimum characters
+                    </p>
                   </div>
 
                   <div className="space-y-2">
@@ -385,7 +497,11 @@ export default function ToolsPage() {
 
                   <Button
                     onClick={handleGenerateSummary}
-                    disabled={summaryLoading || !summaryContent.trim()}
+                    disabled={
+                      summaryLoading ||
+                      summaryContent.trim().length < 50 ||
+                      !userId
+                    }
                     className="w-full"
                   >
                     {summaryLoading ? (
@@ -418,9 +534,16 @@ export default function ToolsPage() {
                   )}
                 </div>
 
-                <div className="min-h-[400px] max-h-[600px] overflow-y-auto">
+                <div
+                  className="min-h-[400px] max-h-[600px] overflow-y-auto"
+                  aria-live="polite"
+                >
                   {summaryLoading ? (
                     <SkeletonLoader />
+                  ) : summaryError ? (
+                    <div className="flex items-center justify-center h-[400px] text-center text-sm text-destructive">
+                      {summaryError}
+                    </div>
                   ) : summaryResult ? (
                     <div className="prose prose-invert max-w-none whitespace-pre-wrap leading-relaxed [&>p]:mb-4 [&>h1]:text-2xl [&>h1]:font-bold [&>h1]:mb-4 [&>h2]:text-xl [&>h2]:font-bold [&>h2]:mb-3 [&>h3]:text-lg [&>h3]:font-bold [&>h3]:mb-2 [&>ul]:list-disc [&>ul]:pl-5 [&>ul]:mb-4 [&>ol]:list-decimal [&>ol]:pl-5 [&>ol]:mb-4">
                       <ReactMarkdown remarkPlugins={[remarkGfm]}>
@@ -481,8 +604,9 @@ export default function ToolsPage() {
                     onClick={handleGenerateStudyGuide}
                     disabled={
                       studyGuideLoading ||
-                      !studySubject.trim() ||
-                      !studyTopics.trim()
+                      studySubject.trim().length < 2 ||
+                      !studyTopics.split(",").some((topic) => topic.trim()) ||
+                      !userId
                     }
                     className="w-full"
                   >
@@ -520,9 +644,16 @@ export default function ToolsPage() {
                   )}
                 </div>
 
-                <div className="min-h-[400px] max-h-[600px] overflow-y-auto">
+                <div
+                  className="min-h-[400px] max-h-[600px] overflow-y-auto"
+                  aria-live="polite"
+                >
                   {studyGuideLoading ? (
                     <SkeletonLoader />
+                  ) : studyGuideError ? (
+                    <div className="flex items-center justify-center h-[400px] text-center text-sm text-destructive">
+                      {studyGuideError}
+                    </div>
                   ) : studyGuideResult ? (
                     <div className="prose prose-invert max-w-none whitespace-pre-wrap leading-relaxed [&>p]:mb-4 [&>h1]:text-2xl [&>h1]:font-bold [&>h1]:mb-4 [&>h2]:text-xl [&>h2]:font-bold [&>h2]:mb-3 [&>h3]:text-lg [&>h3]:font-bold [&>h3]:mb-2 [&>ul]:list-disc [&>ul]:pl-5 [&>ul]:mb-4 [&>ol]:list-decimal [&>ol]:pl-5 [&>ol]:mb-4">
                       <ReactMarkdown remarkPlugins={[remarkGfm]}>

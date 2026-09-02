@@ -10,9 +10,17 @@ export const maxDuration = 60
 
 // Input validation schema
 const studyGuideRequestSchema = z.object({
-  subject: z.string().min(2, "Subject must be at least 2 characters").max(100, "Subject is too long"),
-  topics: z.array(z.string().min(1)).min(1, "At least one topic is required").max(20, "Maximum 20 topics allowed"),
-  examDate: z.string().optional(),
+  subject: z.string().trim().min(2, "Subject must be at least 2 characters").max(100, "Subject is too long"),
+  topics: z
+    .array(z.string().trim().min(1, "Topic cannot be empty"))
+    .min(1, "At least one topic is required")
+    .max(20, "Maximum 20 topics allowed"),
+  examDate: z
+    .union([
+      z.literal(""),
+      z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Exam date must be in YYYY-MM-DD format"),
+    ])
+    .optional(),
   userId: z.string().min(1, "User ID is required"),
 })
 
@@ -35,12 +43,14 @@ export async function POST(req: Request) {
     const prompt = buildStudyGuidePrompt({
       subject,
       topics,
-      examDate,
+      examDate: examDate || undefined,
     })
 
     const { text } = await generateTextWithGateway({
+      abortSignal: req.signal,
       feature: "study-guide",
       userId,
+      requestedModelId: "deepseek-chat",
       promptVersion: `${STUDY_GUIDE_PROMPT.id}:${STUDY_GUIDE_PROMPT.version}`,
       retrievalQuery: `${subject} ${topicsList}`,
       request: {

@@ -105,7 +105,8 @@ export const getUserByStripeCustomerId = query({
 
 export const updateUserSubscription = mutation({
   args: {
-    userId: v.string(),
+    webhookSecret: v.string(),
+    userId: v.id("users"),
     subscriptionId: v.optional(v.string()),
     tier: v.optional(v.string()),
     status: v.optional(v.string()),
@@ -116,7 +117,14 @@ export const updateUserSubscription = mutation({
     ),
   },
   handler: async (ctx, args) => {
-    const user = await ctx.db.get(args.userId as any);
+    if (
+      !process.env.POLAR_WEBHOOK_SECRET ||
+      args.webhookSecret !== process.env.POLAR_WEBHOOK_SECRET
+    ) {
+      throw new ConvexError("Unauthorized webhook request");
+    }
+
+    const user = await ctx.db.get(args.userId);
     if (!user) {
       throw new Error("User not found");
     }
@@ -136,7 +144,7 @@ export const updateUserSubscription = mutation({
       calculatedPlan = "FREE";
     }
 
-    await ctx.db.patch(args.userId as any, {
+    await ctx.db.patch(args.userId, {
       subscriptionPlan: calculatedPlan,
       subscriptionTier: args.tier || (calculatedPlan === "FREE" ? "Free" : calculatedPlan === "STUDENTPRO" ? "Pro" : "Starter"),
       endsOn: args.endsOn,

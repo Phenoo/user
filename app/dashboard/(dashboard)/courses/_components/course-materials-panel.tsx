@@ -19,6 +19,7 @@ import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { GooglePicker } from "@/components/integrations/google-picker";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
@@ -269,6 +270,7 @@ export function CourseMaterialsPanel({
               <SelectItem value="canvas">Canvas</SelectItem>
             </SelectContent>
           </Select>
+          <GooglePicker courseId={courseId} />
           <Button onClick={openCreateDialog}>
             <Plus className="mr-2 h-4 w-4" />
             Add Material

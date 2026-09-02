@@ -1,5 +1,5 @@
 import { mutation, query } from "./_generated/server";
-import { v } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import { auth } from "./auth";
 
 export const list = query({
@@ -7,23 +7,18 @@ export const list = query({
     userId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    let userId = args?.userId;
-
-    if (!userId) {
-      const authUserId = await auth.getUserId(ctx);
-      if (authUserId) {
-        userId = authUserId;
-      }
+    const authUserId = await auth.getUserId(ctx);
+    if (!authUserId) {
+      return [];
     }
 
-    if (!userId) {
-      // Fallback if no user is specified or authenticated
-      return await ctx.db.query("events").collect();
+    if (args.userId && args.userId !== authUserId) {
+      throw new ConvexError("Unauthorized access");
     }
 
     return await ctx.db
       .query("events")
-      .filter((q) => q.eq(q.field("userId"), userId))
+      .withIndex("by_user", (q) => q.eq("userId", authUserId))
       .collect();
   },
 });
@@ -38,13 +33,22 @@ export const add = mutation({
     userId: v.string(),
   },
   handler: async (ctx, args) => {
-    return await ctx.db.insert("events", args);
+    const authUserId = await auth.getUserId(ctx);
+    if (!authUserId || authUserId !== args.userId) {
+      throw new ConvexError("Unauthorized access");
+    }
+    return await ctx.db.insert("events", { ...args, userId: authUserId });
   },
 });
 
 export const remove = mutation({
   args: { id: v.id("events") },
   handler: async (ctx, { id }) => {
+    const event = await ctx.db.get(id);
+    const authUserId = await auth.getUserId(ctx);
+    if (!event || !authUserId || event.userId !== authUserId) {
+      throw new ConvexError("Event not found or unauthorized access");
+    }
     await ctx.db.delete(id);
   },
 });
@@ -60,6 +64,16 @@ export const update = mutation({
     userId: v.string(),
   },
   handler: async (ctx, args) => {
+    const event = await ctx.db.get(args.id);
+    const authUserId = await auth.getUserId(ctx);
+    if (
+      !event ||
+      !authUserId ||
+      event.userId !== authUserId ||
+      args.userId !== authUserId
+    ) {
+      throw new ConvexError("Event not found or unauthorized access");
+    }
     const { id, ...updates } = args;
     await ctx.db.patch(id, updates);
   },

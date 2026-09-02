@@ -16,6 +16,7 @@ export const maxDuration = 60;
 const summaryRequestSchema = z.object({
   content: z
     .string()
+    .trim()
     .min(50, "Content must be at least 50 characters")
     .max(50000, "Content is too long (max 50,000 characters)"),
   summaryType: z.enum(["brief", "detailed", "bullet"], {
@@ -48,8 +49,10 @@ export async function POST(req: Request) {
     });
 
     const { text } = await generateTextWithGateway({
+      abortSignal: req.signal,
       feature: "summary",
       userId,
+      requestedModelId: "deepseek-chat",
       courseId,
       courseName,
       promptVersion: `${SUMMARY_PROMPT.id}:${SUMMARY_PROMPT.version}`,

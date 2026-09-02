@@ -44,6 +44,7 @@ export async function POST(req: NextRequest) {
     });
 
     const { object } = await generateObjectWithGateway({
+      abortSignal: req.signal,
       feature: "flashcards",
       userId,
       courseId,

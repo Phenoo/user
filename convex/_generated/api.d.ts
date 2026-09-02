@@ -27,6 +27,8 @@ import type * as generatedContent from "../generatedContent.js";
 import type * as http from "../http.js";
 import type * as integrations from "../integrations.js";
 import type * as messages from "../messages.js";
+import type * as notifications from "../notifications.js";
+import type * as search from "../search.js";
 import type * as seedFeatureLimits from "../seedFeatureLimits.js";
 import type * as sessions from "../sessions.js";
 import type * as settings from "../settings.js";
@@ -71,6 +73,8 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   integrations: typeof integrations;
   messages: typeof messages;
+  notifications: typeof notifications;
+  search: typeof search;
   seedFeatureLimits: typeof seedFeatureLimits;
   sessions: typeof sessions;
   settings: typeof settings;

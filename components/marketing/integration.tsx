@@ -97,6 +97,7 @@ const Integration = () => {
               alt="Integration"
               width={1000}
               height={1000}
+              sizes="(max-width: 1024px) 384px, 0px"
               className="w-full h-auto"
             />
           </div>

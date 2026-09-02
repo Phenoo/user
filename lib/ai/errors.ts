@@ -15,6 +15,12 @@ export class AIEntitlementError extends AIError {
   }
 }
 
+export class AIAuthenticationError extends AIError {
+  constructor(message: string = "You must be signed in to use AI features") {
+    super(message, "AI_AUTHENTICATION_REQUIRED", 401);
+  }
+}
+
 export class AICreditLimitError extends AIError {
   constructor(message: string = "Monthly AI credits quota exceeded") {
     super(message, "AI_CREDIT_LIMIT_EXCEEDED", 429);

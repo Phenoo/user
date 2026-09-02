@@ -1,9 +1,18 @@
-import { v } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { auth } from "./auth";
+
+async function requireUserId(ctx: any) {
+  const userId = await auth.getUserId(ctx);
+  if (!userId) throw new ConvexError("Not authenticated");
+  return userId;
+}
 
 export const getSettingsByUserId = query({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
+    const userId = await requireUserId(ctx);
+    if (userId !== args.userId) throw new ConvexError("Unauthorized access");
     return await ctx.db
       .query("userSettings")
       .withIndex("by_user", (q) => q.eq("userId", args.userId))
@@ -14,15 +23,11 @@ export const getSettingsByUserId = query({
 export const getUserSettings = query({
   args: { userId: v.optional(v.id("users")) },
   handler: async (ctx, args) => {
-    let targetUserId = args.userId;
-
-    if (!targetUserId) {
-      const identity = await ctx.auth.getUserIdentity();
-      if (!identity) return null;
-      targetUserId = identity.subject as any;
+    const currentUserId = await requireUserId(ctx);
+    const targetUserId = args.userId ?? currentUserId;
+    if (targetUserId !== currentUserId) {
+      throw new ConvexError("Unauthorized access");
     }
-
-    if (!targetUserId) return null;
 
     let settings = await ctx.db
       .query("userSettings")
@@ -36,10 +41,8 @@ export const getUserSettings = query({
 export const createUserSettings = mutation({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
+    const userId = await requireUserId(ctx);
+    if (userId !== args.userId) throw new ConvexError("Unauthorized access");
     const now = Date.now();
 
     const settings = await ctx.db.insert("userSettings", {
@@ -47,6 +50,8 @@ export const createUserSettings = mutation({
       emailNotifications: true,
       pushNotifications: true,
       studyReminders: true,
+      assignmentReminders: true,
+      examReminders: true,
       reminderTime: "09:00",
       weeklyReport: true,
       pomodoroMinutes: 25,
@@ -77,6 +82,8 @@ export const updateUserSettings = mutation({
     emailNotifications: v.optional(v.boolean()),
     pushNotifications: v.optional(v.boolean()),
     studyReminders: v.optional(v.boolean()),
+    assignmentReminders: v.optional(v.boolean()),
+    examReminders: v.optional(v.boolean()),
     reminderTime: v.optional(v.string()),
     weeklyReport: v.optional(v.boolean()),
     pomodoroMinutes: v.optional(v.number()),
@@ -103,12 +110,7 @@ export const updateUserSettings = mutation({
     language: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
-
-    const userId = identity.subject as any;
+    const userId = await requireUserId(ctx);
 
     const settings = await ctx.db
       .query("userSettings")
@@ -132,12 +134,7 @@ export const updateUserSettings = mutation({
 export const deleteUserAccount = mutation({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
-
-    const userId = identity.subject as any;
+    const userId = await requireUserId(ctx);
 
     // Delete user settings
     const settings = await ctx.db
@@ -196,12 +193,7 @@ export const deleteUserAccount = mutation({
 export const exportUserData = query({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
-
-    const userId = identity.subject as any;
+    const userId = await requireUserId(ctx);
 
     // Get all user data
     const settings = await ctx.db

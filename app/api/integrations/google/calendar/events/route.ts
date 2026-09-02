@@ -1,11 +1,21 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { createGoogleMeetService } from "@/lib/google-meet";
-import { getValidGoogleAccessToken, GoogleAuthError } from "@/lib/integrations/google/tokens";
+import { GoogleAuthError } from "@/lib/integrations/google/tokens";
+import {
+  resolveGoogleCredentials,
+  setGoogleCredentialCookies,
+} from "@/lib/integrations/google/credentials";
+import { getAuthenticatedUser } from "@/lib/server/convex-auth";
 
 export async function POST(request: NextRequest) {
+  const authentication = await getAuthenticatedUser();
+  if (!authentication) {
+    return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+  }
+
   try {
     const body = await request.json();
-    const { summary, description, startTime, endTime, attendees, timeZone, sourceType, sourceId, providerEventId } = body;
+    const { summary, description, startTime, endTime, attendees, providerEventId } = body;
 
     if (!summary || !startTime || !endTime) {
       return NextResponse.json(
@@ -24,22 +34,14 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const accessToken = request.cookies.get("google_meet_token")?.value;
-    const refreshToken = request.cookies.get("google_meet_refresh_token")?.value;
-
-    const tokenResult = await getValidGoogleAccessToken(
-      {
-        accessToken,
-        refreshToken,
-        expiresAt: accessToken ? Date.now() + 1800000 : 0,
-        scopes: ["https://www.googleapis.com/auth/calendar.events.owned"],
-        status: "connected",
-      },
+    const credentials = await resolveGoogleCredentials(
+      request,
+      authentication,
       "calendar"
     );
 
     const service = createGoogleMeetService();
-    service.setAccessToken(tokenResult.accessToken);
+    service.setAccessToken(credentials.accessToken);
 
     const meeting = await service.createMeeting({
       summary,
@@ -55,18 +57,10 @@ export async function POST(request: NextRequest) {
       providerEventId: meeting.meetingCode || `cal-${Date.now()}`,
     });
 
-    if (tokenResult.updatedTokens) {
-      response.cookies.set("google_meet_token", tokenResult.updatedTokens.accessToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        maxAge: 3600,
-        path: "/",
-      });
-    }
+    setGoogleCredentialCookies(response, credentials);
 
     return response;
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (error instanceof GoogleAuthError) {
       return NextResponse.json(
         { error: error.message, code: error.code },
@@ -76,7 +70,12 @@ export async function POST(request: NextRequest) {
 
     console.error("[CalendarEvents] Error creating Google Calendar event:", error);
     return NextResponse.json(
-      { error: error?.message || "Failed to create Google Calendar event" },
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to create Google Calendar event",
+      },
       { status: 500 }
     );
   }

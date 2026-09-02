@@ -6,32 +6,21 @@ import {
   validateRequiredFields,
   handleApiError,
 } from "@/lib/api-helpers";
+import { getAuthenticatedUser } from "@/lib/server/convex-auth";
+import {
+  resolveGoogleCredentials,
+  setGoogleCredentialCookies,
+} from "@/lib/integrations/google/credentials";
 
 export async function POST(request: NextRequest) {
   try {
+    const authentication = await getAuthenticatedUser();
+    if (!authentication) {
+      return CommonErrors.unauthorized("Authentication required");
+    }
+
     const body = await request.json();
-    const { summary, description, startTime, endTime, attendees, accessToken } =
-      body;
-
-    // Validate access token from body or cookie
-    let token = accessToken || request.cookies.get("google_meet_token")?.value;
-    const refreshToken = request.cookies.get("google_meet_refresh_token")?.value;
-
-    const googleMeetService = createGoogleMeetService();
-
-    // If access token is missing but refresh token exists, refresh automatically
-    if (!token && refreshToken) {
-      try {
-        const refreshed = await googleMeetService.refreshAccessToken(refreshToken);
-        token = refreshed.accessToken;
-      } catch (refreshErr) {
-        console.warn("Failed to refresh access token using offline refresh token:", refreshErr);
-      }
-    }
-
-    if (!token) {
-      return CommonErrors.unauthorized("Access token is required");
-    }
+    const { summary, description, startTime, endTime, attendees } = body;
 
     // Validate required fields
     const validationError = validateRequiredFields(body, [
@@ -43,39 +32,27 @@ export async function POST(request: NextRequest) {
       return validationError;
     }
 
-    googleMeetService.setAccessToken(token);
+    const credentials = await resolveGoogleCredentials(
+      request,
+      authentication,
+      "calendar"
+    );
+    const googleMeetService = createGoogleMeetService();
+    googleMeetService.setAccessToken(credentials.accessToken);
+    const meeting = await googleMeetService.createMeeting({
+      summary,
+      description,
+      startTime,
+      endTime,
+      attendees,
+    });
 
-    let meeting;
-    try {
-      meeting = await googleMeetService.createMeeting({
-        summary,
-        description,
-        startTime,
-        endTime,
-        attendees,
-      });
-    } catch (meetingErr) {
-      // If original token expired mid-session and refresh token is available, attempt auto-refresh retry
-      if (refreshToken) {
-        try {
-          const refreshed = await googleMeetService.refreshAccessToken(refreshToken);
-          googleMeetService.setAccessToken(refreshed.accessToken);
-          meeting = await googleMeetService.createMeeting({
-            summary,
-            description,
-            startTime,
-            endTime,
-            attendees,
-          });
-        } catch (retryErr) {
-          throw meetingErr;
-        }
-      } else {
-        throw meetingErr;
-      }
-    }
-
-    return successResponse({ meeting }, "Google Meet created successfully");
+    const response = successResponse(
+      { meeting },
+      "Google Meet created successfully"
+    );
+    setGoogleCredentialCookies(response, credentials);
+    return response;
   } catch (error) {
     console.error("Error creating Google Meet:", error);
     return handleApiError(error, "Failed to create meeting");

@@ -1,38 +1,45 @@
 import { type NextRequest, NextResponse } from "next/server";
+
 import { createGoogleMeetService } from "@/lib/google-meet";
+import {
+  resolveGoogleCredentials,
+  setGoogleCredentialCookies,
+} from "@/lib/integrations/google/credentials";
+import { GoogleAuthError } from "@/lib/integrations/google/tokens";
+import { getAuthenticatedUser } from "@/lib/server/convex-auth";
 
 export async function GET(request: NextRequest) {
+  const authentication = await getAuthenticatedUser();
+  if (!authentication) {
+    return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+  }
+
   try {
-    let token = request.cookies.get("google_meet_token")?.value;
-    const refreshToken = request.cookies.get("google_meet_refresh_token")?.value;
+    const credentials = await resolveGoogleCredentials(
+      request,
+      authentication,
+      "classroom"
+    );
 
     const googleMeetService = createGoogleMeetService();
-
-    if (!token && refreshToken) {
-      try {
-        const refreshed = await googleMeetService.refreshAccessToken(refreshToken);
-        token = refreshed.accessToken;
-      } catch (err) {
-        console.warn("Failed auto refresh for Classroom:", err);
-      }
-    }
-
-    if (!token) {
-      return NextResponse.json(
-        { error: "Unauthorized. Please connect your Google account." },
-        { status: 401 }
-      );
-    }
-
-    googleMeetService.setAccessToken(token);
+    googleMeetService.setAccessToken(credentials.accessToken);
     const courses = await googleMeetService.getClassroomCourses();
+    const response = NextResponse.json({ courses });
 
-    return NextResponse.json({ courses });
-  } catch (error: any) {
-    console.error("Google Classroom API Error:", error);
+    setGoogleCredentialCookies(response, credentials);
+
+    return response;
+  } catch (error: unknown) {
+    console.error("Google Classroom API error:", error);
+    const status = error instanceof GoogleAuthError ? 403 : 500;
     return NextResponse.json(
-      { error: error?.message || "Failed to list Google Classroom courses" },
-      { status: 500 }
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to list Google Classroom courses",
+      },
+      { status }
     );
   }
 }

@@ -41,6 +41,10 @@ import { useTheme } from "next-themes";
 const HeaderComponent = () => {
   const { signOut } = useAuthActions();
   const user = useQuery(api.users.currentUser);
+  const notificationCounts = useQuery(
+    api.notifications.getCounts,
+    user?._id ? {} : "skip"
+  );
   const router = useRouter();
   const { onOpen } = useNotificationModal();
   const { theme, setTheme, resolvedTheme } = useTheme();
@@ -94,11 +98,16 @@ const HeaderComponent = () => {
             <Button
               variant="ghost"
               size="icon"
-              className="rounded-full w-10 h-10 hover:bg-muted/80"
+              className="relative rounded-full w-10 h-10 hover:bg-muted/80"
               onClick={onOpen}
               aria-label="Notifications"
             >
               <Bell className="h-5 w-5 text-foreground" />
+              {!!notificationCounts?.unread && (
+                <span className="absolute right-1 top-1 flex min-h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold leading-none text-destructive-foreground">
+                  {notificationCounts.unread > 99 ? "99+" : notificationCounts.unread}
+                </span>
+              )}
             </Button>
 
             <DropdownMenu dir="ltr">

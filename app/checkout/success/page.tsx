@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,62 +8,15 @@ import { ArrowRight, Home } from "lucide-react";
 import Link from "next/link";
 import { CiCircleCheck } from "react-icons/ci";
 
-import { useMutation, useQuery } from "convex/react";
+import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 
-export default function CheckoutSuccessPage() {
+function CheckoutSuccessContent() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("session_id");
-  const userIdParam = searchParams.get("user_id");
-  const [isLoading, setIsLoading] = useState(true);
-  const [sessionData, setSessionData] = useState<any>(null);
-
   const currentUser = useQuery(api.users.currentUser);
-  const updateUserSub = useMutation(api.users.updateUserSubscription);
 
-  useEffect(() => {
-    let isMounted = true;
-
-    async function syncPaymentStatus() {
-      if (currentUser || userIdParam) {
-        const targetUserId = currentUser?._id || userIdParam;
-        if (targetUserId) {
-          try {
-            await updateUserSub({
-              userId: targetUserId as string,
-              status: "active",
-              tier: "Starter",
-              plan: "STUDENT",
-            });
-          } catch (e) {
-            console.error("Failed to update user subscription status on success page:", e);
-          }
-        }
-        if (isMounted) {
-          setSessionData({
-            customer_email: currentUser?.email || "your account",
-            amount_total: 500,
-            currency: "usd",
-          });
-          setIsLoading(false);
-        }
-      } else {
-        // Wait briefly for auth query
-        const timer = setTimeout(() => {
-          if (isMounted) setIsLoading(false);
-        }, 2000);
-        return () => clearTimeout(timer);
-      }
-    }
-
-    syncPaymentStatus();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [currentUser, userIdParam, sessionId, updateUserSub]);
-
-  if (isLoading) {
+  if (sessionId && currentUser === undefined) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -74,7 +27,7 @@ export default function CheckoutSuccessPage() {
     );
   }
 
-  if (!sessionId || !sessionData) {
+  if (!sessionId) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Card className="max-w-md w-full mx-4">
@@ -109,7 +62,7 @@ export default function CheckoutSuccessPage() {
               Thank you for your subscription!
             </p>
             <p className="text-sm text-muted-foreground">
-              A confirmation email has been sent to {sessionData.customer_email}
+              Your receipt will be sent to {currentUser?.email || "your account email"}.
             </p>
           </div>
 
@@ -118,11 +71,11 @@ export default function CheckoutSuccessPage() {
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li className="flex items-center gap-2">
                 <CiCircleCheck className="h-4 w-4 text-green-500" />
-                Your account has been upgraded immediately
+                Your payment was accepted successfully
               </li>
               <li className="flex items-center gap-2">
                 <CiCircleCheck className="h-4 w-4 text-green-500" />
-                You now have access to all premium features
+                Your subscription is being activated automatically
               </li>
               <li className="flex items-center gap-2">
                 <CiCircleCheck className="h-4 w-4 text-green-500" />
@@ -148,5 +101,13 @@ export default function CheckoutSuccessPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function CheckoutSuccessPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-background" />}>
+      <CheckoutSuccessContent />
+    </Suspense>
   );
 }

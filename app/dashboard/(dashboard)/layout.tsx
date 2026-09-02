@@ -1,27 +1,10 @@
-"use client";
-
-import { useConvexAuth, useQuery } from "convex/react";
 import HeaderComponent from "./components/header";
-import { api } from "@/convex/_generated/api";
-import { useRouter } from "next/navigation";
-import LoadingComponent from "@/components/loader";
 
 export default function DashboardLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const { isAuthenticated, isLoading } = useConvexAuth();
-  const router = useRouter();
-  if (isLoading) {
-    return <LoadingComponent />;
-  }
-
-  if (!isAuthenticated) {
-    router.push("/auth");
-    return null;
-  }
-
   return (
     <>
       <HeaderComponent />

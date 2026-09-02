@@ -21,6 +21,60 @@ export interface CreateMeetingRequest {
   attendees?: string[];
 }
 
+export interface ClassroomCourse {
+  id: string;
+  name: string;
+  section?: string;
+  description?: string;
+  descriptionHeading?: string;
+  alternateLink?: string;
+  updateTime?: string;
+}
+
+export interface ClassroomMaterial {
+  driveFile?: {
+    driveFile: {
+      id: string;
+      title: string;
+      alternateLink?: string;
+      mimeType?: string;
+    };
+  };
+  youtubeVideo?: {
+    id: string;
+    title: string;
+    alternateLink?: string;
+  };
+  link?: {
+    url: string;
+    title?: string;
+  };
+  form?: {
+    formUrl: string;
+    title?: string;
+  };
+}
+
+export interface ClassroomCourseWork {
+  id: string;
+  title: string;
+  description?: string;
+  dueDate?: { year: number; month: number; day: number };
+  dueTime?: { hours?: number; minutes?: number; seconds?: number };
+  alternateLink?: string;
+  updateTime?: string;
+  materials?: ClassroomMaterial[];
+}
+
+export interface ClassroomCourseWorkMaterial {
+  id: string;
+  title: string;
+  description?: string;
+  alternateLink?: string;
+  updateTime?: string;
+  materials?: ClassroomMaterial[];
+}
+
 // Google Calendar API Types
 interface ConferenceEntryPoint {
   entryPointType: string;
@@ -312,50 +366,83 @@ export class GoogleMeetService {
     return data.files || [];
   }
 
-  // Get courses from Google Classroom
-  async getClassroomCourses(): Promise<Array<{ id: string; name: string; section?: string; descriptionHeading?: string; alternateLink?: string }>> {
+  private async getClassroomCollection<T>(
+    path: string,
+    collectionKey: string,
+    params: Record<string, string> = {}
+  ): Promise<T[]> {
     if (!this.accessToken) {
       throw new Error("Not authenticated with Google");
     }
 
-    const response = await fetch(
-      `https://classroom.googleapis.com/v1/courses?courseStates=ACTIVE`,
-      {
+    const items: T[] = [];
+    let pageToken: string | undefined;
+
+    for (let page = 0; page < 100; page += 1) {
+      const url = new URL(`https://classroom.googleapis.com/v1/${path}`);
+      Object.entries(params).forEach(([key, value]) =>
+        url.searchParams.set(key, value)
+      );
+      url.searchParams.set("pageSize", "100");
+      if (pageToken) {
+        url.searchParams.set("pageToken", pageToken);
+      }
+
+      const response = await fetch(url, {
         headers: {
           Authorization: `Bearer ${this.accessToken}`,
         },
-      }
-    );
+      });
 
-    const data = await response.json();
-    if (!response.ok) {
-      throw new Error(`Failed to fetch Classroom courses: ${data.error?.message || "Unknown error"}`);
+      const data: Record<string, unknown> = await response.json();
+      if (!response.ok) {
+        const googleError = data.error as { message?: string } | undefined;
+        throw new Error(
+          `Failed to fetch Google Classroom data: ${googleError?.message || "Unknown error"}`
+        );
+      }
+
+      const pageItems = data[collectionKey];
+      if (Array.isArray(pageItems)) {
+        items.push(...(pageItems as T[]));
+      }
+
+      pageToken =
+        typeof data.nextPageToken === "string" ? data.nextPageToken : undefined;
+      if (!pageToken) {
+        break;
+      }
     }
 
-    return data.courses || [];
+    return items;
+  }
+
+  // Get courses from Google Classroom
+  async getClassroomCourses(): Promise<ClassroomCourse[]> {
+    return this.getClassroomCollection<ClassroomCourse>("courses", "courses", {
+      courseStates: "ACTIVE",
+    });
   }
 
   // Get coursework/assignments for a Google Classroom course
-  async getClassroomCourseWork(courseId: string): Promise<Array<{ id: string; title: string; description?: string; dueDate?: any; alternateLink?: string }>> {
-    if (!this.accessToken) {
-      throw new Error("Not authenticated with Google");
-    }
-
-    const response = await fetch(
-      `https://classroom.googleapis.com/v1/courses/${courseId}/courseWork`,
-      {
-        headers: {
-          Authorization: `Bearer ${this.accessToken}`,
-        },
-      }
+  async getClassroomCourseWork(
+    courseId: string
+  ): Promise<ClassroomCourseWork[]> {
+    return this.getClassroomCollection<ClassroomCourseWork>(
+      `courses/${encodeURIComponent(courseId)}/courseWork`,
+      "courseWork",
+      { courseWorkStates: "PUBLISHED", orderBy: "updateTime desc" }
     );
+  }
 
-    const data = await response.json();
-    if (!response.ok) {
-      throw new Error(`Failed to fetch Classroom coursework: ${data.error?.message || "Unknown error"}`);
-    }
-
-    return data.courseWork || [];
+  async getClassroomCourseWorkMaterials(
+    courseId: string
+  ): Promise<ClassroomCourseWorkMaterial[]> {
+    return this.getClassroomCollection<ClassroomCourseWorkMaterial>(
+      `courses/${encodeURIComponent(courseId)}/courseWorkMaterials`,
+      "courseWorkMaterial",
+      { courseWorkMaterialStates: "PUBLISHED", orderBy: "updateTime desc" }
+    );
   }
 
   setAccessToken(token: string) {

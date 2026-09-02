@@ -1,8 +1,8 @@
 "use client";
 
+import { useEffect } from "react";
 import { useConvexAuth, useQuery } from "convex/react";
 import { useRouter } from "next/navigation";
-import HeaderComponent from "./(dashboard)/components/header";
 import { api } from "@/convex/_generated/api";
 import LoadingComponent from "@/components/loader";
 import { PomodoroProvider } from "@/contexts/pomodoro-context";
@@ -18,27 +18,31 @@ export default function DashboardLayout({
   const router = useRouter();
   const user = useQuery(api.users.currentUser);
 
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.replace("/auth");
+    }
+  }, [isAuthenticated, isLoading, router]);
+
   if (isLoading) {
     return <LoadingComponent />;
   }
 
-  if (user === undefined || isLoading) {
+  if (user === undefined) {
     return <LoadingComponent />;
   }
 
   if (!isAuthenticated) {
-    router.push("/auth");
+    return null;
   }
 
   return (
-    <>
-      <PomodoroProvider>
-        <main className="min-h-screen h-full g-gradient-to-br from-blue-50 to-red-50 dark:from-blue-900 dark:to-red-900">
-          {children}
-          <MinimizedTimerCard />
-          <FloatingAIChat />
-        </main>
-      </PomodoroProvider>
-    </>
+    <PomodoroProvider>
+      <main className="min-h-screen h-full g-gradient-to-br from-blue-50 to-red-50 dark:from-blue-900 dark:to-red-900">
+        {children}
+        <MinimizedTimerCard />
+        <FloatingAIChat />
+      </main>
+    </PomodoroProvider>
   );
 }

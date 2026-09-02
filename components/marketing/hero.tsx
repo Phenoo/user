@@ -18,12 +18,7 @@ const Hero = () => {
     setMounted(true);
   }, []);
 
-  if (!mounted) {
-    // Avoid mismatched HTML on hydration
-    return null;
-  }
-
-  const isDarkMode = resolvedTheme === "dark";
+  const isDarkMode = !mounted || resolvedTheme === "dark";
 
   return (
     <div className="relative flex flex-col items-center justify-center w-full py-20">
@@ -100,6 +95,8 @@ const Hero = () => {
                     alt="dashboard"
                     width={1920}
                     height={1080}
+                    priority
+                    sizes="(max-width: 1280px) 100vw, 1152px"
                     className="rounded-lg lg:rounded-[20px]"
                   />
                 ) : (
@@ -108,6 +105,8 @@ const Hero = () => {
                     alt="dashboard"
                     width={1920}
                     height={1080}
+                    priority
+                    sizes="(max-width: 1280px) 100vw, 1152px"
                     className="rounded-lg lg:rounded-[20px]"
                   />
                 )}

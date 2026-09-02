@@ -89,6 +89,7 @@ const Features = () => {
                     alt={feature.title}
                     width={500}
                     height={500}
+                    sizes="(max-width: 768px) 100vw, 50vw"
                     className={cn(
                       "w-full h-full object-cover rounded-sm",
 

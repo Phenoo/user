@@ -29,6 +29,7 @@ export async function POST(req: Request) {
     const { text, userId } = await req.json()
 
     const { object } = await generateObjectWithGateway({
+      abortSignal: req.signal,
       feature: "schedule-parser",
       userId,
       promptVersion: `${SCHEDULE_PARSER_PROMPT.id}:${SCHEDULE_PARSER_PROMPT.version}`,

@@ -1,6 +1,7 @@
 import { ConvexError, v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
+import { auth } from "./auth";
 
 import {
   getCreditsForRequest,
@@ -12,6 +13,16 @@ import type {
   AIRequestMode,
   SubscriptionPlan,
 } from "../lib/ai/models";
+
+const AI_RESERVATION_TTL_MS = 15 * 60 * 1000;
+
+function consumesCredits(request: { status: string; createdAt: number }) {
+  return (
+    request.status === "success" ||
+    (request.status === "reserved" &&
+      request.createdAt >= Date.now() - AI_RESERVATION_TTL_MS)
+  );
+}
 
 function getUsageWindow(now = Date.now()) {
   const start = new Date(now);
@@ -42,6 +53,18 @@ async function getUserAndPlan(ctx: any, userId: string) {
   };
 }
 
+async function assertCurrentUser(ctx: any, userId: string) {
+  const currentUserId = await auth.getUserId(ctx);
+
+  if (!currentUserId) {
+    throw new ConvexError("Not authenticated");
+  }
+
+  if (currentUserId !== userId) {
+    throw new ConvexError("Unauthorized access");
+  }
+}
+
 async function getCurrentPeriodRequests(ctx: any, userId: string) {
   const { windowStart, resetAt } = getUsageWindow();
 
@@ -68,6 +91,8 @@ export const prepareRequest = query({
     ),
   },
   handler: async (ctx, args) => {
+    await assertCurrentUser(ctx, args.userId);
+
     const mode = (args.mode || "standard") as AIRequestMode;
     const feature = args.feature as AIFeature;
 
@@ -75,7 +100,7 @@ export const prepareRequest = query({
     const { requests, resetAt } = await getCurrentPeriodRequests(ctx, args.userId);
 
     const creditsUsed = requests
-      .filter((request: any) => request.status === "success")
+      .filter(consumesCredits)
       .reduce(
         (sum: number, request: any) => sum + (request.creditsUsed || 0),
         0
@@ -122,6 +147,102 @@ export const prepareRequest = query({
   },
 });
 
+export const reserveRequest = mutation({
+  args: {
+    userId: v.string(),
+    requestId: v.string(),
+    provider: v.union(v.literal("deepseek"), v.literal("openai")),
+    model: v.string(),
+    feature: v.string(),
+    mode: v.optional(
+      v.union(v.literal("standard"), v.literal("deep-reasoning"))
+    ),
+    courseId: v.optional(v.string()),
+    courseName: v.optional(v.string()),
+    promptVersion: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await assertCurrentUser(ctx, args.userId);
+
+    const existing = await ctx.db
+      .query("aiRequests")
+      .withIndex("by_user_request", (q) =>
+        q.eq("userId", args.userId).eq("requestId", args.requestId)
+      )
+      .unique();
+
+    if (existing) {
+      return {
+        allowed: existing.status === "reserved" || existing.status === "success",
+        requestId: existing.requestId,
+        requestedCredits: existing.creditsUsed || 0,
+      };
+    }
+
+    const mode = (args.mode || "standard") as AIRequestMode;
+    const feature = args.feature as AIFeature;
+    const { plan, entitlements } = await getUserAndPlan(ctx, args.userId);
+    const { requests, resetAt } = await getCurrentPeriodRequests(ctx, args.userId);
+    const creditsUsed = requests
+      .filter(consumesCredits)
+      .reduce(
+        (sum: number, request: any) => sum + (request.creditsUsed || 0),
+        0
+      );
+    const requestedCredits = getCreditsForRequest(feature, mode);
+    const remainingCredits = Math.max(
+      0,
+      entitlements.ai.monthlyCredits - creditsUsed
+    );
+
+    if (mode === "deep-reasoning" && !entitlements.ai.deepReasoning) {
+      return {
+        allowed: false,
+        plan,
+        reason: "Deep reasoning is available on the STUDENTPRO plan.",
+        creditsUsed,
+        remainingCredits,
+        requestedCredits,
+        resetAt,
+      };
+    }
+
+    if (remainingCredits < requestedCredits) {
+      return {
+        allowed: false,
+        plan,
+        reason: "You've reached your AI credit allowance for this month.",
+        creditsUsed,
+        remainingCredits,
+        requestedCredits,
+        resetAt,
+      };
+    }
+
+    await ctx.db.insert("aiRequests", {
+      ...args,
+      mode,
+      inputTokens: 0,
+      outputTokens: 0,
+      totalTokens: 0,
+      estimatedCostUSD: 0,
+      creditsUsed: requestedCredits,
+      status: "reserved",
+      createdAt: Date.now(),
+    });
+
+    return {
+      allowed: true,
+      plan,
+      requestId: args.requestId,
+      creditsUsed,
+      remainingCredits: remainingCredits - requestedCredits,
+      requestedCredits,
+      resetAt,
+    };
+  },
+});
+
 export const recordRequest = mutation({
   args: {
     userId: v.string(),
@@ -143,12 +264,18 @@ export const recordRequest = mutation({
     estimatedCostUSD: v.number(),
     creditsUsed: v.optional(v.number()),
     latencyMs: v.optional(v.number()),
-    status: v.union(v.literal("success"), v.literal("error")),
+    status: v.union(
+      v.literal("success"),
+      v.literal("error"),
+      v.literal("canceled")
+    ),
     errorCode: v.optional(v.string()),
     retrievalChunkCount: v.optional(v.number()),
     retrievalLatencyMs: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    await assertCurrentUser(ctx, args.userId);
+
     const existing = await ctx.db
       .query("aiRequests")
       .withIndex("by_user_request", (q) =>
@@ -156,16 +283,19 @@ export const recordRequest = mutation({
       )
       .unique();
 
-    if (existing) {
+    if (existing?.status === "success") {
       return existing._id;
     }
 
     const now = Date.now();
-
-    const requestId = await ctx.db.insert("aiRequests", {
+    const requestId = existing?._id || (await ctx.db.insert("aiRequests", {
       ...args,
       createdAt: now,
-    });
+    }));
+
+    if (existing) {
+      await ctx.db.patch(existing._id, args);
+    }
 
     if (args.status === "success") {
       await ctx.db.insert("aiTokenUsage", {
@@ -223,6 +353,8 @@ export const getUsageDashboard = query({
     userId: v.string(),
   },
   handler: async (ctx, args) => {
+    await assertCurrentUser(ctx, args.userId);
+
     const { plan, entitlements } = await getUserAndPlan(ctx, args.userId);
     const { requests, windowStart, resetAt } = await getCurrentPeriodRequests(
       ctx,

@@ -282,6 +282,36 @@ function TimerSettings() {
 }
 
 function NotificationSettings() {
+  const user = useQuery(api.users.currentUser);
+  const settings = useQuery(
+    api.settings.getUserSettings,
+    user?._id ? { userId: user._id } : "skip"
+  );
+  const updateSettings = useMutation(api.settings.updateUserSettings);
+  const [reminderTime, setReminderTime] = useState("09:00");
+
+  useEffect(() => {
+    if (settings?.reminderTime) setReminderTime(settings.reminderTime);
+  }, [settings?.reminderTime]);
+
+  const updatePreference = async (
+    preference:
+      | "emailNotifications"
+      | "pushNotifications"
+      | "studyReminders"
+      | "assignmentReminders"
+      | "examReminders"
+      | "weeklyReport",
+    value: boolean
+  ) => {
+    try {
+      await updateSettings({ [preference]: value });
+    } catch (error) {
+      console.error("Failed to update notification preference:", error);
+      toast.error("Could not save notification preference");
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -293,7 +323,7 @@ function NotificationSettings() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Study Reminders</CardTitle>
+          <CardTitle>Reminder Types</CardTitle>
           <CardDescription>
             Get notified about your study schedule and goals
           </CardDescription>
@@ -306,53 +336,116 @@ function NotificationSettings() {
                 Remind me to start my daily study sessions
               </p>
             </div>
-            <Switch defaultChecked />
+            <Switch
+              checked={settings?.studyReminders ?? true}
+              disabled={!settings}
+              onCheckedChange={(checked) =>
+                void updatePreference("studyReminders", checked)
+              }
+            />
           </div>
           <div className="flex items-center justify-between">
             <div className="space-y-2">
-              <Label>Break Notifications</Label>
+              <Label>Assignment Reminders</Label>
               <p className="text-sm text-muted-foreground">
-                Alert me when it's time for a break
+                Alert me when an assignment is due within seven days
               </p>
             </div>
-            <Switch defaultChecked />
+            <Switch
+              checked={settings?.assignmentReminders ?? true}
+              disabled={!settings}
+              onCheckedChange={(checked) =>
+                void updatePreference("assignmentReminders", checked)
+              }
+            />
           </div>
           <div className="flex items-center justify-between">
             <div className="space-y-2">
-              <Label>Goal Progress Updates</Label>
+              <Label>Exam Reminders</Label>
               <p className="text-sm text-muted-foreground">
-                Weekly progress reports on study goals
+                Notify me about upcoming exams, tests, and quizzes
               </p>
             </div>
-            <Switch />
+            <Switch
+              checked={settings?.examReminders ?? true}
+              disabled={!settings}
+              onCheckedChange={(checked) =>
+                void updatePreference("examReminders", checked)
+              }
+            />
           </div>
           <div className="flex items-center justify-between">
             <div className="space-y-2">
-              <Label>Motivational Messages</Label>
+              <Label>Weekly Progress Report</Label>
               <p className="text-sm text-muted-foreground">
-                Encouraging messages during study sessions
+                Receive a weekly summary of study progress
               </p>
             </div>
-            <Switch defaultChecked />
+            <Switch
+              checked={settings?.weeklyReport ?? true}
+              disabled={!settings}
+              onCheckedChange={(checked) =>
+                void updatePreference("weeklyReport", checked)
+              }
+            />
           </div>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Notification Timing</CardTitle>
+          <CardTitle>Delivery</CardTitle>
           <CardDescription>
             Set when you want to receive notifications
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="quiet-hours-start">Quiet Hours Start</Label>
-            <Input id="quiet-hours-start" type="time" defaultValue="22:00" />
+          <div className="flex items-center justify-between">
+            <div className="space-y-2">
+              <Label>Email Notifications</Label>
+              <p className="text-sm text-muted-foreground">Allow important reminders by email</p>
+            </div>
+            <Switch
+              checked={settings?.emailNotifications ?? true}
+              disabled={!settings}
+              onCheckedChange={(checked) =>
+                void updatePreference("emailNotifications", checked)
+              }
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <div className="space-y-2">
+              <Label>Push Notifications</Label>
+              <p className="text-sm text-muted-foreground">Allow browser and device notifications</p>
+            </div>
+            <Switch
+              checked={settings?.pushNotifications ?? true}
+              disabled={!settings}
+              onCheckedChange={(checked) =>
+                void updatePreference("pushNotifications", checked)
+              }
+            />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="quiet-hours-end">Quiet Hours End</Label>
-            <Input id="quiet-hours-end" type="time" defaultValue="07:00" />
+            <Label htmlFor="reminder-time">Daily Reminder Time</Label>
+            <div className="flex gap-2">
+              <Input
+                id="reminder-time"
+                type="time"
+                value={reminderTime}
+                onChange={(event) => setReminderTime(event.target.value)}
+              />
+              <Button
+                disabled={!settings}
+                onClick={() =>
+                  void updateSettings({ reminderTime })
+                    .then(() => toast.success("Reminder time saved"))
+                    .catch(() => toast.error("Could not save reminder time"))
+                }
+              >
+                Save
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>

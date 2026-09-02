@@ -45,6 +45,7 @@ export async function POST(req: Request) {
     });
 
     const { text } = await generateTextWithGateway({
+      abortSignal: req.signal,
       feature: "essay",
       userId,
       courseId,

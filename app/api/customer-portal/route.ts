@@ -1,13 +1,18 @@
-import { type NextRequest } from "next/server";
 import { polarClient } from "@/lib/polar-client";
 import { CommonErrors, successResponse, handleApiError } from "@/lib/api-helpers";
+import { getAuthenticatedSubscription } from "@/lib/server/convex-auth";
 
-export async function POST(request: NextRequest) {
+export async function POST() {
   try {
-    const { customerId } = await request.json();
+    const authentication = await getAuthenticatedSubscription();
 
+    if (!authentication) {
+      return CommonErrors.unauthorized();
+    }
+
+    const customerId = authentication.subscription?.polarCustomerId;
     if (!customerId) {
-      return CommonErrors.badRequest("Customer ID is required");
+      return CommonErrors.notFound("No active subscription found");
     }
 
     const session = await polarClient.getCustomerPortalSession(customerId);
