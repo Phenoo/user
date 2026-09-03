@@ -10,7 +10,6 @@ import {
 import { fetchMutation } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
 
-const RELAY_PATH = "/google-callback";
 const OAUTH_CALLBACK_PARAMS = [
   "code",
   "state",
@@ -23,7 +22,8 @@ function redirectToSameOriginRelay(
   request: NextRequest,
   searchParams: URLSearchParams
 ) {
-  const relayUrl = new URL(RELAY_PATH, request.url);
+  const relayUrl = new URL(request.url);
+  relayUrl.search = "";
   const responseKeys = Array.from(searchParams.keys()).sort();
 
   console.info("[GoogleCallback] Relaying OAuth response", {
@@ -37,9 +37,10 @@ function redirectToSameOriginRelay(
       relayUrl.searchParams.set(parameter, value);
     }
   }
+  relayUrl.searchParams.set("oauth_relay", "1");
 
-  // A 303 makes Google form_post callbacks and direct browser requests load
-  // the relay page with GET before the app submits the callback same-origin.
+  // A 303 converts Google's cross-site form POST into a same-site GET so the
+  // app's Lax authentication cookies are available while processing OAuth.
   return NextResponse.redirect(relayUrl, 303);
 }
 
@@ -215,7 +216,18 @@ async function handleGoogleCallback(
 }
 
 export async function GET(request: NextRequest) {
-  return redirectToSameOriginRelay(request, new URL(request.url).searchParams);
+  const searchParams = new URL(request.url).searchParams;
+
+  if (searchParams.get("oauth_relay") === "1") {
+    searchParams.delete("oauth_relay");
+    console.info("[GoogleCallback] Processing same-origin relay", {
+      method: request.method,
+      responseKeys: Array.from(searchParams.keys()).sort(),
+    });
+    return handleGoogleCallback(request, searchParams);
+  }
+
+  return redirectToSameOriginRelay(request, searchParams);
 }
 
 export async function POST(request: NextRequest) {
@@ -236,6 +248,7 @@ export async function POST(request: NextRequest) {
   }
 
   console.info("[GoogleCallback] Processing same-origin relay", {
+    method: request.method,
     responseKeys: Array.from(searchParams.keys()).sort(),
   });
 
