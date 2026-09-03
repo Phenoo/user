@@ -1,5 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { verifyOAuthState } from "@/lib/integrations/google/state";
+import {
+  decryptOAuthRelayCode,
+  encryptOAuthRelayCode,
+  verifyOAuthState,
+} from "@/lib/integrations/google/state";
 import { createGoogleMeetService, getGoogleIntegrationRedirectUri } from "@/lib/google-meet";
 import { getRequiredGoogleScopes, hasGoogleScopes } from "@/lib/integrations/google/scopes";
 import { getAuthenticatedUser } from "@/lib/server/convex-auth";
@@ -11,12 +15,12 @@ import { fetchMutation } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
 
 const OAUTH_CALLBACK_PARAMS = [
-  "code",
   "state",
   "error",
   "error_description",
   "error_uri",
 ] as const;
+const OAUTH_CODE_COOKIE = "google_oauth_relay_code";
 
 function redirectToSameOriginRelay(
   request: NextRequest,
@@ -41,7 +45,23 @@ function redirectToSameOriginRelay(
 
   // A 303 converts Google's cross-site form POST into a same-site GET so the
   // app's Lax authentication cookies are available while processing OAuth.
-  return NextResponse.redirect(relayUrl, 303);
+  const response = NextResponse.redirect(relayUrl, 303);
+  const authorizationCode = searchParams.get("code");
+  if (authorizationCode) {
+    response.cookies.set(
+      OAUTH_CODE_COOKIE,
+      encryptOAuthRelayCode(authorizationCode),
+      {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 5 * 60,
+        path: "/",
+      }
+    );
+  }
+
+  return response;
 }
 
 async function handleGoogleCallback(
@@ -220,11 +240,20 @@ export async function GET(request: NextRequest) {
 
   if (searchParams.get("oauth_relay") === "1") {
     searchParams.delete("oauth_relay");
+    const relayedCode = request.cookies.get(OAUTH_CODE_COOKIE)?.value;
+    if (!searchParams.has("code") && relayedCode) {
+      const authorizationCode = decryptOAuthRelayCode(relayedCode);
+      if (authorizationCode) {
+        searchParams.set("code", authorizationCode);
+      }
+    }
     console.info("[GoogleCallback] Processing same-origin relay", {
       method: request.method,
       responseKeys: Array.from(searchParams.keys()).sort(),
     });
-    return handleGoogleCallback(request, searchParams);
+    const response = await handleGoogleCallback(request, searchParams);
+    response.cookies.delete(OAUTH_CODE_COOKIE);
+    return response;
   }
 
   return redirectToSameOriginRelay(request, searchParams);
