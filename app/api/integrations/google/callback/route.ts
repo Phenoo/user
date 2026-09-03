@@ -127,7 +127,7 @@ async function handleGoogleCallback(
     const tokenDetails = await service.exchangeCodeForTokenDetails(code);
 
     // 3. Inspect granted scopes from Google TokenInfo
-    let grantedScopes: string[] = [];
+    let grantedScopes = tokenDetails.grantedScopes;
     let accountEmail: string | undefined;
     try {
       const tokenInfoRes = await fetch(
@@ -141,12 +141,25 @@ async function handleGoogleCallback(
         if (typeof tokenInfo.email === "string") {
           accountEmail = tokenInfo.email;
         }
+      } else {
+        console.warn("[GoogleCallback] TokenInfo lookup failed", {
+          status: tokenInfoRes.status,
+          usingExchangeScopes: grantedScopes.length > 0,
+        });
       }
     } catch (infoErr) {
       console.warn("[GoogleCallback] Could not inspect granted scopes:", infoErr);
     }
 
-    if (!hasGoogleScopes(grantedScopes, getRequiredGoogleScopes(integration))) {
+    const requiredScopes = getRequiredGoogleScopes(integration);
+    if (!hasGoogleScopes(grantedScopes, requiredScopes)) {
+      console.warn("[GoogleCallback] Required Google scopes were not granted", {
+        integration,
+        grantedScopes,
+        missingScopes: requiredScopes.filter(
+          (scope) => !grantedScopes.includes(scope)
+        ),
+      });
       return NextResponse.redirect(
         `${appUrl}/dashboard?error=insufficient_google_permissions&integration=${integration}`,
         303

@@ -119,6 +119,15 @@ interface CalendarEventList {
   };
 }
 
+interface GoogleTokenEndpointResponse {
+  access_token?: string;
+  refresh_token?: string;
+  expires_in?: number;
+  scope?: string;
+  error?: string;
+  error_description?: string;
+}
+
 export class GoogleMeetService {
   private config: GoogleMeetConfig;
   private accessToken: string | null = null;
@@ -165,6 +174,7 @@ export class GoogleMeetService {
     refreshToken?: string;
     expiresIn: number;
     expiresAt: number;
+    grantedScopes: string[];
   }> {
     const response = await fetch("https://oauth2.googleapis.com/token", {
       method: "POST",
@@ -180,10 +190,14 @@ export class GoogleMeetService {
       }),
     });
 
-    const data = await response.json();
+    const data = (await response.json()) as GoogleTokenEndpointResponse;
 
     if (!response.ok) {
       throw new Error(`Failed to exchange code: ${data.error_description || data.error}`);
+    }
+
+    if (!data.access_token) {
+      throw new Error("Google token response did not include an access token");
     }
 
     this.accessToken = data.access_token;
@@ -195,6 +209,7 @@ export class GoogleMeetService {
       refreshToken: data.refresh_token,
       expiresIn,
       expiresAt,
+      grantedScopes: data.scope?.split(" ").filter(Boolean) ?? [],
     };
   }
 
