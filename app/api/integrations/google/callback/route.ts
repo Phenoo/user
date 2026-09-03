@@ -215,16 +215,17 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const formData = await request.formData();
   const searchParams = new URLSearchParams();
+  const isSameOriginRelay = formData.get("oauth_relay") === "1";
 
   for (const [key, value] of formData.entries()) {
-    if (typeof value === "string") {
+    if (key !== "oauth_relay" && typeof value === "string") {
       searchParams.set(key, value);
     }
   }
 
   // Google may still use form_post for an older cached authorization request.
   // Relay that request first so the callback processing happens same-origin.
-  if (request.headers.get("x-google-oauth-relay") !== "1") {
+  if (!isSameOriginRelay) {
     return redirectToSameOriginRelay(request, searchParams);
   }
 
