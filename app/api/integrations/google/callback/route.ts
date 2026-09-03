@@ -10,6 +10,33 @@ import {
 import { fetchMutation } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
 
+const RELAY_PATH = "/google-callback";
+const OAUTH_CALLBACK_PARAMS = [
+  "code",
+  "state",
+  "error",
+  "error_description",
+  "error_uri",
+] as const;
+
+function redirectToSameOriginRelay(
+  request: NextRequest,
+  searchParams: URLSearchParams
+) {
+  const relayUrl = new URL(RELAY_PATH, request.url);
+
+  for (const parameter of OAUTH_CALLBACK_PARAMS) {
+    const value = searchParams.get(parameter);
+    if (value) {
+      relayUrl.searchParams.set(parameter, value);
+    }
+  }
+
+  // A 303 makes Google form_post callbacks and direct browser requests load
+  // the relay page with GET before the app submits the callback same-origin.
+  return NextResponse.redirect(relayUrl, 303);
+}
+
 async function handleGoogleCallback(
   request: NextRequest,
   searchParams: URLSearchParams
@@ -25,7 +52,8 @@ async function handleGoogleCallback(
     if (error) {
       console.warn("[GoogleCallback] User declined authorization or Google returned error:", error);
       return NextResponse.redirect(
-        `${appUrl}/dashboard?error=${encodeURIComponent(error)}`
+        `${appUrl}/dashboard?error=${encodeURIComponent(error)}`,
+        303
       );
     }
 
@@ -37,7 +65,8 @@ async function handleGoogleCallback(
         responseKeys: Array.from(searchParams.keys()).sort(),
       });
       return NextResponse.redirect(
-        `${appUrl}/dashboard?error=invalid_callback_request`
+        `${appUrl}/dashboard?error=invalid_callback_request`,
+        303
       );
     }
 
@@ -48,7 +77,8 @@ async function handleGoogleCallback(
     if (!stateData || !storedNonce || stateData.nonce !== storedNonce) {
       console.error("[GoogleCallback] Invalid state or CSRF mismatch");
       return NextResponse.redirect(
-        `${appUrl}/dashboard?error=csrf_validation_failed`
+        `${appUrl}/dashboard?error=csrf_validation_failed`,
+        303
       );
     }
 
@@ -56,7 +86,8 @@ async function handleGoogleCallback(
     if (!authentication || authentication.user._id !== stateData.userId) {
       console.error("[GoogleCallback] OAuth user does not match the active session");
       return NextResponse.redirect(
-        `${appUrl}/dashboard?error=oauth_user_mismatch`
+        `${appUrl}/dashboard?error=oauth_user_mismatch`,
+        303
       );
     }
 
@@ -90,7 +121,8 @@ async function handleGoogleCallback(
 
     if (!hasGoogleScopes(grantedScopes, getRequiredGoogleScopes(integration))) {
       return NextResponse.redirect(
-        `${appUrl}/dashboard?error=insufficient_google_permissions&integration=${integration}`
+        `${appUrl}/dashboard?error=insufficient_google_permissions&integration=${integration}`,
+        303
       );
     }
 
@@ -142,7 +174,7 @@ async function handleGoogleCallback(
 
     // 5. Redirect after durable credentials and connection metadata are saved.
     const redirectUrl = `${appUrl}/dashboard?connected=${integration}&status=success`;
-    const response = NextResponse.redirect(redirectUrl);
+    const response = NextResponse.redirect(redirectUrl, 303);
 
     // 6. Store tokens in server-only cookies, never in client-readable data.
     response.cookies.set("google_meet_token", tokenDetails.accessToken, {
@@ -170,13 +202,14 @@ async function handleGoogleCallback(
   } catch (err: unknown) {
     console.error("[GoogleCallback] Unhandled error during OAuth callback:", err);
     return NextResponse.redirect(
-      `${appUrl}/dashboard?error=callback_processing_error`
+      `${appUrl}/dashboard?error=callback_processing_error`,
+      303
     );
   }
 }
 
 export async function GET(request: NextRequest) {
-  return handleGoogleCallback(request, new URL(request.url).searchParams);
+  return redirectToSameOriginRelay(request, new URL(request.url).searchParams);
 }
 
 export async function POST(request: NextRequest) {
@@ -187,6 +220,12 @@ export async function POST(request: NextRequest) {
     if (typeof value === "string") {
       searchParams.set(key, value);
     }
+  }
+
+  // Google may still use form_post for an older cached authorization request.
+  // Relay that request first so the callback processing happens same-origin.
+  if (request.headers.get("x-google-oauth-relay") !== "1") {
+    return redirectToSameOriginRelay(request, searchParams);
   }
 
   return handleGoogleCallback(request, searchParams);
