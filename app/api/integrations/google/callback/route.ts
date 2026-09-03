@@ -24,6 +24,12 @@ function redirectToSameOriginRelay(
   searchParams: URLSearchParams
 ) {
   const relayUrl = new URL(RELAY_PATH, request.url);
+  const responseKeys = Array.from(searchParams.keys()).sort();
+
+  console.info("[GoogleCallback] Relaying OAuth response", {
+    method: request.method,
+    responseKeys,
+  });
 
   for (const parameter of OAUTH_CALLBACK_PARAMS) {
     const value = searchParams.get(parameter);
@@ -228,6 +234,10 @@ export async function POST(request: NextRequest) {
   if (!isSameOriginRelay) {
     return redirectToSameOriginRelay(request, searchParams);
   }
+
+  console.info("[GoogleCallback] Processing same-origin relay", {
+    responseKeys: Array.from(searchParams.keys()).sort(),
+  });
 
   return handleGoogleCallback(request, searchParams);
 }

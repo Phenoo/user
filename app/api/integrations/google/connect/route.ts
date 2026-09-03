@@ -54,14 +54,20 @@ export async function GET(request: NextRequest) {
       client_id: clientId,
       redirect_uri: redirectUri,
       response_type: "code",
-      // A top-level GET callback includes the app's Lax authentication cookie,
-      // allowing the callback to verify the active user against signed state.
-      response_mode: "query",
+      // Google posts the authorization response to the callback. The callback
+      // relays it through a same-origin page before reading the app session.
+      response_mode: "form_post",
       scope: scopesToRequest.join(" "),
       access_type: "offline",
       include_granted_scopes: "true",
       prompt: "consent",
       state,
+    });
+
+    console.info("[GoogleConnect] Starting OAuth", {
+      integration,
+      responseMode: "form_post",
+      callbackHost: new URL(redirectUri).host,
     });
 
     const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
